@@ -17,7 +17,7 @@
     <div class="row">
       <div class="col-md-2" style="padding: 0;">
         <div class="d-flex flex-column flex-shrink-0 p-3 text-white bg-dark sidebar" style="margin-left: 0;">
-    <a href="/" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-white text-decoration-none">
+    <a href="{% url 'main:main_chat' %}" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-white text-decoration-none">
       <svg class="bi me-2" width="40" height="32"><use xlink:href="#bootstrap"></use></svg>
       <span class="fs-4" id="page_title">RAG Chat &nbsp<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" fill="currentColor" class="bi bi-chat-left-dots-fill" viewBox="0 0 16 16">
   <path d="M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4.414a1 1 0 0 0-.707.293L.854 15.146A.5.5 0 0 1 0 14.793zm5 4a1 1 0 1 0-2 0 1 1 0 0 0 2 0m4 0a1 1 0 1 0-2 0 1 1 0 0 0 2 0m3 1a1 1 0 1 0 0-2 1 1 0 0 0 0 2"/>
@@ -33,8 +33,9 @@
     </ul>
     <br>
     <ul class="nav nav-pills flex-column" id="#chats">
+    <input type="hidden" value="{{active_thread_id}}">
     {% for thread in chat_threads %}
-    <a href="#" class="list-group-item list-group-item-action py-3 lh-tight" style="margin-bottom: 10px">
+    <a class="list-group-item list-group-item-action py-3 lh-tight rag-thread {% if active_thread_id == thread.id %}current{% endif %}" id="{{thread.id}}" style="margin-bottom: 10px" onclick="changeRag(this)">
         <div class="d-flex w-100 align-items-center justify-content-between">
           <strong class="mb-1">{{ thread.name }}</strong>
           <small class="text-muted">Tues</small>
@@ -51,9 +52,9 @@
         <strong>User</strong>
       </a>
       <ul class="dropdown-menu dropdown-menu-dark text-small shadow" aria-labelledby="dropdownUser1">
-        <li><a class="dropdown-item" href="#">Profile</a></li>
+        <li><a class="dropdown-item" href="{% url 'users:profile' %}">Profile</a></li>
         <li><hr class="dropdown-divider"></li>
-        <li><a class="dropdown-item" href="#">Sign out</a></li>
+        <li><a class="dropdown-item" href="{% url 'users:logout' %}">Sign out</a></li>
       </ul>
     </div>
     </div>
@@ -79,13 +80,13 @@
     {% endfor %}
     </div>
     <div class="row">
-        <form method="post" class="form-group" id="chat-box">
+        <form method="post" class="form-group" id="msg-form">
             {% csrf_token %}
             <div class="input-group mb-3">
                 <div class="input-group-prepend" style="display: flex; align-items: center;">
-                    <input type="text" placeholder="Send a message..." name="message" id="msg_field">
+                    <input type="text" placeholder="Send a message..." name="message" id="msgInput">
                     <button type="submit" name="send" class="btn btn-success" id="send_btn">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-send-fill" viewBox="0 0 16 16"><path d="M15.964.686a.5.5 0 0 0-.65-.65L.767 5.855H.766l-.452.18a.5.5 0 0 0-.082.887l.41.26.001.002 4.995 3.178 3.178 4.995.002.002.26.41a.5.5 0 0 0 .886-.083zm-1.833 1.89L6.637 10.07l-.215-.338a.5.5 0 0 0-.154-.154l-.338-.215 7.494-7.494 1.178-.471z"/></svg>
+                    <svg width="20" height="20" fill="currentColor" class="bi bi-send-fill" viewBox="0 0 16 16"><path d="M15.964.686a.5.5 0 0 0-.65-.65L.767 5.855H.766l-.452.18a.5.5 0 0 0-.082.887l.41.26.001.002 4.995 3.178 3.178 4.995.002.002.26.41a.5.5 0 0 0 .886-.083zm-1.833 1.89L6.637 10.07l-.215-.338a.5.5 0 0 0-.154-.154l-.338-.215 7.494-7.494 1.178-.471z"/></svg>
                     </button>
                 </div>
             </div>
@@ -141,6 +142,42 @@
 </div>
 <script>
 // websocket scripts
+var loc = window.location
+
+protocol = 'ws://'
+if (loc.protocol == "https:") {protocol = 'wss://'};
+var endpoint = protocol + loc.host + loc.pathname
+var socket = new WebSocket(endpoint);
+console.log ("endpoint", endpoint);
+
+var formData = $("#msg-form")
+var msgInput = $("#msgInput")
+var chatHolder = $("#board")
+
+socket.onopen = function(e) {
+    console.log ("open", e)
+    formData.submit(function(event) {
+        event.preventDefault();
+        var data = {
+            'message': msgInput.val(),
+        }
+        socket.send(JSON.stringify(data));
+        msgInput.val('');
+        //formData[0].reset();
+    })
+}
+
+websocket.onmessage = function(e) {
+}
+
+socket.onerror  = function(e) {
+    console.log ("error", e)
+}
+socket.onclose  = function(e) {
+    console.log ("close", e)
+}
+
+
 function submitForm() {
   // Get the input field values
   var ragModelName = document.getElementById("rag-name").value;
@@ -155,27 +192,30 @@ function submitForm() {
     documentNameElement.textContent = fileName;
     uploadedDocumentsDiv.appendChild(documentNameElement);
   }
-
-  // Perform further processing or submit the form to the server
-  // ... (add your logic here)
 }
 
-//var exampleModal = document.getElementById('exampleModal')
-//exampleModal.addEventListener('show.bs.modal', function (event) {
-  // Button that triggered the modal
-  //var button = event.relatedTarget
-  // Extract info from data-bs-* attributes
-  //var ragName = button.getAttribute('data-bs-newRagName')
-  // If necessary, you could initiate an AJAX request here
-  // and then do the updating in a callback.
-  //
-  // Update the modal's content.
-  //var modalTitle = exampleModal.querySelector('.modal-title')
-  //var modalBodyInput = exampleModal.querySelector('.modal-body input')
+function changeRag(element) {
+  // Highlight the selected RAG thread
+  var ragId = element.id;
+  var elements = $(".rag-thread");
 
-  //modalTitle.textContent = 'New message to ' + ragName
-  //modalBodyInput.value = ragName
-//})
+  var elements = document.getElementsByClassName("rag-thread");
+  for (var i = 0; i < elements.length; i++) {
+    elements[i].className = "list-group-item list-group-item-action py-3 lh-tight rag-thread";
+  }
+  
+  element.className = "list-group-item list-group-item-action py-3 lh-tight rag-thread current"
+  
+  var currentUrl = window.location.href;
+  var new_rag_path = "/" + ragId
+  endpoint = protocol + loc.host + new_rag_path
+  console.log("endpoint:" + endpoint)
+  window.history.pushState({}, "RAG Chat", new_rag_path);
+}
+
+
+
+
 </script>
 </body>
 </html>

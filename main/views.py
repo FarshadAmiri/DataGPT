@@ -21,8 +21,11 @@ vector_db_path = "vector_dbs"
 def chat_view(request, chat_id=None):
     user = request.user
     if request.method == "GET":
-        chat_threads = Vector_db.objects.filter(user=user).values()
-        context = {"chat_threads": chat_threads}
+        chat_threads = Vector_db.objects.filter(user=user)
+        # active_thread_id = chat_threads[0].id
+        context = {"chat_threads": chat_threads,
+                #    "active_thread_id": active_thread_id
+                   }
         return render(request, 'main/chat.html', context)
 
 
