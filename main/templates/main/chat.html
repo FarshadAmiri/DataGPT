@@ -33,9 +33,9 @@
     </ul>
     <br>
     <ul class="nav nav-pills flex-column" id="#chats">
-    <input type="hidden" value="{{active_thread_id}}">
+    <input type="hidden" id="active-thread" value="{{active_thread_id}}">
     {% for thread in chat_threads %}
-    <a class="list-group-item list-group-item-action py-3 lh-tight rag-thread {% if active_thread_id == thread.id %}current{% endif %}" id="{{thread.id}}" style="margin-bottom: 10px" onclick="changeRag(this)">
+    <a href="{% url 'main:chat' thread.id %}" class="list-group-item list-group-item-action py-3 lh-tight rag-thread {% if active_thread_id == thread.id %}current{% endif %}" id="{{thread.id}}" style="margin-bottom: 10px;">
         <div class="d-flex w-100 align-items-center justify-content-between">
           <strong class="mb-1">{{ thread.name }}</strong>
           <small class="text-muted">Tues</small>
@@ -48,8 +48,8 @@
     <hr>
     <div class="dropdown">
       <a href="#" class="d-flex align-items-center text-white text-decoration-none dropdown-toggle mb" id="dropdownUser1" data-bs-toggle="dropdown" aria-expanded="false">
-        <img src="https://github.com/farshadamiri.png" alt="" width="32" height="32" class="rounded-circle me-2">
-        <strong>User</strong>
+        <img id="profile-img" alt="" width="32" height="32" class="rounded-circle me-2">
+        <strong>@{{request.user.username}}</strong>
       </a>
       <ul class="dropdown-menu dropdown-menu-dark text-small shadow" aria-labelledby="dropdownUser1">
         <li><a class="dropdown-item" href="{% url 'users:profile' %}">Profile</a></li>
@@ -96,7 +96,7 @@
 </div>
 <div class="col-md-2" style="padding: 0;">
             <div class="d-flex flex-column flex-shrink-0 p-3 text-white bg-dark sidebar" style="margin-left: 0;">
-                <!-- New sidebar content -->
+            
             </div>
         </div>
 </div>
@@ -124,9 +124,9 @@
           </select>
           </div>
           <div class="mb-3">
-            <label for="formFile" class="form-label">Add knowledge source</label>
-            <input class="form-control" type="file" id="formFile" name="files" multiple>
-            {% comment %} <input class="form-control" type="file" id="formFile2" multiple directory webkitdirectory> {% endcomment %}
+            <label for="docForm" class="form-label">Add knowledge source</label>
+            <input class="form-control" type="file" id="docForm" name="files" multiple>
+            {% comment %} <input class="form-control" type="file" id="docForm" multiple directory webkitdirectory> {% endcomment %}
           </div>
           <div id="uploadedDocuments" class="mt-3"></div>
         {% comment %} </form> {% endcomment %}
@@ -141,18 +141,72 @@
   </div>
 </div>
 <script>
-// websocket scripts
 var loc = window.location
 
-protocol = 'ws://'
-if (loc.protocol == "https:") {protocol = 'wss://'};
+var protocol = 'ws://'
+if (loc.protocol == "https:") {protocol = 'wss://'}
 var endpoint = protocol + loc.host + loc.pathname
 var socket = new WebSocket(endpoint);
-console.log ("endpoint", endpoint);
+console.log("endpoint-onload: " + endpoint);
+
+//window.onload = function () {
+//  var loc = window.location
+//  var protocol = 'ws://'
+//  if (loc.protocol == "https:") {protocol = 'wss://'}
+//  var ragId = $("#active-thread")[0].value
+//  var new_rag_path = "/" + ragId + "/"
+//  var endpoint = protocol + loc.host + new_rag_path
+//  window.history.pushState({}, "RAG Chat", new_rag_path);
+//  socket = new WebSocket(endpoint);
+//  console.log("endpoint-onload: " + endpoint)
+//}
+
+
+//websocket scripts
+//var currentUrl = window.location.href;
+
+//var endpoint = protocol + loc.host + loc.pathname
+
 
 var formData = $("#msg-form")
 var msgInput = $("#msgInput")
-var chatHolder = $("#board")
+var board = $("#board")
+
+function submitForm() {
+  // Get the input field values
+  var ragModelName = document.getElementById("rag-name").value;
+  var files = document.getElementById("docForm").files;
+
+  // Display the uploaded document names
+  var uploadedDocumentsDiv = document.getElementById("uploadedDocuments");
+  uploadedDocumentsDiv.innerHTML = "";
+  for (var i = 0; i < files.length; i++) {
+    var fileName = files[i].name;
+    var documentNameElement = document.createElement("p");
+    documentNameElement.textContent = fileName;
+    uploadedDocumentsDiv.appendChild(documentNameElement);
+  }
+}
+
+//function changeRag(element) {
+//  // Highlight the selected RAG thread
+//  var ragId = element.id;
+//  var elements = $(".rag-thread");
+//
+//  var elements = document.getElementsByClassName("rag-thread");
+//  for (var i = 0; i < elements.length; i++) {
+//    elements[i].className = "list-group-item list-group-item-action py-3 lh-tight rag-thread";
+//  }
+//  
+//  element.className = "list-group-item list-group-item-action py-3 lh-tight rag-thread current"
+//  
+//  var currentUrl = window.location.href;
+//  var new_rag_path = "/" + ragId + "/"
+//  endpoint = protocol + loc.host + new_rag_path
+//  console.log("endpoint:" + endpoint)
+//  window.history.pushState({}, "RAG Chat", new_rag_path);
+//  var socket = new WebSocket(endpoint);
+//}
 
 socket.onopen = function(e) {
     console.log ("open", e)
@@ -167,7 +221,7 @@ socket.onopen = function(e) {
     })
 }
 
-websocket.onmessage = function(e) {
+socket.onmessage = function(e) {
 }
 
 socket.onerror  = function(e) {
@@ -176,45 +230,6 @@ socket.onerror  = function(e) {
 socket.onclose  = function(e) {
     console.log ("close", e)
 }
-
-
-function submitForm() {
-  // Get the input field values
-  var ragModelName = document.getElementById("rag-name").value;
-  var files = document.getElementById("formFile").files;
-
-  // Display the uploaded document names
-  var uploadedDocumentsDiv = document.getElementById("uploadedDocuments");
-  uploadedDocumentsDiv.innerHTML = "";
-  for (var i = 0; i < files.length; i++) {
-    var fileName = files[i].name;
-    var documentNameElement = document.createElement("p");
-    documentNameElement.textContent = fileName;
-    uploadedDocumentsDiv.appendChild(documentNameElement);
-  }
-}
-
-function changeRag(element) {
-  // Highlight the selected RAG thread
-  var ragId = element.id;
-  var elements = $(".rag-thread");
-
-  var elements = document.getElementsByClassName("rag-thread");
-  for (var i = 0; i < elements.length; i++) {
-    elements[i].className = "list-group-item list-group-item-action py-3 lh-tight rag-thread";
-  }
-  
-  element.className = "list-group-item list-group-item-action py-3 lh-tight rag-thread current"
-  
-  var currentUrl = window.location.href;
-  var new_rag_path = "/" + ragId
-  endpoint = protocol + loc.host + new_rag_path
-  console.log("endpoint:" + endpoint)
-  window.history.pushState({}, "RAG Chat", new_rag_path);
-}
-
-
-
 
 </script>
 </body>

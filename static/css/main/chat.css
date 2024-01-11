@@ -140,6 +140,11 @@ body{
   cursor: pointer
 }
 
+#profile-img{
+  content: url("..\\..\\icons\\user.jpg");
+
+}
+
 /* .modal {
   animation-name: slide-down;
   animation-duration: 0.2s;

@@ -8,20 +8,20 @@ from channels.db import database_sync_to_async
 class RAGConsumer(AsyncConsumer):
     async def websocket_connect(self, event):
         print("connected", event)
-        other_user = self.scope["url_route"]["kwargs"]["username"]
-        user = self.scope["user"]
-        self.user = user
-        thread_obj = await self.get_thread(user, other_user)
-        self.thread_obj = thread_obj
-        chat_room = f"thread_{thread_obj.id}"
-        self.chat_room = chat_room
-        await self.channel_layer.group_add(
-            chat_room, 
-            self.channel_name
-        )
-        print(thread_obj)
-        print(other_user, user)
-        print(user, thread_obj.id)
+        # other_user = self.scope["url_route"]["kwargs"]["username"]
+        # user = self.scope["user"]
+        # self.user = user
+        # thread_obj = await self.get_thread(user, other_user)
+        # self.thread_obj = thread_obj
+        # chat_room = f"thread_{thread_obj.id}"
+        # self.chat_room = chat_room
+        # await self.channel_layer.group_add(
+        #     chat_room, 
+        #     self.channel_name
+        # )
+        # print(thread_obj)
+        # print(other_user, user)
+        # print(user, thread_obj.id)
         await self.send({
             "type": "websocket.accept"
         })
