@@ -5,6 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script type="text/javascript" src="{% static 'jquery-3.7.1.min.js' %}"></script>
+    <link rel="icon" href="{% static 'icons/favicon5.ico' %}" type="image/x-icon">
+    <link rel="shortcut icon" href="{% static 'icons/favicon5.ico' %}" type="image/x-icon">
     <link rel="stylesheet" type="text/css" href="{% static 'css/bootstrap.min.css' %}">
     <link rel="stylesheet" type="text/css" href="{% static 'css/sidebars.css' %}">
     <link rel="stylesheet" type="text/css" href="{% static 'css/main/chat.css' %}">
@@ -222,6 +224,10 @@ socket.onopen = function(e) {
 }
 
 socket.onmessage = function(e) {
+    console.log ("ws message:", e)
+    var chatMsgData = JSON.parse(e.data)
+    console.log ("response: ", chatMsgData)
+    
 }
 
 socket.onerror  = function(e) {

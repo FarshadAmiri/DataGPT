@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect
 from main.utilities.RAG import load_model, llm_inference
-from main.models import Vector_db, Document
+from main.models import Thread, Document
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
@@ -10,22 +10,24 @@ import os
 
 vector_db_path = "vector_dbs"
 
-# model_obj = load_model()
-# model = model_obj["model"]
-# tokenizer = model_obj["tokenizer"]
-# device = model_obj["device"]
-# streamer = model_obj["streamer"]
+model_obj = load_model()
+model = model_obj["model"]
+tokenizer = model_obj["tokenizer"]
+device = model_obj["device"]
+streamer = model_obj["streamer"]
 
 
 @login_required(login_url='users:login')
 def chat_view(request, chat_id=None):
+    print(f"\nchat_id: {chat_id}\n")
     user = request.user
     if request.method == "GET":
         if chat_id is None:
-            chat_threads = Vector_db.objects.filter(user=user)
+            chat_threads = Thread.objects.filter(user=user)
             chat_id = chat_threads[0].id
             return redirect('main:chat', chat_id=chat_id)
-        chat_threads = Vector_db.objects.filter(user=user)
+        chat_threads = Thread.objects.filter(user=user)
+        print(f"\nchat_id: {chat_id}\n")
         print(f"\nactive_thread_id: {type(chat_id)} {chat_id}\n")
         context = {"chat_threads": chat_threads,
                    "active_thread_id": int(chat_id)
@@ -54,7 +56,7 @@ def create_rag_view(request,):   # Erros front should handle: 1-similar rag_name
                                           description=None, loc=doc_path)
             docs.append(doc)
         
-        vdb = Vector_db.objects.create(user=user, name=rag_name, public=False, 
+        vdb = Thread.objects.create(user=user, name=rag_name, public=False, 
                                        description=None, loc=vdb_path)
         vdb.docs.set(docs)
 
