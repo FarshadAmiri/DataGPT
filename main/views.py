@@ -1,11 +1,11 @@
 from django.shortcuts import render, redirect
 from main.utilities.RAG import load_model, llm_inference
-from main.models import Thread, Document
+from main.models import Thread, Document, ChatMessage
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from main.utilities.helper_functions import create_folder
-from main.utilities.RAG import create_rag
+from main.utilities.RAG import create_rag, add_docs
 import os
 
 vector_db_path = "vector_dbs"
@@ -22,16 +22,16 @@ def chat_view(request, chat_id=None):
     print(f"\nchat_id: {chat_id}\n")
     user = request.user
     if request.method == "GET":
-        if chat_id is None:
-            chat_threads = Thread.objects.filter(user=user)
+        chat_threads = Thread.objects.filter(user=user)
+        if (chat_id is None) and (len(chat_threads) > 0):
             chat_id = chat_threads[0].id
             return redirect('main:chat', chat_id=chat_id)
-        chat_threads = Thread.objects.filter(user=user)
         print(f"\nchat_id: {chat_id}\n")
         print(f"\nactive_thread_id: {type(chat_id)} {chat_id}\n")
-        context = {"chat_threads": chat_threads,
-                   "active_thread_id": int(chat_id)
-                   }
+        chat_id = int(chat_id)
+        messages = ChatMessage.objects.filter(user=user, thread=chat_id)
+        context = {"chat_threads": chat_threads, "active_thread_id": chat_id,
+                   "messages": messages,}
         return render(request, 'main/chat.html', context)
 
 
@@ -46,6 +46,7 @@ def create_rag_view(request,):   # Erros front should handle: 1-similar rag_name
         create_rag(vdb_path)
         create_folder(docs_path)
         docs = []
+        docs_paths = []
 
         for file in uploaded_files:
             file_name = file.name
@@ -55,9 +56,15 @@ def create_rag_view(request,):   # Erros front should handle: 1-similar rag_name
             doc = Document.objects.create(user=user, name=file_name, public=False,
                                           description=None, loc=doc_path)
             docs.append(doc)
+            docs_paths.append(doc_path)
         
         vdb = Thread.objects.create(user=user, name=rag_name, public=False, 
                                        description=None, loc=vdb_path)
         vdb.docs.set(docs)
+        add_docs(vdb_path, docs_paths)
 
         return redirect('main:main_chat')
+    
+
+def testView(request,):
+    return render(request, "main/test.html")

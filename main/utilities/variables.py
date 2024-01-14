@@ -1,4 +1,5 @@
 from transformers import AutoTokenizer, AutoModelForCausalLM, TextStreamer
+from llama_index.prompts.prompts import SimpleInputPrompt
 import accelerate
 import torch
 import time
@@ -46,3 +47,16 @@ model = AutoModelForCausalLM.from_pretrained(name
 
 
 streamer = TextStreamer(tokenizer, skip_prompt=True, skip_special_tokens=True)
+
+
+system_prompt = """<s>[INST] <<SYS>>
+You are a helpful, respectful and honest assistant. Always answer as
+helpfully as possible, while being safe.
+If a question does not make any sense, or is not factually coherent, explain
+why instead of answering something not correct. If you don't know the answer
+to a question, please express that you do not have informaion or knowledge in that context and please don't share false information.
+Try to be exact in information and numbers you tell.
+Your goal is to provide answers based on the information provided and your other knowledge.<</SYS>>
+"""
+
+query_wrapper_prompt = SimpleInputPrompt("{query_str} [/INST]")

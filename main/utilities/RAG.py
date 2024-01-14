@@ -83,14 +83,37 @@ def create_rag(path):
 
 
 def add_docs(vdb_path: str, docs_paths: list):
+    from main.utilities.variables import system_prompt, query_wrapper_prompt
+    from main.views import model, tokenizer
     db = chromadb.PersistentClient(path = vdb_path)
     chroma_collection = db.get_or_create_collection("default")
     vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
     storage_context = StorageContext.from_defaults(vector_store=vector_store)
+    llm = HuggingFaceLLM(context_window=4096,
+                     max_new_tokens=512,
+                     system_prompt=system_prompt,
+                     query_wrapper_prompt=query_wrapper_prompt,
+                     model=model,
+                     tokenizer=tokenizer)
+
+    embeddings = LangchainEmbedding(
+        HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+    )
+    # Create new service context instance
+    service_context = ServiceContext.from_defaults(
+        chunk_size=1024,
+        chunk_overlap=20,
+        llm=llm,
+        embed_model=embeddings
+    )
+
+    # And set the service context
+    set_global_service_context(service_context)
     index = VectorStoreIndex.from_vector_store(vector_store, storage_context=storage_context)
     PyMuPDFReader = download_loader("PyMuPDFReader")
     loader = PyMuPDFReader()
     # Load documents
+    print(f"\ndocs_paths: {docs_paths}\n")
     for doc_path in docs_paths:
         document = loader.load(file_path=Path(doc_path), metadata=False)
         # Create indexes

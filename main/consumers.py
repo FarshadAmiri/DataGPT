@@ -63,6 +63,8 @@ class RAGConsumer(AsyncConsumer):
         set_global_service_context(service_context)
         index = VectorStoreIndex.from_vector_store(vector_store, storage_context=storage_context)
         query_engine = index.as_query_engine()
+
+        # # Customize query engine
         # retriever = VectorIndexRetriever(
         #     index=index,
         #     similarity_top_k=3,
@@ -76,11 +78,11 @@ class RAGConsumer(AsyncConsumer):
         # query_engine = RetrieverQueryEngine(
         #     retriever=retriever,
         #     response_synthesizer=response_synthesizer,
-        #     node_postprocessors=[SimilarityPostprocessor(similarity_cutoff=0.2)],
+        #     node_postprocessors=[SimilarityPostprocessor(similarity_cutoff=0.1)],
         # )
         self.query_engine = query_engine
-        response = query_engine.query("what is machine? explain in less than 100 words")
-        print(f"\nresponse.response: {response.response}\n")
+
+
 
         # other_user = self.scope["url_route"]["kwargs"]["username"]
         # user = self.scope["user"]
@@ -96,7 +98,7 @@ class RAGConsumer(AsyncConsumer):
         # print(thread_obj)
         # print(other_user, user)
         # print(user, thread_obj.id)
-        self.send({
+        await self.send({
             "type": "websocket.accept"
         })
 
@@ -110,13 +112,13 @@ class RAGConsumer(AsyncConsumer):
             await self.create_chat_message(msg, rag_response=False)
             print(f"msg: {msg}")
             response = self.query_engine.query(msg)
-            response = llm_inference(msg, model, tokenizer, device)
+            # response = llm_inference(msg, model, tokenizer, device)
             print(f"\n\nresponse: {response}\n\n")
             await self.create_chat_message(response, rag_response=True)
             
             response_dict = {
                 # "message": response.response,
-                "message": response,
+                "message": response.response,
                 "username": username,
             }
 
@@ -142,3 +144,17 @@ class RAGConsumer(AsyncConsumer):
         ChatMessage.objects.create(thread=thread, user=user, message=message, rag_response=rag_response)
         print("\nChat message saved\n")
         return
+    
+
+class TestConsumer(AsyncConsumer):
+    async def websocket_connect(self, event):
+        print("connected", event)
+        await self.send({
+            "type": "websocket.accept",
+        })
+
+    async def websocket_receive(self, event):
+        print("received", event)
+
+    async def websocket_disconnect(self, event):
+        print("disconnected", event)
