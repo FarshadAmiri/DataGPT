@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="connect-src 'self' ws://127.0.0.1:8000">
     <script type="text/javascript" src="{% static 'jquery-3.7.1.min.js' %}"></script>
     <link rel="icon" href="{% static 'icons/favicon5.ico' %}" type="image/x-icon">
     <link rel="shortcut icon" href="{% static 'icons/favicon5.ico' %}" type="image/x-icon">
@@ -68,15 +69,15 @@
     {% for message in messages %}
     {% if curr_user == message.sender_name %}
         <div class="container darker">
-            <img src="{% static 'images/user_image.jpg' %}" alt="Avatar" class="right" style="width:100%;">
-            <p>{{message.description}}</p>
-            <span class="time-right">{{message.time}}</span>
+            <img src="{% static 'icons/user.png' %}" alt="Avatar" class="right" style="width:100%;">
+            <p>{{message.message}}</p>
+            <span class="time-right">{{message.timestamp}}</span>
         </div>
     {% else %}
         <div class="container">
-            <img src="{% static 'images/user_image.jpg' %}" alt="Avatar" style="width:100%;">
-            <p>{{message.description}}</p>
-            <span class="time-left">{{message.time}}</span>
+            <img src="{% static 'icons/ai_icon.png' %}" alt="Avatar" style="width:100%;">
+            <p>{{message.message}}</p>
+            <span class="time-left">{{message.timestamp}}</span>
         </div>
     {% endif %}
     {% endfor %}
@@ -145,24 +146,11 @@
 <script>
 var loc = window.location
 
-var protocol = 'ws://'
-if (loc.protocol == "https:") {protocol = 'wss://'}
-var endpoint = protocol + loc.host + loc.pathname
+var protocol = 'ws://';
+if (loc.protocol == "https:") {protocol = 'wss://'};
+var endpoint = protocol + loc.host + loc.pathname;
 var socket = new WebSocket(endpoint);
 console.log("endpoint-onload: " + endpoint);
-
-//window.onload = function () {
-//  var loc = window.location
-//  var protocol = 'ws://'
-//  if (loc.protocol == "https:") {protocol = 'wss://'}
-//  var ragId = $("#active-thread")[0].value
-//  var new_rag_path = "/" + ragId + "/"
-//  var endpoint = protocol + loc.host + new_rag_path
-//  window.history.pushState({}, "RAG Chat", new_rag_path);
-//  socket = new WebSocket(endpoint);
-//  console.log("endpoint-onload: " + endpoint)
-//}
-
 
 //websocket scripts
 //var currentUrl = window.location.href;
@@ -174,40 +162,20 @@ var formData = $("#msg-form")
 var msgInput = $("#msgInput")
 var board = $("#board")
 
-function submitForm() {
-  // Get the input field values
-  var ragModelName = document.getElementById("rag-name").value;
-  var files = document.getElementById("docForm").files;
-
-  // Display the uploaded document names
-  var uploadedDocumentsDiv = document.getElementById("uploadedDocuments");
-  uploadedDocumentsDiv.innerHTML = "";
-  for (var i = 0; i < files.length; i++) {
-    var fileName = files[i].name;
-    var documentNameElement = document.createElement("p");
-    documentNameElement.textContent = fileName;
-    uploadedDocumentsDiv.appendChild(documentNameElement);
-  }
-}
-
-//function changeRag(element) {
-//  // Highlight the selected RAG thread
-//  var ragId = element.id;
-//  var elements = $(".rag-thread");
+//function submitForm() {
+//  // Get the input field values
+//  var ragModelName = document.getElementById("rag-name").value;
+//  var files = document.getElementById("docForm").files;
 //
-//  var elements = document.getElementsByClassName("rag-thread");
-//  for (var i = 0; i < elements.length; i++) {
-//    elements[i].className = "list-group-item list-group-item-action py-3 lh-tight rag-thread";
+//  // Display the uploaded document names
+//  var uploadedDocumentsDiv = document.getElementById("uploadedDocuments");
+//  uploadedDocumentsDiv.innerHTML = "";
+//  for (var i = 0; i < files.length; i++) {
+//    var fileName = files[i].name;
+//    var documentNameElement = document.createElement("p");
+//    documentNameElement.textContent = fileName;
+//    uploadedDocumentsDiv.appendChild(documentNameElement);
 //  }
-//  
-//  element.className = "list-group-item list-group-item-action py-3 lh-tight rag-thread current"
-//  
-//  var currentUrl = window.location.href;
-//  var new_rag_path = "/" + ragId + "/"
-//  endpoint = protocol + loc.host + new_rag_path
-//  console.log("endpoint:" + endpoint)
-//  window.history.pushState({}, "RAG Chat", new_rag_path);
-//  var socket = new WebSocket(endpoint);
 //}
 
 socket.onopen = function(e) {
@@ -219,7 +187,7 @@ socket.onopen = function(e) {
         }
         socket.send(JSON.stringify(data));
         msgInput.val('');
-        //formData[0].reset();
+    formData[0].reset();
     })
 }
 
@@ -227,7 +195,6 @@ socket.onmessage = function(e) {
     console.log ("ws message:", e)
     var chatMsgData = JSON.parse(e.data)
     console.log ("response: ", chatMsgData)
-    
 }
 
 socket.onerror  = function(e) {
@@ -237,6 +204,9 @@ socket.onclose  = function(e) {
     console.log ("close", e)
 }
 
+window.onunload = function () {
+    socket.close();
+}
 </script>
 </body>
 </html>

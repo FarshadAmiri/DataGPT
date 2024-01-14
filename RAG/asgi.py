@@ -3,7 +3,7 @@ from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.security.websocket import AllowedHostsOriginValidator
 from django.core.asgi import get_asgi_application
 from django.urls import re_path, path
-from main.consumers import RAGConsumer
+from main.consumers import RAGConsumer, TestConsumer
 import os
 import django
 from django.core.asgi import get_asgi_application
@@ -16,6 +16,7 @@ application = ProtocolTypeRouter({
         AuthMiddlewareStack(
             URLRouter([
                 path("<chat_id>/", RAGConsumer.as_asgi()),
+                path("test/", TestConsumer.as_asgi()),
             ])
         )
     )
