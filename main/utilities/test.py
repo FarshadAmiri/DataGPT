@@ -81,52 +81,9 @@ class RAGConsumer(AsyncConsumer):
             node_postprocessors=[SimilarityPostprocessor(similarity_cutoff=0.1)],
         )
         self.query_engine = query_engine
-
-
-
-        # other_user = self.scope["url_route"]["kwargs"]["username"]
-        # user = self.scope["user"]
-        # self.user = user
-        # thread_obj = await self.get_thread(user, other_user)
-        # self.thread_obj = thread_obj
-        # chat_room = f"thread_{thread_obj.id}"
-        # self.chat_room = chat_room
-        # await self.channel_layer.group_add(
-        #     chat_room, 
-        #     self.channel_name
-        # )
-        # print(thread_obj)
-        # print(other_user, user)
-        # print(user, thread_obj.id)
         await self.send({
             "type": "websocket.accept"
         })
-
-    # async def websocket_receive(self, event):
-    #     print("receive", event)
-    #     client_data = event.get('text', None)
-    #     if client_data is not None:
-    #         dict_data = json.loads(client_data)
-    #         msg = dict_data.get("message")
-    #         username = self.user.username
-    #         await self.create_chat_message(msg, rag_response=False)
-    #         print(f"msg: {msg}")
-    #         response = self.query_engine.query(msg)
-    #         print(f"\n\nresponse: {response}\n\n")
-    #         await self.create_chat_message(response, rag_response=True)
-            
-    #         response_dict = {
-    #             # "message": response.response,
-    #             "message": response.response,
-    #             "username": username,
-    #         }
-
-    #         await self.send(
-    #             {
-    #             "type": "websocket.send",
-    #             "text": json.dumps(response_dict),
-    #             }
-    #         )
 
 
     async def websocket_receive(self, event):
@@ -151,7 +108,7 @@ class RAGConsumer(AsyncConsumer):
                     "text": json.dumps(response_dict),
                     }
                 )
-            async for response_txt in self.query_engine_streamer(msg):
+            async for response_txt in await self.query_engine_streamer.query(msg):
                 print(f"\n\nresponse_txt: {response_txt}\n\n")
                 # await self.create_chat_message(response_txt, rag_response=True)
                 
@@ -185,6 +142,7 @@ class RAGConsumer(AsyncConsumer):
         print("\nChat message saved\n")
         return
     
+    @database_sync_to_async
     async def query_engine_streamer(self, query):
         response = await self.query_engine.query(query)
         for txt in response.response_gen:

@@ -42,10 +42,10 @@
   border-radius: 5px;
   padding: 10px;
   margin: 10px;
+  width: 98%;
 }
 
 .darker {
-  max-height: 120px;
   border-color: #ccc;
   background-color: #ddd;
 }
@@ -57,17 +57,9 @@
 }
 
 .container img {
-  content: url("..\\..\\icons\\user.png");
-  float: left;
-  max-width: 60px;
-  width: 100%;
-  margin-right: 20px;
-  border-radius: 50%;
-}
-
-/*needs_review*/
-.darker img {
   content: url("..\\..\\icons\\ai_icon.png");
+  width: 32;
+  height: 32;
   float: left;
   max-width: 60px;
   width: 100%;
@@ -75,11 +67,21 @@
   border-radius: 50%;
 }
 
+.darker img {
+  content: url("..\\..\\icons\\user.jpg");
+  width: 32;
+  height: 32;
+  float: left;
+  max-width: 60px;
+  width: 100%;
+  margin-right: 20px;
+  border-radius: 50%;
+}
 
 .container img.right {
   float: right;
   margin-left: 20px;
-  margin-right:0;
+  margin-right: 0;
 }
 
 .time-right {
@@ -92,13 +94,12 @@
   color: #999;
 }
 
-.messages{
-    height: 85vh;
-    width: 1200px;
-    /* border: thick solid #000; */
-    border-width: 2px;
-    margin-top: 16px;
-    overflow-y: auto;
+.messages {
+  height: 85vh;
+  width: 1200px;
+  border-width: 2px;
+  margin-top: 16px;
+  overflow-y: auto;
 }
 
 #send_btn{
