@@ -109,7 +109,7 @@
 
 .chat-box {
   background-color: rgb(230, 230, 230);
-  border-radius: 30px;
+  border-radius: 14px;
 }
 
 #msgInput {
@@ -155,6 +155,39 @@ body{
 
 #profile-img{
   content: url("..\\..\\icons\\user.jpg");
+}
+
+#copy-icon {
+  content: url("..\\..\\icons\\copy-2.png");
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.copy-btn {
+  font-family: RobotoSlab ;
+  font-size: 16px;
+  font-weight: normal;
+  color: #ffffff;
+  text-align: right;
+  border-width: 0px;
+  /* display: flex; */
+  align-items: center;
+  justify-content: center;
+}
+
+
+.showing-message {
+  color: black;
+  font-size: 14px;
+  position: absolute;
+  background-color: #fff;
+  padding: 5px 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 /* .modal {

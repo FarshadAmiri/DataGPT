@@ -74,10 +74,11 @@
             <span class="time-left">{{message.timestamp}}</span>
         </div>
     {% else %}
-        <div class="container">
+        <div class="container"> 
             <img src="{% static 'icons/user.jpg' %}" alt="Avatar" style="width: 42px; height: 42px;">
             <p class="rag-response" style="line-break: auto;">{{message.message|linebreaksbr}}</p>
             <span class="time-right">{{message.timestamp}}</span>
+            <button class="copy-btn" onclick="showMessage('Copied!', this)"><img id="copy-icon"></button>
         </div>
     {% endif %}
     {% endfor %}
@@ -98,10 +99,9 @@
     </div> 
 </div>
 <div class="col-md-2" style="padding: 0;">
-            <div class="d-flex flex-column flex-shrink-0 p-3 text-white bg-dark sidebar" style="margin-left: 0;">
-            
-            </div>
-        </div>
+  <div class="d-flex flex-column flex-shrink-0 p-3 text-white bg-dark sidebar" style="margin-left: 0;">
+  </div>
+</div>
 </div>
 </div>
 <div class="modal fade" id="newRagModal" tabindex="0" aria-labelledby="newRag" aria-hidden="true">
@@ -161,7 +161,7 @@ const user_prompt = '<div class="container darker">' +
 
 const rag_response = '<div class="container">' + 
 '<img src="{% static 'icons/user.jpg' %}" alt="Avatar" style="width: 42px; height: 42px;">' + 
-'<p style="line-break: auto;">{rag_response}</p>' +
+'<p class="rag-response" style="line-break: auto;">{rag_response}</p>' +
 '<span class="time-right">{time}</span>' +
 '</div>'
 
@@ -188,19 +188,31 @@ socket.onmessage = function(e) {
     console.log ("ws message:", e)
     var chatMsgData = JSON.parse(e.data)
     console.log ("response: ", chatMsgData)
+    var today = new Date();
+    var time = today.getHours() + ":" + today.getMinutes();
     if (chatMsgData.mode === "new") {
-      var today = new Date();
-      var time = today.getHours() + ":" + today.getMinutes();
       var field = rag_response.replace('{rag_response}', chatMsgData.message);
+      field = field.replace('{time}', time);
       $('#board').append(field);
       scrolltoend();
     } else {
-      var last_response_element = $(".rag-response:last")[0].text();
-      var last_response_text = last_response.text();
-      last_response_text = last_response_text + chatMsgData.message;
-      last_response_text = last_response_text.replace(/\n/g, '<br>');
-      last_response_element.text() = last_response_text;
+      //const ragResponses = document.getElementsByClassName('rag-response');
+      //const lastRagResponse = ragResponses[ragResponses.length - 1];
+      //var updatedRagResponse = lastRagResponse.textContent + chatMsgData.message;
+      //updatedRagResponse = updatedRagResponse.replace(/\n/g, '<br>');
+      //lastRagResponse.innerHTML = updatedRagResponse;
+      //scrolltoend();
+      const ragResponses = document.getElementsByClassName('rag-response');
+      const lastRagResponse = ragResponses[ragResponses.length - 1];
+      var updatedRagResponse = lastRagResponse.innerHTML + chatMsgData.message;
+      updatedRagResponse = updatedRagResponse.replace(/\n/g, '<br>');
+      lastRagResponse.innerHTML = updatedRagResponse;
       scrolltoend();
+
+      //var last_response_text = $('.rag-response:last')[0].textContent;
+      //last_response_text = last_response_text.replace(/\n/g, '<br>');
+      //$('.rag-response:last')[0].textContent = last_response_text + chatMsgData.message;
+      //scrolltoend();
     }
 }
 
@@ -239,6 +251,46 @@ function scrolltoend() {
 window.onload = function() {
   scrolltoend();}
 
+
+
+var copyButtons = document.getElementsByClassName('copy-btn');
+
+// Add event listener to each copy button
+Array.from(copyButtons).forEach(function(button) {
+    button.addEventListener('click', function() {
+        var messageText = this.parentNode.querySelector('.rag-response').textContent;
+        copyToClipboard(messageText);
+    });
+});
+
+// Function to copy text to clipboard
+function copyToClipboard(text) {
+    var tempInput = document.createElement('input');
+    tempInput.value = text;
+    document.body.appendChild(tempInput);
+    tempInput.select();
+    document.execCommand('copy');
+    document.body.removeChild(tempInput);
+}
+
+function showMessage(message, button) {
+  const messageBox = document.createElement('div');
+  messageBox.textContent = message;
+  messageBox.classList.add('showing-message');
+  button.appendChild(messageBox);
+
+  const buttonRect = button.getBoundingClientRect();
+  const messageBoxRect = messageBox.getBoundingClientRect();
+  const topOffset = buttonRect.top - messageBoxRect.height + 10;
+  const leftOffset = buttonRect.left + (buttonRect.width - messageBoxRect.width) / 2;
+
+  messageBox.style.top = topOffset + 'px';
+  messageBox.style.left = leftOffset + 'px';
+
+  setTimeout(function() {
+    messageBox.remove();
+  }, 500);
+}
 
 </script>
 </body>

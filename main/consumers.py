@@ -68,7 +68,6 @@ class RAGConsumer(AsyncConsumer):
         retriever = VectorIndexRetriever(
             index=index,
             similarity_top_k=3,
-            doc_id = ["fe0ab12b-146f-45e2-9161-387ac90f8031"]
         )
 
         # configure response synthesizer
@@ -138,36 +137,31 @@ class RAGConsumer(AsyncConsumer):
             username = self.user.username
             await self.create_chat_message(msg, rag_response=False)
             print(f"msg: {msg}")
-            # response = self.query_engine.query(msg)
             response_dict = {
-                    # "message": response.response,
-                    "message": "",
-                    "username": username,
-                    "mode": "new",
-                }
-            await self.send(
-                    {
-                    "type": "websocket.send",
-                    "text": json.dumps(response_dict),
-                    }
-                )
-            async for response_txt in self.query_engine_streamer(msg):
+                "message": "",
+                "username": username,
+                "mode": "new",
+            }
+            await self.send({
+                "type": "websocket.send",
+                "text": json.dumps(response_dict),
+            })
+
+            full_response = ""
+            response_generator = self.query_engine_streamer(msg)
+            async for response_txt in response_generator:
                 print(f"\n\nresponse_txt: {response_txt}\n\n")
-                # await self.create_chat_message(response_txt, rag_response=True)
-                
+                full_response = full_response + response_txt
                 response_dict = {
-                    # "message": response.response,
                     "message": response_txt,
                     "username": username,
                     "mode": "continue",
                 }
-
-                await self.send(
-                    {
+                await self.send({
                     "type": "websocket.send",
                     "text": json.dumps(response_dict),
-                    }
-                )
+                })
+            await self.create_chat_message(full_response, rag_response=True)
 
 
     async def websocket_disconnect(self, event):
@@ -186,6 +180,12 @@ class RAGConsumer(AsyncConsumer):
         return
     
     async def query_engine_streamer(self, query):
-        response = await self.query_engine.query(query)
-        for txt in response.response_gen:
-            yield txt
+        response = self.query_engine.query(query)
+        response_gen = response.response_gen
+
+        try:
+            while True:
+                yield next(response_gen)
+                await asyncio.sleep(0)
+        except StopIteration:
+            pass
