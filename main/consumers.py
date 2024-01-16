@@ -150,7 +150,6 @@ class RAGConsumer(AsyncConsumer):
             full_response = ""
             response_generator = self.query_engine_streamer(msg)
             async for response_txt in response_generator:
-                print(f"\n\nresponse_txt: {response_txt}\n\n")
                 full_response = full_response + response_txt
                 response_dict = {
                     "message": response_txt,

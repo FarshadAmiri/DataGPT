@@ -146,7 +146,21 @@ body{
 }
 
 .list-group-item.current {
-  border: 6px solid rgb(255, 145, 0);
+  border: 2px solid rgba(145,192,241,1);
+
+  /* background-image: radial-gradient( circle 759px at -6.7% 50%,  rgb(99, 138, 94) 0%, rgba(140,209,131,1) 26.2%, rgba(178,231,170,1) 50.6%, rgba(144,213,135,1) 74.1%, rgb(88, 116, 85) 100.3% ); */
+  background-image: radial-gradient( circle farthest-corner at 10% 20%,  rgba(147,230,241,1) 0%, rgba(145,192,241,1) 45.5% );
+  /* background-image: radial-gradient( circle farthest-corner at 10% 20%,  rgba(186,190,245,1) 0%, rgba(192,192,245,1) 33.1%, rgba(218,203,246,1) 90% ); */
+  
+}
+
+
+#new-rag-btn {
+  background-image: radial-gradient( circle 759px at -6.7% 50%,  rgb(110, 156, 105) 0%, rgb(148, 197, 142) 26.2%, rgb(168, 212, 161) 50.6%, rgb(144, 199, 137) 74.1%, rgb(108, 134, 105) 100.3% );
+  /* background-color: rgb(66, 141, 66); */
+  font-weight: 600;
+  font-size: 18px;
+  color: rgb(6, 46, 6);
 }
 
 .rag-thread{
@@ -159,8 +173,8 @@ body{
 
 #copy-icon {
   content: url("..\\..\\icons\\copy-2.png");
-  width: 26px;
-  height: 26px;
+  width: 22px;
+  height: 22px;
   display: inline-flex;
   align-items: center;
   justify-content: center;

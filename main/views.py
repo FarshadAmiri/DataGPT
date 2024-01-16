@@ -4,7 +4,7 @@ from main.models import Thread, Document, ChatMessage
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
-from main.utilities.helper_functions import create_folder
+from main.utilities.helper_functions import create_folder, get_first_words
 from main.utilities.RAG import create_rag, add_docs
 import os
 
@@ -26,12 +26,22 @@ def chat_view(request, chat_id=None):
         if (chat_id is None) and (len(chat_threads) > 0):
             chat_id = chat_threads[0].id
             return redirect('main:chat', chat_id=chat_id)
+        threads_preview = dict()
+        for thread in chat_threads:
+            if ChatMessage.objects.filter(thread__id=thread.id).count() > 0:
+                txt = ChatMessage.objects.filter(thread__id=thread.id).latest('timestamp').message[:80]
+                msg_initial_words = get_first_words(txt, 60) + "..."
+                threads_preview[thread.id] = msg_initial_words
+            else:
+                threads_preview[thread.id] = "Empty chat"
+
+        print(f"\nthreads_preview: {threads_preview}\n")
         print(f"\nchat_id: {chat_id}\n")
         print(f"\nactive_thread_id: {type(chat_id)} {chat_id}\n")
         chat_id = int(chat_id)
         messages = ChatMessage.objects.filter(user=user, thread=chat_id)
         context = {"chat_threads": chat_threads, "active_thread_id": chat_id,
-                   "messages": messages,}
+                   "messages": messages, "threads_preview": threads_preview}
         return render(request, 'main/chat.html', context)
 
 

@@ -1,4 +1,5 @@
 {% load static %}
+{% load custom_filters %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -29,8 +30,8 @@
     <hr>
     <ul class="nav nav-pills flex-column">
       <li class="nav-item">
-        <a href="{% url 'main:create_rag' %}" class="nav-link active text-center" aria-current="page" data-bs-toggle="modal" data-bs-target="#newRagModal" data-bs-whatever="@getbootstrap" >
-          Create a new RAG
+        <a href="{% url 'main:create_rag' %}" id="new-rag-btn" class="nav-link active text-center" aria-current="page" data-bs-toggle="modal" data-bs-target="#newRagModal" data-bs-whatever="@getbootstrap">
+          Create a new RAG thread
         </a>
       </li>
     </ul>
@@ -43,7 +44,9 @@
           <strong class="mb-1">{{ thread.name }}</strong>
           <small class="text-muted">Tues</small>
         </div>
-        <div class="col-10 mb-1 small">Last message sent to this chat</div>
+        {% with thread.id as thread_id %}
+        <div class="col-10 mb-1 small" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ threads_preview|get_dict_value:thread_id }}</div>
+        {% endwith %}
       </a>
     {% endfor %}
     </ul>
@@ -69,9 +72,9 @@
     {% for message in messages %}
     {% if message.rag_response == False %}
         <div class="container darker">
-            <img src="{% static 'icons/ai_icon.png' %}" alt="Avatar" class="right" style="width: 42px; height: 42px;">
+            <img src="{% static 'icons/ai_icon.png' %}" alt="Avatar" style="width: 42px; height: 42px;">
             <p style="line-break: auto;">{{message.message|linebreaksbr}}</p>
-            <span class="time-left">{{message.timestamp}}</span>
+            <span class="time-right">{{message.timestamp}}</span>
         </div>
     {% else %}
         <div class="container"> 
@@ -108,7 +111,7 @@
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title" id="newRag">Create a New RAG</h5>
+        <h5 class="modal-title" id="newRag">Create a new RAG thread</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" data-bs-newRagName="{{ new_rag_name }}"></button>
       </div>
       <div class="modal-body">
@@ -141,6 +144,47 @@
   </div>
 </div>
 <script>
+var copyButtons = document.getElementsByClassName('copy-btn');
+
+// Add event listener to each copy button
+Array.from(copyButtons).forEach(function(button) {
+    button.addEventListener('click', function() {
+        var messageText = this.parentNode.querySelector('.rag-response').textContent;
+        copyToClipboard(messageText);
+    });
+});
+
+// Function to copy text to clipboard
+function copyToClipboard(text) {
+    var tempInput = document.createElement('input');
+    tempInput.value = text;
+    document.body.appendChild(tempInput);
+    tempInput.select();
+    document.execCommand('copy');
+    document.body.removeChild(tempInput);
+}
+
+function showMessage(message, button) {
+  const messageBox = document.createElement('div');
+  messageBox.textContent = message;
+  messageBox.classList.add('showing-message');
+  button.appendChild(messageBox);
+
+  const buttonRect = button.getBoundingClientRect();
+  const messageBoxRect = messageBox.getBoundingClientRect();
+  const topOffset = buttonRect.top - messageBoxRect.height + 10;
+  const leftOffset = buttonRect.left + (buttonRect.width - messageBoxRect.width) / 2;
+
+  messageBox.style.top = topOffset + 'px';
+  messageBox.style.left = leftOffset + 'px';
+
+  setTimeout(function() {
+    messageBox.remove();
+  }, 500);
+}
+
+
+// Websocket stuff
 var loc = window.location
 
 var protocol = 'ws://';
@@ -154,15 +198,16 @@ var msgInput = $("#msgInput")
 var board = $("#board")
 
 const user_prompt = '<div class="container darker">' + 
-'<img src="{% static 'icons/ai_icon.png' %}" alt="Avatar" class="right" style="width: 42px; height: 42px;">' +
+'<img src="{% static 'icons/ai_icon.png' %}" alt="Avatar" style="width: 42px; height: 42px;">' +
 '<p style="line-break: auto;">{prompt}</p>' + 
-'<span class="time-left">{time}</span>' +
+'<span class="time-right">{time}</span>' +
 '</div>'
 
 const rag_response = '<div class="container">' + 
 '<img src="{% static 'icons/user.jpg' %}" alt="Avatar" style="width: 42px; height: 42px;">' + 
 '<p class="rag-response" style="line-break: auto;">{rag_response}</p>' +
 '<span class="time-right">{time}</span>' +
+'<button class=\'copy-btn\' onclick=\"showMessage(\'Copied!\', this)\"><img id=\'copy-icon\'></button>' +
 '</div>'
 
 socket.onopen = function(e) {
@@ -195,6 +240,14 @@ socket.onmessage = function(e) {
       field = field.replace('{time}', time);
       $('#board').append(field);
       scrolltoend();
+      copyButtons = document.getElementsByClassName('copy-btn');
+      // Add event listener to each copy button
+      Array.from(copyButtons).forEach(function(button) {
+        button.addEventListener('click', function() {
+          var messageText = this.parentNode.querySelector('.rag-response').textContent;
+          copyToClipboard(messageText);
+        });
+      });
     } else {
       //const ragResponses = document.getElementsByClassName('rag-response');
       //const lastRagResponse = ragResponses[ragResponses.length - 1];
@@ -253,44 +306,7 @@ window.onload = function() {
 
 
 
-var copyButtons = document.getElementsByClassName('copy-btn');
 
-// Add event listener to each copy button
-Array.from(copyButtons).forEach(function(button) {
-    button.addEventListener('click', function() {
-        var messageText = this.parentNode.querySelector('.rag-response').textContent;
-        copyToClipboard(messageText);
-    });
-});
-
-// Function to copy text to clipboard
-function copyToClipboard(text) {
-    var tempInput = document.createElement('input');
-    tempInput.value = text;
-    document.body.appendChild(tempInput);
-    tempInput.select();
-    document.execCommand('copy');
-    document.body.removeChild(tempInput);
-}
-
-function showMessage(message, button) {
-  const messageBox = document.createElement('div');
-  messageBox.textContent = message;
-  messageBox.classList.add('showing-message');
-  button.appendChild(messageBox);
-
-  const buttonRect = button.getBoundingClientRect();
-  const messageBoxRect = messageBox.getBoundingClientRect();
-  const topOffset = buttonRect.top - messageBoxRect.height + 10;
-  const leftOffset = buttonRect.left + (buttonRect.width - messageBoxRect.width) / 2;
-
-  messageBox.style.top = topOffset + 'px';
-  messageBox.style.left = leftOffset + 'px';
-
-  setTimeout(function() {
-    messageBox.remove();
-  }, 600);
-}
 </script>
 </body>
 </html>
