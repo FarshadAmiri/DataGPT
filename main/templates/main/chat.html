@@ -71,20 +71,20 @@
     </div>
   </div>
   </div>
-  <div class="col-md-8" style="margin-bottom: 1px; padding-bottom: 1px;">
+  <div class="col-md-8">
   <div class="chat-box">
     <div class="messages" id="board">
     {% for message in messages %}
     {% if message.rag_response == False %}
         <div class="container darker">
             <img src="{% static 'icons/ai_icon.png' %}" alt="Avatar" style="width: 42px; height: 42px;">
-            <p style="line-break: auto;">{{message.message|linebreaksbr}}</p>
+            <p class="msg" style="line-break: auto;">{{message.message|linebreaksbr}}</p>
             <span class="time-right">{{message.timestamp}}</span>
         </div>
     {% else %}
         <div class="container"> 
             <img src="{% static 'icons/user.jpg' %}" alt="Avatar" style="width: 42px; height: 42px;">
-            <p class="rag-response" style="line-break: auto;">{{message.message|linebreaksbr}}</p>
+            <p class="msg rag-response" style="line-break: auto;">{{message.message|linebreaksbr}}</p>
             <span class="time-right">{{message.timestamp}}</span>
             <button class="copy-btn" onclick="showMessage('Copied!', this)"><img id="copy-icon"></button>
         </div>
@@ -204,13 +204,13 @@ var board = $("#board")
 
 const user_prompt = '<div class="container darker">' + 
 '<img src="{% static 'icons/ai_icon.png' %}" alt="Avatar" style="width: 42px; height: 42px;">' +
-'<p style="line-break: auto;">{prompt}</p>' + 
+'<p class="msg" style="line-break: auto;">{prompt}</p>' + 
 '<span class="time-right">{time}</span>' +
 '</div>'
 
 const rag_response = '<div class="container">' + 
 '<img src="{% static 'icons/user.jpg' %}" alt="Avatar" style="width: 42px; height: 42px;">' + 
-'<p class="rag-response" style="line-break: auto;">{rag_response}</p>' +
+'<p class="msg rag-response" style="line-break: auto;">{rag_response}</p>' +
 '<span class="time-right">{time}</span>' +
 '<button class=\'copy-btn\' onclick=\"showMessage(\'Copied!\', this)\"><img id=\'copy-icon\'></button>' +
 '</div>'
