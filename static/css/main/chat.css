@@ -95,7 +95,7 @@
 }
 
 .messages {
-  height: 85vh;
+  height: 88vh;
   width: 1200px;
   border-width: 2px;
   margin-top: 16px;
@@ -108,8 +108,11 @@
 }
 
 .chat-box {
-  background-color: rgb(230, 230, 230);
+  /* background-color: rgb(230, 230, 230); */
+  background-color: #212529;
   border-radius: 14px;
+  padding-bottom: 0px;
+  margin-bottom: 0px;
 }
 
 #msgInput {
@@ -117,9 +120,13 @@
   border-radius: 24px;
   margin-left: 24px;
   margin-top: 16px;
+  margin-bottom: 0px;
+  padding-bottom: 0px;
   width: 120svb;
-  height: 40px;
+  height: 53px;
   padding-left: 15px;
+  border-width: 4px;
+  border-color: rgb(12, 38, 82);
 }
 
 
@@ -129,20 +136,22 @@ body{
 }
 
 #send_btn {
-  width: 40px; /* Adjust the width as needed */
-  height: 40px; /* Adjust the height as needed */
+  width: 57px; /* Adjust the width as needed */
+  height: 57px; /* Adjust the height as needed */
   border-radius: 50%; /* Make the button circular */
-  padding: 10px;
-  margin: 20px;
+  /* padding: 10px; */
+  /* margin: 20px; */
   display: flex;
   align-items: center;
   justify-content: center;
+  background-color: transparent !important;
+  border-width: 0px;
 }
 
 #send_btn svg {
-  fill: white; /* Set the fill color of the SVG icon */
-  width: 20px; /* Adjust the size of the SVG icon as needed */
-  height: 20px; /* Adjust the size of the SVG icon as needed */
+  fill: rgb(176, 241, 116); /* Set the fill color of the SVG icon */
+  width: 32px; /* Adjust the size of the SVG icon as needed */
+  height: 32px; /* Adjust the size of the SVG icon as needed */
 }
 
 .list-group-item.current {
@@ -203,6 +212,56 @@ body{
   border-radius: 5px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
+
+
+/* .options-container {
+  position: relative;
+} */
+
+/* .options-btn {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  transform: translateY(-100%);
+  border-width: 0;
+  background-color: rgba(0, 0, 0, 0);
+  display: none;
+} */
+
+/* .rag-thread:hover .options-btn {
+  display: block;
+} */
+
+/* .options-img {
+  content: url("..\\..\\icons\\options_1_h.png");
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+} */
+
+
+/* Customizing the scrollbar */
+::-webkit-scrollbar {
+  width: 7px;
+}
+
+::-webkit-scrollbar-track {
+  /* background-color: #000000; */
+  background-color: #212529;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #9c9b9b;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: #555;
+}
+/* End of Customizing the scrollbar */
+
 
 /* .modal {
   animation-name: slide-down;

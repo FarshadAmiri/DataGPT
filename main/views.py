@@ -60,6 +60,7 @@ def create_rag_view(request,):   # Erros front should handle: 1-similar rag_name
 
         for file in uploaded_files:
             file_name = file.name
+            print(f"\nfile_name: {file_name} is in progress...\n")
             doc_path = os.path.join(docs_path, file_name)
             default_storage.save(doc_path, ContentFile(file.read()))
 
