@@ -14,6 +14,7 @@ from llama_index.retrievers import VectorIndexRetriever
 from llama_index.query_engine import RetrieverQueryEngine
 from llama_index.postprocessor import SimilarityPostprocessor
 from llama_index.vector_stores import MilvusVectorStore
+from main.models import Thread, Document
 import chromadb
 from pathlib import Path
 import accelerate
@@ -119,3 +120,91 @@ def add_docs(vdb_path: str, docs_paths: list):
         # Create indexes
         for doc in document:
             index.insert(doc)
+
+
+def index_builder(vdb_path: str, model, tokenizer):
+    from main.utilities.variables import system_prompt, query_wrapper_prompt
+    db = chromadb.PersistentClient(path = vdb_path)
+    chroma_collection = db.get_or_create_collection("default")
+    vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
+    storage_context = StorageContext.from_defaults(vector_store=vector_store)
+    llm = HuggingFaceLLM(context_window=4096,
+                     max_new_tokens=512,
+                     system_prompt=system_prompt,
+                     query_wrapper_prompt=query_wrapper_prompt,
+                     model=model,
+                     tokenizer=tokenizer)
+
+    embeddings = LangchainEmbedding(
+        HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+    )
+    # Create new service context instance
+    service_context = ServiceContext.from_defaults(
+        chunk_size=1024,
+        chunk_overlap=20,
+        llm=llm,
+        embed_model=embeddings
+    )
+
+    # And set the service context
+    set_global_service_context(service_context)
+    index = VectorStoreIndex.from_vector_store(vector_store, storage_context=storage_context)
+    PyMuPDFReader = download_loader("PyMuPDFReader")
+    loader = PyMuPDFReader()
+    result = {"index": index, "loader": loader}
+
+    return result
+
+
+
+
+
+
+def add_docs2(vdb_path: str, vdb, docs_dict: dict):
+    from main.utilities.variables import system_prompt, query_wrapper_prompt
+    db = chromadb.PersistentClient(path = vdb_path)
+    chroma_collection = db.get_or_create_collection("default")
+    vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
+    storage_context = StorageContext.from_defaults(vector_store=vector_store)
+    llm = HuggingFaceLLM(context_window=4096,
+                     max_new_tokens=512,
+                     system_prompt=system_prompt,
+                     query_wrapper_prompt=query_wrapper_prompt,
+                     model=model,
+                     tokenizer=tokenizer)
+
+    embeddings = LangchainEmbedding(
+        HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+    )
+    # Create new service context instance
+    service_context = ServiceContext.from_defaults(
+        chunk_size=1024,
+        chunk_overlap=20,
+        llm=llm,
+        embed_model=embeddings
+    )
+
+    # And set the service context
+    set_global_service_context(service_context)
+    index = VectorStoreIndex.from_vector_store(vector_store, storage_context=storage_context)
+    PyMuPDFReader = download_loader("PyMuPDFReader")
+    loader = PyMuPDFReader()
+    # Adding documents to vector database
+    for doc in docs_dict:
+        user = doc["user"]
+        public = doc["public"]
+        description = doc["description"]
+        loc = doc["loc"]
+        document_obj = doc["doc_obj"]
+
+        document = loader.load(file_path=Path(loc), metadata=False)
+
+        # Create indexes
+        for chunked_doc in document:
+            index.insert(chunked_doc)
+        vdb.docs.add(document_obj)
+        
+
+        add_docs(vdb_path, docs_paths)
+        
+

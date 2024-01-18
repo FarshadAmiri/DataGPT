@@ -108,6 +108,12 @@
 </div>
 <div class="col-md-2" style="padding: 0;">
   <div class="d-flex flex-column flex-shrink-0 p-3 text-white bg-dark sidebar" style="margin-left: 0;">
+  <h3>This RAG thread is augmented by the following documents:</h3>
+  {% for doc in rag_docs %}
+  <ul>
+    <li>{{ doc.name }}: {{ doc.loc }}</li>
+  </ul>
+  {% endfor %}
   </div>
 </div>
 </div>
