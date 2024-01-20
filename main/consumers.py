@@ -135,8 +135,8 @@ class RAGConsumer(AsyncConsumer):
             dict_data = json.loads(client_data)
             msg = dict_data.get("message")
             username = self.user.username
-            await self.create_chat_message(msg, rag_response=False)
             print(f"msg: {msg}")
+            await self.create_chat_message(msg, rag_response=False)
             response_dict = {
                 "message": "",
                 "username": username,

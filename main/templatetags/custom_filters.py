@@ -1,6 +1,6 @@
 from django.utils.safestring import mark_safe
 from django import template
-import json
+import json ,os
 
 register = template.Library()
 
@@ -26,3 +26,8 @@ def has_group(user, group_name):
 @register.filter
 def get_dict_value(dictionary, key):
     return dictionary.get(int(key), "")
+
+
+@register.filter
+def path_end_part(path):
+    return os.path.basename(path)

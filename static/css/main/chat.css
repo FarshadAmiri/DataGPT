@@ -225,6 +225,58 @@ body{
 }
 
 
+.tooltip {
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+}
+
+.tooltip .tooltip-text {
+  visibility: hidden;
+  width: 200px;
+  background-color: #ffffff;
+  color: #fff;
+  text-align: center;
+  border-radius: 6px;
+  padding: 5px;
+  position: absolute;
+  z-index: 1;
+  bottom: 125%;
+  left: 50%;
+  transform: translateX(-50%);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.tooltip:hover .tooltip-text {
+  visibility: visible;
+  opacity: 1;
+}
+
+#thread-name-right-sidebar {
+  color: #6ce0da;
+  font-family: RobotoSlab;
+  font-weight: bold;
+  font-size: 32px;
+}
+
+.doc-name-sidebar {
+  color: #6ce089;
+  font-family: RobotoSlab;
+  font-weight: normal;
+  font-size: 17px;
+}
+
+.spinner-grow {
+  height: 1rem;
+  width: 1rem;
+}
+
+#spinner {
+  margin-left: 43%;
+  display: none;
+}
+
 /* .options-container {
   position: relative;
 } */

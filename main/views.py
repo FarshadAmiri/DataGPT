@@ -19,50 +19,52 @@ streamer = model_obj["streamer"]
 
 
 @login_required(login_url='users:login')
-def chat_view(request, chat_id=None):
-    print(f"\nchat_id: {chat_id}\n")
+def chat_view(request, thread_id=None):
+    print(f"\nchat_id: {thread_id}\n")
     user = request.user
-    if request.method == "GET":
-        chat_threads = Thread.objects.filter(user=user)
-        if (chat_id is None) and (len(chat_threads) > 0):
-            chat_id = chat_threads[0].id
-            return redirect('main:chat', chat_id=chat_id)
-        threads_preview = dict()
-        for thread in chat_threads:
-            if ChatMessage.objects.filter(thread__id=thread.id).count() > 0:
-                txt = ChatMessage.objects.filter(thread__id=thread.id).latest('timestamp').message[:80]
-                msg_initial_words = get_first_words(txt, 60) + "..."
-                threads_preview[thread.id] = msg_initial_words
-            else:
-                threads_preview[thread.id] = "Empty chat"
+    # if request.method == "GET":
+    threads = Thread.objects.filter(user=user)
+    if (thread_id is None) and (len(threads) > 0):
+        thread_id = int(threads[0].id)
+        return redirect('main:chat', thread_id=thread_id)
+    threads_preview = dict()
+    for thread in threads:
+        if ChatMessage.objects.filter(thread__id=thread.id).count() > 0:
+            txt = ChatMessage.objects.filter(thread__id=thread.id).latest('timestamp').message[:80]
+            msg_initial_words = get_first_words(txt, 60) + "..."
+            threads_preview[thread.id] = msg_initial_words
+        else:
+            threads_preview[thread.id] = "Empty chat"
 
-        print(f"\nthreads_preview: {threads_preview}\n")
-        print(f"\nchat_id: {chat_id}\n")
-        print(f"\nactive_thread_id: {type(chat_id)} {chat_id}\n")
-        chat_id = int(chat_id)
-        messages = ChatMessage.objects.filter(user=user, thread=chat_id)
-        thread = Thread.objects.get(id=chat_id)
-        rag_docs = thread.docs.all()
-        context = {"chat_threads": chat_threads, "active_thread_id": chat_id, "rag_docs": rag_docs,
-                   "messages": messages, "threads_preview": threads_preview}
-        return render(request, 'main/chat.html', context)
+    print(f"\nthreads_preview: {threads_preview}\n")
+    print(f"\nthread_id: {thread_id}\n")
+    print(f"\nactive_thread_id: {type(thread_id)} {thread_id}\n")
+    thread_id = int(thread_id)
+    messages = ChatMessage.objects.filter(user=user, thread=thread_id)
+    thread = Thread.objects.get(id=thread_id)
+    active_thread_name = thread.name
+    rag_docs = thread.docs.all()
+    context = {"chat_threads": threads, "active_thread_id": thread_id, "active_thread_name": active_thread_name,"rag_docs": rag_docs,
+                "messages": messages, "threads_preview": threads_preview}
+    return render(request, 'main/chat.html', context)
 
 
 @login_required(login_url='users:login')
 def create_rag_view(request,):  # Erros front should handle: 1-similar rag_name, 2-avoid creating off limit rag, 3- error when rag_name is not given
     user = request.user
     if request.method == "POST":
-        global model, tokenizer
+        global model, tokenizer, vector_db_path
         uploaded_files = request.FILES.getlist('files')
         rag_name = request.POST.get("new-rag-name", None)
         vdb_path = os.path.join(vector_db_path, user.username, f'vdb_{rag_name}')
         docs_path = os.path.join(vdb_path, "docs")
         create_rag(vdb_path)
         create_folder(docs_path)
-        docs = []
-        docs_paths = []
 
-        docs_dict = dict()
+        # docs = []
+        # docs_paths = []
+        # docs_dict = dict()
+
         rag_parameters = index_builder(vdb_path, model, tokenizer)
         index, loader = rag_parameters["index"], rag_parameters["loader"]
         vdb = Thread.objects.create(user=user, name=rag_name, public=False, 
@@ -96,8 +98,43 @@ def create_rag_view(request,):  # Erros front should handle: 1-similar rag_name,
         # vdb.docs.set(docs)
         # add_docs(vdb_path, docs_paths)
 
-        return redirect('main:main_chat')
+        return redirect('main:chat', thread_id=vdb.id)
     
 
 def testView(request,):
     return render(request, "main/test.html")
+
+
+@login_required(login_url='users:login')
+def add_docs_view(request, thread_id):
+    print("\n\n111\n\n")
+    user = request.user
+    if request.method == "POST":
+        global vector_db_path, model, tokenizer
+        uploaded_files = request.FILES.getlist('files')
+        thread_id = int(thread_id)
+        thread = Thread.objects.get(user=user, id=thread_id)
+        rag_name = thread.name
+        vdb_path = os.path.join(vector_db_path, user.username, f'vdb_{rag_name}')
+        docs_path = os.path.join(vdb_path, "docs")
+        rag_parameters = index_builder(vdb_path, model, tokenizer)
+        index, loader = rag_parameters["index"], rag_parameters["loader"]
+        vdb = Thread.objects.get(user=user, name=rag_name,)
+        for file in uploaded_files:
+            print("\n\n222\n\n")
+            file_name = file.name
+            print(f"\nfile_name: {file_name} is in progress...\n")
+            doc_path = os.path.join(docs_path, file_name)
+            doc_path = default_storage.get_available_name(doc_path)
+            default_storage.save(doc_path, ContentFile(file.read()))
+
+            document = loader.load(file_path=Path(doc_path), metadata=False)
+
+            # Create indexes
+            for chunked_doc in document:
+                index.insert(chunked_doc)
+            doc_obj = Document.objects.create(user=user, name=file_name, public=False,
+                                              description=None, loc=doc_path)
+            vdb.docs.add(doc_obj)
+        print("\n\n333\n\n")
+        return redirect('main:chat', thread_id=thread_id)

@@ -71,7 +71,7 @@
     </div>
   </div>
   </div>
-  <div class="col-md-8">
+  <div class="col-md-8" style="margin-bottom: 0px; padding-bottom: 0px;">
   <div class="chat-box">
     <div class="messages" id="board">
     {% for message in messages %}
@@ -91,7 +91,18 @@
     {% endif %}
     {% endfor %}
     </div>
-    <div class="row" style="margin-bottom: 1px; padding-bottom: 1px;">
+    <div id="spinner">
+    <div class="spinner-grow text-light" role="status" >
+      <span class="sr-only"></span>
+    </div>
+    <div class="spinner-grow text-light" role="status">
+      <span class="sr-only"></span>
+    </div>
+    <div class="spinner-grow text-light" role="status">
+      <span class="sr-only"></span>
+    </div>
+    </div>
+    <div class="row" style="margin-bottom: 0px; padding-bottom: 0px;">
         <form method="post" class="form-group" id="msg-form">
             {% csrf_token %}
             <div class="input-group mb-3" style="margin-bottom: 0px; padding-bottom: 0px;">
@@ -107,13 +118,25 @@
     </div> 
 </div>
 <div class="col-md-2" style="padding: 0;">
-  <div class="d-flex flex-column flex-shrink-0 p-3 text-white bg-dark sidebar" style="margin-left: 0;">
-  <h3>This RAG thread is augmented by the following documents:</h3>
-  {% for doc in rag_docs %}
-  <ul>
-    <li>{{ doc.name }}: {{ doc.loc }}</li>
+  <div class="d-flex flex-column flex-shrink-0 p-3 text-white bg-dark sidebar" style="margin-right: 0;">
+  <h3 id="thread-name-right-sidebar">{{ active_thread_name }}</h3>
+  <hr>
+  <ul class="nav nav-pills flex-column">
+    <li class="nav-item">
+      <a href="{% url 'main:add_docs' active_thread_id %}" id="add-docs-btn" class="nav-link active text-center" aria-current="page" data-bs-toggle="modal" data-bs-target="#addDocsModal" data-bs-whatever="@getbootstrap">
+        Add new documents
+      </a>
+    </li>
   </ul>
+  <hr>
+  <h3>Included documents:</h3>
+  <div style="max-height: 800px; overflow-y: auto;">
+  <ul class="nav nav-pills flex-column doc-name-sidebar">
+  {% for doc in rag_docs %}
+      <li data-toggle="tooltip" data-placement="top" title='"{{ doc.loc|path_end_part }}" in RAG database'>* {{ doc.name }}</li>  
   {% endfor %}
+  </ul>
+  <hr>
   </div>
 </div>
 </div>
@@ -154,8 +177,46 @@
     </div>
   </div>
 </div>
+
+<div class="modal fade" id="addDocsModal" tabindex="0" aria-labelledby="addDocs" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addDocs">Add new documents</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" data-bs-newRagName="{{ new_rag_name }}"></button>
+      </div>
+      <div class="modal-body">
+        <form action="{%  url 'main:add_docs' active_thread_id %}" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+          <div class="mb-3">
+            <label for="rag-name" class="col-form-label">RAG name</label>
+            <input type="text" class="form-control" id="rag-name" name="new-rag-name" value="{{ active_thread_name }}" disabled>
+          </div>
+          <div class="mb-3">
+          <label for="llm" class="col-form-label">LLM</label>
+          <select class="form-select" id="llm" aria-label="Disabled select example" disabled>
+            <option selected>Llama2 7B</option>
+            <option value="2">Llama2 13B</option>
+            <option value="1">Mistral 7B</option>
+          </select>
+          </div>
+          <div class="mb-3">
+            <label for="docForm" class="form-label">Add knowledge source</label>
+            <input class="form-control" type="file" id="docForm" name="files" multiple>
+          </div>
+          <div id="uploadedDocuments" class="mt-3"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Discard</button>
+        <button type="submit" class="btn btn-primary">Add documents</button>
+      </div>
+      </form>
+    </div>
+  </div>
+</div>
 <script>
 var copyButtons = document.getElementsByClassName('copy-btn');
+var spinner = document.getElementById("spinner");
 
 // Add event listener to each copy button
 Array.from(copyButtons).forEach(function(button) {
@@ -201,7 +262,7 @@ var loc = window.location
 var protocol = 'ws://';
 if (loc.protocol == "https:") {protocol = 'wss://'};
 var endpoint = protocol + loc.host + loc.pathname;
-var socket = new WebSocket(endpoint);
+var socket = new WebSocket(endpoint);-
 console.log("endpoint-onload: " + endpoint);
 
 var formData = $("#msg-form")
@@ -237,6 +298,7 @@ socket.onopen = function(e) {
         scrolltoend();
         msgInput.val('');
         formData[0].reset();
+        spinner.style.display = 'block';
     })
 }
 
@@ -247,6 +309,7 @@ socket.onmessage = function(e) {
     var today = new Date();
     var time = today.getHours() + ":" + today.getMinutes();
     if (chatMsgData.mode === "new") {
+      spinner.style.display = 'none'
       var field = rag_response.replace('{rag_response}', chatMsgData.message);
       field = field.replace('{time}', time);
       $('#board').append(field);
