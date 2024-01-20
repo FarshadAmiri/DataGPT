@@ -217,6 +217,15 @@ body{
 
 #delete-thread-btn {
   background-color: rgb(223, 78, 78);
+  border-radius: 20px;
+  font-family: RobotoSlab;
+  font-size: 17px;
+}
+
+#add-docs-btn {
+  border-radius: 20px;
+  font-family: RobotoSlab;
+  font-size: 17px;
 }
 
 .showing-message {
