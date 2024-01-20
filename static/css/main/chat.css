@@ -39,8 +39,11 @@
 .container {
   border: 2px solid #dedede;
   background-color: #f1f1f1;
-  border-radius: 5px;
-  padding: 10px;
+  border-radius: 25px;
+  padding-right: 20px;
+  padding-left: 20px;
+  padding-top: 15px;
+  padding-bottom: 10px;
   margin: 10px;
   width: 65%;
   clear: both;
@@ -160,7 +163,7 @@ body{
 }
 
 #send_btn svg {
-  fill: rgb(176, 241, 116); /* Set the fill color of the SVG icon */
+  fill: rgb(116, 212, 241); /* Set the fill color of the SVG icon */
   width: 32px; /* Adjust the size of the SVG icon as needed */
   height: 32px; /* Adjust the size of the SVG icon as needed */
 }
@@ -212,6 +215,9 @@ body{
   justify-content: center;
 }
 
+#delete-thread-btn {
+  background-color: rgb(223, 78, 78);
+}
 
 .showing-message {
   color: black;
@@ -268,12 +274,16 @@ body{
 }
 
 .spinner-grow {
-  height: 1rem;
-  width: 1rem;
+  height: 0.7rem;
+  width: 0.7rem;
+  margin: 0px;
+  padding: 0px;
 }
 
 #spinner {
-  margin-left: 43%;
+  position: absolute;
+  margin-left: 30%;
+  margin-top: -10px;
   display: none;
 }
 

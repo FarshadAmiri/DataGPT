@@ -127,13 +127,18 @@
         Add new documents
       </a>
     </li>
+    <li class="nav-item" style="margin-top: 10px;">
+      <a href="{% url 'main:delete_thread' active_thread_id %}" id="delete-thread-btn" class="btn btn-danger nav-link active text-center">
+        Delete this thread
+      </a>
+    </li>
   </ul>
   <hr>
   <h3>Included documents:</h3>
   <div style="max-height: 800px; overflow-y: auto;">
   <ul class="nav nav-pills flex-column doc-name-sidebar">
   {% for doc in rag_docs %}
-      <li data-toggle="tooltip" data-placement="top" title='"{{ doc.loc|path_end_part }}" in RAG database'>* {{ doc.name }}</li>  
+      <li data-toggle="tooltip" data-placement="top" title='"{{ doc.loc|path_end_part }}" in RAG database' style="margin-bottom: 15px;">* {{ doc.name }}</li>  
   {% endfor %}
   </ul>
   <hr>
@@ -376,9 +381,42 @@ function scrolltoend() {
   }
 
 window.onload = function() {
-  scrolltoend();}
+  scrolltoend();
+  // Get the active thread ID from the hidden input field
+  var activeThreadId = document.getElementById('active-thread').value;
 
+  // Find the active thread element
+  var activeThreadElement = document.getElementById(activeThreadId);
 
+  // Check if the active thread element is visible
+  var isVisible = isElementVisible(activeThreadElement);
+
+  // Scroll the scrollbar to the area where the active thread exists
+  if (activeThreadElement && !isVisible) {
+    activeThreadElement.scrollIntoView();
+  }
+};
+
+// Function to check if an element is visible in the viewport
+function isElementVisible(element) {
+  var rect = element.getBoundingClientRect();
+  return (
+    rect.top >= 0 &&
+    rect.left >= 0 &&
+    rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+    rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+  );
+}
+
+document.getElementById("delete-thread-btn").addEventListener("click", function(event) {
+  event.preventDefault(); // Prevent the default link behavior
+
+  var confirmation = confirm("Are you sure you want to delete this thread?");
+
+  if (confirmation) {
+    window.location.href = "{% url 'main:delete_thread' active_thread_id %}";
+  }
+});
 </script>
 </body>
 </html>

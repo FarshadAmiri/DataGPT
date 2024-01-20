@@ -4,6 +4,7 @@ from main.models import Thread, Document, ChatMessage
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
+from django.db.models import Max
 from main.utilities.helper_functions import create_folder, get_first_words
 from main.utilities.RAG import create_rag, add_docs, index_builder
 from pathlib import Path
@@ -22,31 +23,32 @@ streamer = model_obj["streamer"]
 def chat_view(request, thread_id=None):
     print(f"\nchat_id: {thread_id}\n")
     user = request.user
-    # if request.method == "GET":
-    threads = Thread.objects.filter(user=user)
-    if (thread_id is None) and (len(threads) > 0):
-        thread_id = int(threads[0].id)
-        return redirect('main:chat', thread_id=thread_id)
-    threads_preview = dict()
-    for thread in threads:
-        if ChatMessage.objects.filter(thread__id=thread.id).count() > 0:
-            txt = ChatMessage.objects.filter(thread__id=thread.id).latest('timestamp').message[:80]
-            msg_initial_words = get_first_words(txt, 60) + "..."
-            threads_preview[thread.id] = msg_initial_words
-        else:
-            threads_preview[thread.id] = "Empty chat"
+    if request.method == "GET":
+        threads = Thread.objects.filter(user=user).annotate(last_message_timestamp=Max('chatmessage__timestamp'))
+        threads = threads.order_by('-last_message_timestamp')
+        if (thread_id is None) and (len(threads) > 0):
+            thread_id = int(threads[0].id)
+            return redirect('main:chat', thread_id=thread_id)
+        threads_preview = dict()
+        for thread in threads:
+            if ChatMessage.objects.filter(thread__id=thread.id).count() > 0:
+                txt = ChatMessage.objects.filter(thread__id=thread.id).latest('timestamp').message[:80]
+                msg_initial_words = get_first_words(txt, 60) + "..."
+                threads_preview[thread.id] = msg_initial_words
+            else:
+                threads_preview[thread.id] = "Empty chat"
 
-    print(f"\nthreads_preview: {threads_preview}\n")
-    print(f"\nthread_id: {thread_id}\n")
-    print(f"\nactive_thread_id: {type(thread_id)} {thread_id}\n")
-    thread_id = int(thread_id)
-    messages = ChatMessage.objects.filter(user=user, thread=thread_id)
-    thread = Thread.objects.get(id=thread_id)
-    active_thread_name = thread.name
-    rag_docs = thread.docs.all()
-    context = {"chat_threads": threads, "active_thread_id": thread_id, "active_thread_name": active_thread_name,"rag_docs": rag_docs,
-                "messages": messages, "threads_preview": threads_preview}
-    return render(request, 'main/chat.html', context)
+        print(f"\nthreads_preview: {threads_preview}\n")
+        print(f"\nthread_id: {thread_id}\n")
+        print(f"\nactive_thread_id: {type(thread_id)} {thread_id}\n")
+        thread_id = int(thread_id)
+        messages = ChatMessage.objects.filter(user=user, thread=thread_id)
+        thread = Thread.objects.get(id=thread_id)
+        active_thread_name = thread.name
+        rag_docs = thread.docs.all()
+        context = {"chat_threads": threads, "active_thread_id": thread_id, "active_thread_name": active_thread_name,"rag_docs": rag_docs,
+                    "messages": messages, "threads_preview": threads_preview}
+        return render(request, 'main/chat.html', context)
 
 
 @login_required(login_url='users:login')
@@ -107,7 +109,6 @@ def testView(request,):
 
 @login_required(login_url='users:login')
 def add_docs_view(request, thread_id):
-    print("\n\n111\n\n")
     user = request.user
     if request.method == "POST":
         global vector_db_path, model, tokenizer
@@ -121,7 +122,6 @@ def add_docs_view(request, thread_id):
         index, loader = rag_parameters["index"], rag_parameters["loader"]
         vdb = Thread.objects.get(user=user, name=rag_name,)
         for file in uploaded_files:
-            print("\n\n222\n\n")
             file_name = file.name
             print(f"\nfile_name: {file_name} is in progress...\n")
             doc_path = os.path.join(docs_path, file_name)
@@ -136,5 +136,13 @@ def add_docs_view(request, thread_id):
             doc_obj = Document.objects.create(user=user, name=file_name, public=False,
                                               description=None, loc=doc_path)
             vdb.docs.add(doc_obj)
-        print("\n\n333\n\n")
         return redirect('main:chat', thread_id=thread_id)
+
+
+@login_required(login_url='users:login')
+def delete_thread(request, thread_id):
+    user = request.user
+    thread_id = int(thread_id)
+    thread = Thread.objects.get(user=user, id=thread_id)
+    thread.delete()
+    return redirect('main:main_chat')
