@@ -184,10 +184,12 @@ body{
   font-weight: 600;
   font-size: 18px;
   color: rgb(6, 46, 6);
+  border-radius: 10px;
 }
 
 .rag-thread{
-  cursor: pointer
+  cursor: pointer;
+  border-radius: 7px;
 }
 
 #profile-img{

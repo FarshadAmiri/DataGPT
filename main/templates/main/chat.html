@@ -42,15 +42,12 @@
       {% for thread in chat_threads %}
       <a href="{% url 'main:chat' thread.id %}" class="list-group-item list-group-item-action py-3 lh-tight rag-thread {% if active_thread_id == thread.id %}current{% endif %}" id="{{thread.id}}" style="margin-bottom: 10px;">
         <div class="d-flex w-100 align-items-center justify-content-between">
-          <strong class="mb-1">{{ thread.name }}</strong>
+          <strong class="mb-1 thread_name">{{ thread.name }}</strong>
           <small class="text-muted">Tues</small>
         </div>
         {% with thread.id as thread_id %}
         <div class="col-10 mb-1 small" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ threads_preview|get_dict_value:thread_id }}</div>
         {% endwith %}
-        {% comment %} <div class="options-container">
-          <button class="options-btn"><img class="options-img"></button>
-        </div> {% endcomment %}
       </a>
       {% endfor %}
     </ul>
@@ -176,7 +173,7 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Discard</button>
-        <button type="submit" class="btn btn-primary">Create</button>
+        <button type="submit" class="btn btn-primary" onclick="checkNewName(event)">Create</button>
       </div>
       </form>
     </div>
@@ -417,6 +414,22 @@ document.getElementById("delete-thread-btn").addEventListener("click", function(
     window.location.href = "{% url 'main:delete_thread' active_thread_id %}";
   }
 });
+
+
+function checkNewName(event) {
+  var threads = document.getElementsByClassName("thread_name");
+  var threadNames = []
+
+  for (var i = 0; i < threads.length; i++) {
+    var threadName = threads[i].innerHTML;
+    threadNames.push(threadName);
+}
+  inputName = document.getElementById("rag-name").value
+  if (threadNames.includes(inputName)) {
+    event.preventDefault();
+    alert("Thread name already exists! try another name");
+  }
+};
 </script>
 </body>
 </html>
