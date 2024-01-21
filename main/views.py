@@ -8,7 +8,7 @@ from django.db.models import Max
 from main.utilities.helper_functions import create_folder, get_first_words
 from main.utilities.RAG import create_rag, add_docs, index_builder
 from pathlib import Path
-import os
+import os, shutil
 
 vector_db_path = "vector_dbs"
 
@@ -41,6 +41,17 @@ def chat_view(request, thread_id=None):
         print(f"\nthreads_preview: {threads_preview}\n")
         print(f"\nthread_id: {thread_id}\n")
         print(f"\nactive_thread_id: {type(thread_id)} {thread_id}\n")
+        # Delete threads directories that their model instance have been removed before.
+        threads_names = ["vdb_" + x for x in list(threads.values_list("name", flat=True))]
+        user_db_path = os.path.join(vector_db_path, user.username)
+        user_db_vdbs = os.listdir(user_db_path)
+        to_be_deleted_threads = [vdb for vdb in user_db_vdbs if vdb not in threads_names]
+        for vdb in to_be_deleted_threads:
+            try:
+                vdb_path = os.path.join(user_db_path, vdb)
+                shutil.rmtree(vdb_path, ignore_errors=False, onerror=None)
+            except:
+                continue
         thread_id = int(thread_id)
         messages = ChatMessage.objects.filter(user=user, thread=thread_id)
         thread = Thread.objects.get(id=thread_id)
