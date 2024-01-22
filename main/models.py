@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 
 
 class Document(models.Model):
@@ -27,4 +28,9 @@ class ChatMessage(models.Model):
     timestamp   =  models.DateTimeField(auto_now_add=True)
 
 
-
+class Collection(models.Model):
+    user_created =   models.ForeignKey(get_user_model(), on_delete=models.CASCADE)
+    name =   models.CharField(max_length=128)
+    docs =   models.ManyToManyField(Document, related_name='collections')
+    allowed_groups = models.ManyToManyField(Group, related_name='allowed_collections')
+    description = models.TextField(max_length=1024, null=True)

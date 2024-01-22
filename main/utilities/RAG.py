@@ -162,6 +162,7 @@ def index_builder(vdb_path: str, model, tokenizer):
 
 def add_docs2(vdb_path: str, vdb, docs_dict: dict):
     from main.utilities.variables import system_prompt, query_wrapper_prompt
+    from main.views import model, tokenizer
     db = chromadb.PersistentClient(path = vdb_path)
     chroma_collection = db.get_or_create_collection("default")
     vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
@@ -203,8 +204,3 @@ def add_docs2(vdb_path: str, vdb, docs_dict: dict):
         for chunked_doc in document:
             index.insert(chunked_doc)
         vdb.docs.add(document_obj)
-        
-
-        add_docs(vdb_path, docs_paths)
-        
-

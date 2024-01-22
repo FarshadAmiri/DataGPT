@@ -31,29 +31,21 @@
     <ul class="nav nav-pills flex-column">
       <li class="nav-item">
         <a href="{% url 'main:create_rag' %}" id="new-rag-btn" class="nav-link active text-center" aria-current="page" data-bs-toggle="modal" data-bs-target="#newRagModal" data-bs-whatever="@getbootstrap">
-          Create a new RAG thread
+          Create a new collection
         </a>
       </li>
-      {% if user|has_group:"Admins" or user.is_superuser%}
-      <li class="nav-item" style="margin-top: 10px;">
-        <a href=# id="new-collection-btn" class="nav-link active text-center">
-          Manage collections
-        </a>
-      </li>
-      {% endif %}
     </ul>
     <br>
     <div style="max-height: 800px; overflow-y: auto;">
     <ul class="nav nav-pills flex-column" id="#chats">
-      <input type="hidden" id="active-thread" value="{{active_thread_id}}">
-      {% for thread in chat_threads %}
-      <a href="{% url 'main:chat' thread.id %}" class="list-group-item list-group-item-action py-3 lh-tight rag-thread {% if active_thread_id == thread.id %}current{% endif %}" id="{{thread.id}}" style="margin-bottom: 10px;">
+      <input type="hidden" id="active-thread" value="{{active_collection_id}}">
+      {% for collection in collections %}
+      <a href="{% url 'main:collections' collection.id %}" class="list-group-item list-group-item-action py-3 lh-tight collection-box {% if active_thread_id == thread.id %}current{% endif %}" id="{{thread.id}}" style="margin-bottom: 10px;">
         <div class="d-flex w-100 align-items-center justify-content-between">
-          <strong class="mb-1 thread_name">{{ thread.name }}</strong>
-          <small class="text-muted">Tues</small>
+          <strong class="mb-1 collection_name">{{ collection.name }}</strong>
         </div>
-        {% with thread.id as thread_id %}
-        <div class="col-10 mb-1 small" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ threads_preview|get_dict_value:thread_id }}</div>
+        {% with collection.id as collection_id %}
+        <div class="col-10 mb-1 small" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ collections_docs_counts|get_dict_value:collection_id }}</div>
         {% endwith %}
       </a>
       {% endfor %}
@@ -77,7 +69,7 @@
   </div>
   <div class="col-md-8" style="margin-bottom: 0px; padding-bottom: 0px;">
   <div class="chat-box">
-    <div class="messages" id="board">
+    {% comment %} <div class="messages" id="board">
     {% for message in messages %}
     {% if message.rag_response == False %}
         <div class="container darker">
@@ -94,7 +86,7 @@
         </div>
     {% endif %}
     {% endfor %}
-    </div>
+    </div> {% endcomment %}
     <div id="spinner">
     <div class="spinner-grow text-light" role="status" >
       <span class="sr-only"></span>
@@ -128,23 +120,15 @@
   <hr>
   <ul class="nav nav-pills flex-column">
     <li class="nav-item">
-      <a href="{% url 'main:add_docs' active_thread_id %}" id="add-docs-btn" class="nav-link active text-center" aria-current="page" data-bs-toggle="modal" data-bs-target="#addDocsModal" data-bs-whatever="@getbootstrap">
+      <a href="{% url 'main:collection_add_docs' active_collection_id %}" id="add-docs-btn" class="nav-link active text-center" aria-current="page" data-bs-toggle="modal" data-bs-target="#addDocsModal" data-bs-whatever="@getbootstrap">
         Add new documents
       </a>
     </li>
     <li class="nav-item" style="margin-top: 14px;">
-      <a href="{% url 'main:delete_thread' active_thread_id %}" id="delete-thread-btn" class="btn btn-danger nav-link active text-center">
-        Delete this thread
+      <a href="{% url 'main:collection_delete' active_collection_id %}" id="delete-collection-btn" class="btn btn-danger nav-link active text-center">
+        Delete this collection
       </a>
     </li>
-  </ul>
-  <hr>
-  <h3>Included documents:</h3>
-  <div style="max-height: 800px; overflow-y: auto;">
-  <ul class="nav nav-pills flex-column doc-name-sidebar">
-  {% for doc in rag_docs %}
-      <li data-toggle="tooltip" data-placement="top" title='"{{ doc.loc|path_end_part }}" in RAG database' style="margin-bottom: 15px;">* {{ doc.name }}</li>  
-  {% endfor %}
   </ul>
   <hr>
   </div>
