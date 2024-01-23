@@ -9,6 +9,7 @@ class Document(models.Model):
     loc =  models.CharField(max_length=512)
     public = models.BooleanField(default=False)
     description = models.TextField(max_length=1024, null=True)
+    time_created   =  models.DateTimeField(auto_now_add=True)
 
 
 class Thread(models.Model):
@@ -18,6 +19,7 @@ class Thread(models.Model):
     loc  =   models.CharField(max_length=512)
     public = models.BooleanField(default=False)
     description = models.TextField(max_length=1024, null=True)
+    time_created   =  models.DateTimeField(auto_now_add=True)
 
 
 class ChatMessage(models.Model):
@@ -34,3 +36,4 @@ class Collection(models.Model):
     docs =   models.ManyToManyField(Document, related_name='collections')
     allowed_groups = models.ManyToManyField(Group, related_name='allowed_collections')
     description = models.TextField(max_length=1024, null=True)
+    time_created   =  models.DateTimeField(auto_now_add=True)

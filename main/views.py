@@ -4,7 +4,7 @@ from main.models import Thread, Document, ChatMessage, Collection
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
-from django.db.models import Max
+from django.db.models import Max, Count
 from main.utilities.helper_functions import create_folder, get_first_words
 from main.utilities.RAG import create_rag, add_docs, index_builder
 from pathlib import Path
@@ -121,13 +121,44 @@ def create_rag_view(request,):  # Erros front should handle: 1-similar rag_name,
 
         return redirect('main:chat', thread_id=vdb.id)
 
+
+@login_required(login_url='users:login')    
+def collections_view(request,  collection_id=None,):
+    user = request.user
+    if request.method == "GET":
+        collections = Collection.objects.annotate(total_docs=Count('docs')).values('name', 'total_docs')
+        if (collection_id is None) and (len(collections) > 0):
+            collection_id = int(collections[0].id)
+            return redirect('main:chat', collection_id=collection_id)
+        elif len(collections) == 0:
+            context = {"no_collections": True, "active_collection_id": 0,}
+            return render(request, 'main/collections.html', context)
+        
+        collection_id = int(collection_id)
+        collection = Collection.objects.get(id=collection_id)
+        documents = collection.docs.all()
+        context = {"collections": collections, "active_collection_id": collection.id, "active_collection_name": collection.name,
+                    "documents": documents,}
+        render(request, 'main/collections.html', context)
+
+
 @login_required(login_url='users:login')    
 def create_collection_view(request,):
     user = request.user
     if request.method == "GET":
+        return
         collections = Collection.objects.all()
         context = {"collections": collections, "user": user, }
         render(request, 'main/collections.html', context)
+
+
+@login_required(login_url='users:login')    
+def delete_collection(request, collection_id):
+    user = request.user
+    collection_id = int(collection_id)
+    collection = Collection.objects.get(user=user, id=collection_id)
+    collection.delete()
+    return redirect('main:main_collections')
 
 
 @login_required(login_url='users:login')

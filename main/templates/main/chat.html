@@ -36,7 +36,7 @@
       </li>
       {% if user|has_group:"Admins" or user.is_superuser%}
       <li class="nav-item" style="margin-top: 10px;">
-        <a href=# id="new-collection-btn" class="nav-link active text-center">
+        <a href="{% url 'main:main_collections' %}" id="new-collection-btn" class="nav-link active text-center">
           Manage collections
         </a>
       </li>
@@ -444,7 +444,7 @@ function checkNewName(event) {
   inputName = document.getElementById("rag-name").value
   if (threadNames.includes(inputName)) {
     event.preventDefault();
-    alert("Thread name already exists! try another name");
+    alert("This thread name already exists! try another name");
   }
 };
 </script>
