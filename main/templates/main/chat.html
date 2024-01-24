@@ -34,9 +34,9 @@
           Create a new RAG thread
         </a>
       </li>
-      {% if user|has_group:"Admins" or user.is_superuser%}
+      {% if user|has_group:"Admin" or user.is_superuser%}
       <li class="nav-item" style="margin-top: 10px;">
-        <a href="{% url 'main:main_collections' %}" id="new-collection-btn" class="nav-link active text-center">
+        <a href="{% url 'main:main_collection' %}" id="new-collection-btn" class="nav-link active text-center">
           Manage collections
         </a>
       </li>
@@ -49,7 +49,7 @@
       {% for thread in chat_threads %}
       <a href="{% url 'main:chat' thread.id %}" class="list-group-item list-group-item-action py-3 lh-tight rag-thread {% if active_thread_id == thread.id %}current{% endif %}" id="{{thread.id}}" style="margin-bottom: 10px;">
         <div class="d-flex w-100 align-items-center justify-content-between">
-          <strong class="mb-1 thread_name">{{ thread.name }}</strong>
+          <strong class="mb-1 thread_name {% if active_thread_id == thread.id %}current{% endif %}">{{ thread.name }}</strong>
           <small class="text-muted">Tues</small>
         </div>
         {% with thread.id as thread_id %}
@@ -165,6 +165,15 @@
           <div class="mb-3">
             <label for="rag-name" class="col-form-label">RAG name</label>
             <input type="text" class="form-control" id="rag-name" name="new-rag-name">
+          </div>
+          <div class="mb-3">
+          <label for="llm" class="col-form-label">Base documents collection</label>
+          <select class="form-select" name="base-collection-id">
+            <option value='None'>None</option>
+            {% for collection in collections %}
+              <option value='{{ collection.id }}'>{{ collection.name }}</option>
+            {% endfor %}
+          </select>
           </div>
           <div class="mb-3">
           <label for="llm" class="col-form-label">LLM</label>
@@ -400,15 +409,15 @@ window.onload = function() {
   var activeThreadElement = document.getElementById(activeThreadId);
   var isVisible = isElementVisible(activeThreadElement);
 
+  // Scroll the scrollbar to the area where the active thread exists
+  if (activeThreadElement && !isVisible) {
+    activeThreadElement.scrollIntoView();
+  }
   // Place scroller at the last message area
   var containers = document.querySelectorAll(".container");
   var lastContainer = containers[containers.length - 1];
   lastContainer.scrollIntoView();
 
-  // Scroll the scrollbar to the area where the active thread exists
-  if (activeThreadElement && !isVisible) {
-    activeThreadElement.scrollIntoView();
-  }
 };
 
 // Function to check if an element is visible in the viewport

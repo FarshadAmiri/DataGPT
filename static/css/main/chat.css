@@ -177,6 +177,9 @@ body{
   
 }
 
+.list-group-item:hover strong {
+  color: rgb(0, 112, 204);
+}
 
 #new-rag-btn {
   background-image: radial-gradient( circle 759px at -6.7% 50%,  rgb(110, 156, 105) 0%, rgb(148, 197, 142) 26.2%, rgb(168, 212, 161) 50.6%, rgb(144, 199, 137) 74.1%, rgb(108, 134, 105) 100.3% );
@@ -234,7 +237,7 @@ body{
 }
 
 #delete-thread-btn {
-  background-color: rgb(223, 78, 78);
+  background-color: rgb(223, 94, 94);
   border-radius: 20px;
   font-family: RobotoSlab;
   font-size: 17px;

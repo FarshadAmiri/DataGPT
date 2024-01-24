@@ -1,7 +1,10 @@
 from django.shortcuts import render, redirect
 from main.utilities.RAG import load_model, llm_inference
 from main.models import Thread, Document, ChatMessage, Collection
+from users.models import User
 from django.contrib.auth.decorators import login_required, permission_required
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.models import Group
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from django.db.models import Max, Count
@@ -12,6 +15,7 @@ import os, shutil
 from llama_index import SimpleDirectoryReader
 
 vector_db_path = "vector_dbs"
+collections_path = "collections"
 
 model_obj = load_model()
 model = model_obj["model"]
@@ -64,8 +68,9 @@ def chat_view(request, thread_id=None):
         active_thread = Thread.objects.get(id=thread_id)
         active_thread_name = thread.name
         rag_docs = active_thread.docs.all()
+        collections = Collection.objects.all().values('id', 'name')
         context = {"chat_threads": threads, "active_thread_id": thread_id, "active_thread_name": active_thread_name,"rag_docs": rag_docs,
-                    "messages": messages, "threads_preview": threads_preview}
+                    "messages": messages, "threads_preview": threads_preview, 'collections': collections,}
         return render(request, 'main/chat.html', context)
 
 
@@ -76,17 +81,17 @@ def create_rag_view(request,):  # Erros front should handle: 1-similar rag_name,
         global model, tokenizer, vector_db_path
         uploaded_files = request.FILES.getlist('files')
         rag_name = request.POST.get("new-rag-name", None)
+        base_collection_id = request.POST.get("base-collection-id", None)
         vdb_path = os.path.join(vector_db_path, user.username, f'vdb_{rag_name}')
         docs_path = os.path.join(vdb_path, "docs")
-        create_rag(vdb_path)
+        if base_collection_id in ["None", None]:
+            create_rag(vdb_path)
+        else:
+            base_collection = Collection.objects.get(id=base_collection_id)
+            pass
         create_folder(docs_path)
 
-        # docs = []
-        # docs_paths = []
-        # docs_dict = dict()
-
-        rag_parameters = index_builder(vdb_path, model, tokenizer)
-        index, loader = rag_parameters["index"], rag_parameters["loader"]
+        index = index_builder(vdb_path)
         vdb = Thread.objects.create(user=user, name=rag_name, public=False, 
                                     description=None, loc=vdb_path)
         for file in uploaded_files:
@@ -96,7 +101,6 @@ def create_rag_view(request,):  # Erros front should handle: 1-similar rag_name,
             doc_path = default_storage.get_available_name(doc_path)
             default_storage.save(doc_path, ContentFile(file.read()))
 
-            # document = loader.load(file_path=Path(doc_path), metadata=False)
             document = SimpleDirectoryReader(input_files=[doc_path]).load_data()
 
             # Create indexes
@@ -106,59 +110,9 @@ def create_rag_view(request,):  # Erros front should handle: 1-similar rag_name,
                                               description=None, loc=doc_path)
             vdb.docs.add(doc_obj)
 
-            # docs.append(doc_obj)
-            # docs_paths.append(doc_path)
-
-            # docs_dict[file_name] = dict()
-            # docs_dict[file_name]["user"] = user
-            # docs_dict[file_name]["public"] = False
-            # docs_dict[file_name]["description"] = None
-            # docs_dict[file_name]["loc"] = doc_path
-            # docs_dict[file_name]["doc_obj"] = doc_obj
-        
-        # vdb.docs.set(docs)
-        # add_docs(vdb_path, docs_paths)
-
         return redirect('main:chat', thread_id=vdb.id)
 
 
-@login_required(login_url='users:login')    
-def collections_view(request,  collection_id=None,):
-    user = request.user
-    if request.method == "GET":
-        collections = Collection.objects.annotate(total_docs=Count('docs')).values('name', 'total_docs')
-        if (collection_id is None) and (len(collections) > 0):
-            collection_id = int(collections[0].id)
-            return redirect('main:chat', collection_id=collection_id)
-        elif len(collections) == 0:
-            context = {"no_collections": True, "active_collection_id": 0,}
-            return render(request, 'main/collections.html', context)
-        
-        collection_id = int(collection_id)
-        collection = Collection.objects.get(id=collection_id)
-        documents = collection.docs.all()
-        context = {"collections": collections, "active_collection_id": collection.id, "active_collection_name": collection.name,
-                    "documents": documents,}
-        render(request, 'main/collections.html', context)
-
-
-@login_required(login_url='users:login')    
-def create_collection_view(request,):
-    user = request.user
-    if request.method == "GET":
-        return
-        collections = Collection.objects.all()
-        context = {"collections": collections, "user": user, }
-        render(request, 'main/collections.html', context)
-
-
-@login_required(login_url='users:login')    
-def delete_collection(request, collection_id):
-    user = request.user
-    collection_id = int(collection_id)
-    collection = Collection.objects.get(user=user, id=collection_id)
-    collection.delete()
-    return redirect('main:main_collections')
 
 
 @login_required(login_url='users:login')
@@ -172,8 +126,7 @@ def add_docs_view(request, thread_id):
         rag_name = thread.name
         vdb_path = os.path.join(vector_db_path, user.username, f'vdb_{rag_name}')
         docs_path = os.path.join(vdb_path, "docs")
-        rag_parameters = index_builder(vdb_path, model, tokenizer)
-        index, loader = rag_parameters["index"], rag_parameters["loader"]
+        index = index_builder(vdb_path)
         vdb = Thread.objects.get(user=user, name=rag_name,)
         for file in uploaded_files:
             file_name = file.name
@@ -195,9 +148,110 @@ def add_docs_view(request, thread_id):
 
 
 @login_required(login_url='users:login')
-def delete_thread(request, thread_id):
+def delete_view(request, thread_id):
     user = request.user
     thread_id = int(thread_id)
     thread = Thread.objects.get(user=user, id=thread_id)
     thread.delete()
     return redirect('main:main_chat')
+
+
+@login_required(login_url='users:login')    
+@user_passes_test(lambda user: user.groups.filter(name='Admin').exists())
+def collections_view(request,  collection_id=None,):
+    user = request.user
+    if request.method == "GET":
+        collections = Collection.objects.annotate(total_docs=Count('docs')).values('id', 'name', 'total_docs')
+        if (collection_id is None) and (len(collections) > 0):
+            collection_id = int(collections[0]["id"])
+            return redirect('main:collection', collection_id=collection_id)
+        elif len(collections) == 0:
+            context = {"no_collections": True, "active_collection_id": 0,}
+            return render(request, 'main/collections.html', context)
+        
+        collection_id = int(collection_id)
+        collection = Collection.objects.get(id=collection_id)
+        documents = collection.docs.all()
+        context = {"collections": collections, "active_collection_id": collection.id, "active_collection_name": collection.name,
+                    "documents": documents,}
+        return render(request, 'main/collections.html', context)
+
+
+@login_required(login_url='users:login')   
+@user_passes_test(lambda user: user.groups.filter(name='Admin').exists()) 
+def collection_create_view(request,):
+    user = request.user
+    if request.method == "POST":
+        global collections_path
+        uploaded_files = request.FILES.getlist('files')
+        collection_name = request.POST.get("new-collection-name", None)
+
+        allowed_groups = Group.objects.all() # Can be specified by user while creation
+        
+        collection_path = os.path.join(collections_path, f'collection_{collection_name}')
+        docs_path = os.path.join(collection_path, "docs")
+        create_rag(collection_path)
+        create_folder(docs_path)
+
+        index = index_builder(collection_path)
+        collection_vdb = Collection.objects.create(user_created=user, name=collection_name, description=None, loc=collection_path)
+        collection_vdb.allowed_groups.set(allowed_groups)
+        for file in uploaded_files:
+            file_name = file.name
+            print(f"\nfile_name: {file_name} is in progress...\n")
+            doc_path = os.path.join(docs_path, file_name)
+            doc_path = default_storage.get_available_name(doc_path)
+            default_storage.save(doc_path, ContentFile(file.read()))
+
+            document = SimpleDirectoryReader(input_files=[doc_path]).load_data()
+
+            # Create indexes
+            for chunked_doc in document:
+                index.insert(chunked_doc)
+            doc_obj = Document.objects.create(user=user, name=file_name, public=False,
+                                              description=None, loc=doc_path)
+            collection_vdb.docs.add(doc_obj)
+
+        return redirect('main:collection', collection_id=collection_vdb.id)
+
+
+
+@login_required(login_url='users:login')
+@user_passes_test(lambda user: user.groups.filter(name='Admin').exists())
+def collection_delete_view(request, collection_id):
+    user = request.user
+    collection_id = int(collection_id)
+    collection = Collection.objects.get(id=collection_id)  # Now each Admin can delete any of collections
+    collection.delete()
+    return redirect('main:main_collection')
+
+
+@login_required(login_url='users:login')
+def collection_add_docs_view(request, collection_id):
+    user = request.user
+    if request.method == "POST":
+        global collections_path
+        uploaded_files = request.FILES.getlist('files')
+        collection_id = int(collection_id)
+        collection = Collection.objects.get(user_created=user, id=collection_id)  # Now each Admin can add to any of collections
+        collection_name = collection.name
+        collection_path = os.path.join(collections_path, f'collection_{collection_name}')
+        docs_path = os.path.join(collection_path, "docs")
+        index = index_builder(collection_path)
+        for file in uploaded_files:
+            file_name = file.name
+            print(f"\nfile_name: {file_name} is in progress...\n")
+            doc_path = os.path.join(docs_path, file_name)
+            doc_path = default_storage.get_available_name(doc_path)
+            default_storage.save(doc_path, ContentFile(file.read()))
+
+            # document = loader.load(file_path=Path(doc_path), metadata=False)
+            document = SimpleDirectoryReader(input_files=[doc_path]).load_data()
+
+            # Create indexes
+            for chunked_doc in document:
+                index.insert(chunked_doc)
+            doc_obj = Document.objects.create(user=user, name=file_name, public=False,
+                                              description=None, loc=doc_path)
+            collection.docs.add(doc_obj)
+        return redirect('main:collection', collection_id=collection_id)

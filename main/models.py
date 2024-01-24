@@ -17,7 +17,6 @@ class Thread(models.Model):
     name =   models.CharField(max_length=32)
     docs =   models.ManyToManyField(Document, related_name='vector_dbs')
     loc  =   models.CharField(max_length=512)
-    public = models.BooleanField(default=False)
     description = models.TextField(max_length=1024, null=True)
     time_created   =  models.DateTimeField(auto_now_add=True)
 
@@ -37,3 +36,4 @@ class Collection(models.Model):
     allowed_groups = models.ManyToManyField(Group, related_name='allowed_collections')
     description = models.TextField(max_length=1024, null=True)
     time_created   =  models.DateTimeField(auto_now_add=True)
+    loc  =  models.CharField(max_length=512)
