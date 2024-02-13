@@ -8,14 +8,17 @@ from django.contrib.auth.models import Group
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from django.db.models import Max, Count
-from main.utilities.helper_functions import create_folder, get_first_words
+from main.utilities.helper_functions import create_folder, get_first_words, copy_folder_contents, hash_file
 from main.utilities.RAG import create_rag, add_docs, index_builder
 from pathlib import Path
 import os, shutil
 from llama_index import SimpleDirectoryReader
+from llama_index import Document as llama_index_doc
+
 
 vector_db_path = "vector_dbs"
 collections_path = "collections"
+# model_name = "TheBloke/Mistral-7B-Instruct-v0.2-AWQ"
 
 model_obj = load_model()
 model = model_obj["model"]
@@ -24,7 +27,8 @@ device = model_obj["device"]
 streamer = model_obj["streamer"]
 
 
-@login_required(login_url='users:login')
+
+@login_required(login_url='users:login') 
 def chat_view(request, thread_id=None):
     print(f"\nchat_id: {thread_id}\n")
     user = request.user
@@ -49,6 +53,7 @@ def chat_view(request, thread_id=None):
         print(f"\nthreads_preview: {threads_preview}\n")
         print(f"\nthread_id: {thread_id}\n")
         print(f"\nactive_thread_id: {type(thread_id)} {thread_id}\n")
+              
         # Delete threads directories that their model instance have been removed before.
         try:
             threads_names = ["vdb_" + x for x in list(threads.values_list("name", flat=True))]
@@ -63,14 +68,16 @@ def chat_view(request, thread_id=None):
                     continue
         except:
             pass
+            
         thread_id = int(thread_id)
         messages = ChatMessage.objects.filter(user=user, thread=thread_id)
         active_thread = Thread.objects.get(id=thread_id)
         active_thread_name = thread.name
         rag_docs = active_thread.docs.all()
+        base_collection_name = None if active_thread.base_collection == None else active_thread.base_collection.name
         collections = Collection.objects.all().values('id', 'name')
         context = {"chat_threads": threads, "active_thread_id": thread_id, "active_thread_name": active_thread_name,"rag_docs": rag_docs,
-                    "messages": messages, "threads_preview": threads_preview, 'collections': collections,}
+                   "base_collection_name": base_collection_name ,"messages": messages, "threads_preview": threads_preview, 'collections': collections,}
         return render(request, 'main/chat.html', context)
 
 
@@ -81,35 +88,38 @@ def create_rag_view(request,):  # Erros front should handle: 1-similar rag_name,
         global model, tokenizer, vector_db_path
         uploaded_files = request.FILES.getlist('files')
         rag_name = request.POST.get("new-rag-name", None)
+        description = None
         base_collection_id = request.POST.get("base-collection-id", None)
         vdb_path = os.path.join(vector_db_path, user.username, f'vdb_{rag_name}')
         docs_path = os.path.join(vdb_path, "docs")
+        print(f"base_collection_id: {base_collection_id}")
         if base_collection_id in ["None", None]:
             create_rag(vdb_path)
+            create_folder(docs_path)
+            vdb = Thread.objects.create(user=user, name=rag_name, description=description, loc=vdb_path,)
+            index = index_builder(vdb_path)
+            for file in uploaded_files:
+                file_name = file.name
+                print(f"\nfile_name: {file_name} is in progress...\n")
+                doc_path = os.path.join(docs_path, file_name)
+                doc_path = default_storage.get_available_name(doc_path)
+                default_storage.save(doc_path, ContentFile(file.read()))
+
+                document = SimpleDirectoryReader(input_files=[doc_path]).load_data()
+                doc_sha256 = hash_file(doc_path)["sha256"]
+
+                doc_obj = Document.objects.create(user=user, name=file_name, public=False,
+                                                  description=None, loc=doc_path, sha256= doc_sha256)
+                # Create indexes
+                for idx, chunked_doc in enumerate(document):
+                    doc = llama_index_doc(text=chunked_doc.text, id_=f"{doc_obj.id}_{idx}")
+                    index.insert(doc)
+                vdb.docs.add(doc_obj)
         else:
             base_collection = Collection.objects.get(id=base_collection_id)
-            pass
-        create_folder(docs_path)
-
-        index = index_builder(vdb_path)
-        vdb = Thread.objects.create(user=user, name=rag_name, public=False, 
-                                    description=None, loc=vdb_path)
-        for file in uploaded_files:
-            file_name = file.name
-            print(f"\nfile_name: {file_name} is in progress...\n")
-            doc_path = os.path.join(docs_path, file_name)
-            doc_path = default_storage.get_available_name(doc_path)
-            default_storage.save(doc_path, ContentFile(file.read()))
-
-            document = SimpleDirectoryReader(input_files=[doc_path]).load_data()
-
-            # Create indexes
-            for chunked_doc in document:
-                index.insert(chunked_doc)
-            doc_obj = Document.objects.create(user=user, name=file_name, public=False,
-                                              description=None, loc=doc_path)
-            vdb.docs.add(doc_obj)
-
+            collection_dir = base_collection.loc
+            # copy_folder_contents(collection_dir, vdb_path, "docs")
+            vdb = Thread.objects.create(user=user, name=rag_name, description=description, loc=collection_dir, base_collection=base_collection)
         return redirect('main:chat', thread_id=vdb.id)
 
 
@@ -137,12 +147,14 @@ def add_docs_view(request, thread_id):
 
             # document = loader.load(file_path=Path(doc_path), metadata=False)
             document = SimpleDirectoryReader(input_files=[doc_path]).load_data()
+            doc_sha256 = hash_file(doc_path)["sha256"]
 
-            # Create indexes
-            for chunked_doc in document:
-                index.insert(chunked_doc)
             doc_obj = Document.objects.create(user=user, name=file_name, public=False,
-                                              description=None, loc=doc_path)
+                                              description=None, loc=doc_path, sha256=doc_sha256)
+            # Create indexes
+            for idx, chunked_doc in enumerate(document):
+                doc = llama_index_doc(text=chunked_doc.text, id_=f"{doc_obj.id}_{idx}")
+                index.insert(doc)
             vdb.docs.add(doc_obj)
         return redirect('main:chat', thread_id=thread_id)
 
@@ -157,11 +169,15 @@ def delete_view(request, thread_id):
 
 
 @login_required(login_url='users:login')    
-@user_passes_test(lambda user: user.groups.filter(name='Admin').exists())
-def collections_view(request,  collection_id=None,):
+@user_passes_test(lambda user: user.is_admin() or user.is_advanced_user() or user.is_superuser)
+def collections_view(request, collection_id=None,):
     user = request.user
     if request.method == "GET":
-        collections = Collection.objects.annotate(total_docs=Count('docs')).values('id', 'name', 'total_docs')
+        if user.is_admin() or user.is_superuser:
+            collections = Collection.objects.all()
+        elif user.is_advanced_user():
+            collections = Collection.objects.filter(user_created=user)
+        collections = collections.annotate(total_docs=Count('docs')).values('id', 'name', 'total_docs')
         if (collection_id is None) and (len(collections) > 0):
             collection_id = int(collections[0]["id"])
             return redirect('main:collection', collection_id=collection_id)
@@ -173,12 +189,12 @@ def collections_view(request,  collection_id=None,):
         collection = Collection.objects.get(id=collection_id)
         documents = collection.docs.all()
         context = {"collections": collections, "active_collection_id": collection.id, "active_collection_name": collection.name,
-                    "documents": documents,}
+                    "active_collection_creator": collection.user_created, "documents": documents,}
         return render(request, 'main/collections.html', context)
 
 
 @login_required(login_url='users:login')   
-@user_passes_test(lambda user: user.groups.filter(name='Admin').exists()) 
+@user_passes_test(lambda user: user.is_admin() or user.is_advanced_user() or user.is_superuser)
 def collection_create_view(request,):
     user = request.user
     if request.method == "POST":
@@ -204,12 +220,14 @@ def collection_create_view(request,):
             default_storage.save(doc_path, ContentFile(file.read()))
 
             document = SimpleDirectoryReader(input_files=[doc_path]).load_data()
+            doc_sha256 = hash_file(doc_path)["sha256"]
 
-            # Create indexes
-            for chunked_doc in document:
-                index.insert(chunked_doc)
             doc_obj = Document.objects.create(user=user, name=file_name, public=False,
-                                              description=None, loc=doc_path)
+                                              description=None, loc=doc_path, sha256=doc_sha256)
+            # Create indexes
+            for idx, chunked_doc in enumerate(document):
+                doc = llama_index_doc(text=chunked_doc.text, id_=f"{doc_obj.id}_{idx}")
+                index.insert(doc)
             collection_vdb.docs.add(doc_obj)
 
         return redirect('main:collection', collection_id=collection_vdb.id)
@@ -217,23 +235,31 @@ def collection_create_view(request,):
 
 
 @login_required(login_url='users:login')
-@user_passes_test(lambda user: user.groups.filter(name='Admin').exists())
+@user_passes_test(lambda user: user.is_admin() or user.is_advanced_user() or user.is_superuser)
 def collection_delete_view(request, collection_id):
     user = request.user
     collection_id = int(collection_id)
     collection = Collection.objects.get(id=collection_id)  # Now each Admin can delete any of collections
-    collection.delete()
+    if user.is_advanced_user():
+        if collection.user_created == user:
+            collection.delete()
+    elif user.groups.filter(name='Admin').exists():
+        collection.delete()
     return redirect('main:main_collection')
 
 
 @login_required(login_url='users:login')
+@user_passes_test(lambda user: user.is_admin() or user.is_advanced_user() or user.is_superuser)
 def collection_add_docs_view(request, collection_id):
     user = request.user
     if request.method == "POST":
         global collections_path
         uploaded_files = request.FILES.getlist('files')
         collection_id = int(collection_id)
-        collection = Collection.objects.get(user_created=user, id=collection_id)  # Now each Admin can add to any of collections
+        collection = Collection.objects.get(id=collection_id)  # Now each Admin can add to any of collections
+        if user.is_advanced_user() and not user.is_admin():
+            if collection.user_created != user:
+                return redirect('main:main_collection')
         collection_name = collection.name
         collection_path = os.path.join(collections_path, f'collection_{collection_name}')
         docs_path = os.path.join(collection_path, "docs")
@@ -247,11 +273,13 @@ def collection_add_docs_view(request, collection_id):
 
             # document = loader.load(file_path=Path(doc_path), metadata=False)
             document = SimpleDirectoryReader(input_files=[doc_path]).load_data()
+            doc_sha256 = hash_file(doc_path)["sha256"]
 
-            # Create indexes
-            for chunked_doc in document:
-                index.insert(chunked_doc)
             doc_obj = Document.objects.create(user=user, name=file_name, public=False,
-                                              description=None, loc=doc_path)
+                                              description=None, loc=doc_path, sha256=doc_sha256)
+            # Create indexes
+            for idx, chunked_doc in enumerate(document):
+                doc = llama_index_doc(text=chunked_doc.text, id_=f"{doc_obj.id}_{idx}")
+                index.insert(doc)
             collection.docs.add(doc_obj)
         return redirect('main:collection', collection_id=collection_id)

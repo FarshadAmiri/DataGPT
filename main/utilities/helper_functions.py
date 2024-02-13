@@ -1,4 +1,5 @@
-import os
+import os, shutil
+import hashlib
 
 
 def create_folder(path):
@@ -27,3 +28,37 @@ def get_folder_names(directory_path):
         if os.path.isdir(item_path):
             folder_names.append(item)
     return folder_names
+
+
+
+def copy_folder_contents(source, destination, exclude_folder):
+    for item in os.listdir(source):
+        source_path = os.path.join(source, item)
+        destination_path = os.path.join(destination, item)
+        if item != exclude_folder:
+            if os.path.isdir(source_path):
+                shutil.copytree(source_path, destination_path)
+            else:
+                shutil.copy2(source_path, destination_path)
+
+    
+def hash_file(file_path):
+    # BUF_SIZE is totally arbitrary, change for your app!
+    BUF_SIZE = 65536  # lets read stuff in 64kb chunks!
+
+    hashes = dict()
+    md5 = hashlib.md5()
+    sha256 = hashlib.sha256()
+
+    with open(file_path, 'rb') as f:
+        while True:
+            data = f.read(BUF_SIZE)
+            if not data:
+                break
+            md5.update(data)
+            sha256.update(data)
+            
+    hashes["md5"] = md5.hexdigest()
+    hashes["sha256"] = sha256.hexdigest()
+    
+    return hashes

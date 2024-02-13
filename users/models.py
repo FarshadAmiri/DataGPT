@@ -12,3 +12,13 @@ class User(AbstractUser):
 
     def full_name(self):
         return f'{self.first_name} {self.last_name}'
+
+    def is_admin(self):
+        if self.groups.filter(name='Admin').exists():
+            return True
+        return False
+    
+    def is_advanced_user(self):
+        if self.groups.filter(name='Advanced_user').exists():
+            return True
+        return False

@@ -160,5 +160,14 @@ cython_debug/
 #.idea/
 
 huggingface_credentials.txt
+.vector_dbs/
+.documents_db/
 vector_dbs/
 documents_db/
+*.pdf
+*.pdf
+vector_dbs/admin/vdb_rag10/docs/Sattelite imagery article scripts.pdf
+vector_dbs/admin/vdb_rag10/docs/RAG-IranEconomy.pdf
+*.pdf
+vector_dbs/admin/vdb_rag10/docs/Sattelite imagery article scripts.pdf
+vector_dbs/admin/vdb_rag10/docs/RAG-IranEconomy.pdf

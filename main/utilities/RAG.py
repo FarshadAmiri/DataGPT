@@ -132,10 +132,6 @@ def index_builder(vdb_path: str):
     return index
 
 
-
-
-
-
 def add_docs2(vdb_path: str, vdb, docs_dict: dict):
     from main.utilities.variables import system_prompt, query_wrapper_prompt
     from main.views import model, tokenizer

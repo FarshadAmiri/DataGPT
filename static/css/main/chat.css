@@ -163,7 +163,7 @@ body{
 }
 
 #send_btn svg {
-  fill: rgb(116, 212, 241); /* Set the fill color of the SVG icon */
+  fill: rgb(120, 168, 114);
   width: 32px; /* Adjust the size of the SVG icon as needed */
   height: 32px; /* Adjust the size of the SVG icon as needed */
 }
@@ -178,7 +178,7 @@ body{
 }
 
 .list-group-item:hover strong {
-  color: rgb(0, 112, 204);
+  color: rgb(0, 90, 163);
 }
 
 #new-rag-btn {

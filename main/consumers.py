@@ -39,7 +39,8 @@ class RAGConsumer(AsyncConsumer):
         why instead of answering something not correct. If you don't know the answer
         to a question, please don't share false information.
         Try to be exact in information and numbers you tell.
-        Your goal is to provide answers based on the information provided and your other knowledge.<</SYS>>
+        Your goal is to provide answers completely based on the information provided
+        and avoid to use yourown knowledge.<</SYS>>
         """
         query_wrapper_prompt = SimpleInputPrompt("{query_str} [/INST]")
         llm = HuggingFaceLLM(context_window=4096,
@@ -136,7 +137,7 @@ class RAGConsumer(AsyncConsumer):
             msg = dict_data.get("message")
             username = self.user.username
             print(f"msg: {msg}")
-            await self.create_chat_message(msg, rag_response=False)
+            await self.create_chat_message(msg, rag_response=False, source_nodes=None)
             response_dict = {
                 "message": "",
                 "username": username,
@@ -148,9 +149,23 @@ class RAGConsumer(AsyncConsumer):
             })
 
             full_response = ""
-            response_generator = self.query_engine_streamer(msg)
+            # response_generator = self.query_engine_streamer(msg)
+            ########
+            response = self.query_engine.query(msg)
+            source_nodes = response.source_nodes
+            source_nodes_dict = dict()
+            for node in source_nodes:
+                metadata = node.node.relationships
+                key = list(metadata.keys())[0]
+                node_id = metadata[key].node_id
+                node_text = node.text
+                source_nodes_dict[node_id] = node_text
+            source_nodes_json = json.dumps(source_nodes_dict)
+            response_generator = self.query_engine_streamer(response)
+            #############
             async for response_txt in response_generator:
                 response_txt = response_txt.replace("</s>", "")
+                response_txt = response_txt.replace("<|im_end|>", "")
                 full_response = full_response + response_txt
                 response_dict = {
                     "message": response_txt,
@@ -161,7 +176,7 @@ class RAGConsumer(AsyncConsumer):
                     "type": "websocket.send",
                     "text": json.dumps(response_dict),
                 })
-            await self.create_chat_message(full_response, rag_response=True)
+            await self.create_chat_message(full_response, rag_response=True, source_nodes=source_nodes_json)
 
 
     async def websocket_disconnect(self, event):
@@ -172,17 +187,23 @@ class RAGConsumer(AsyncConsumer):
         return Thread.objects.get(id=chat_id)
     
     @database_sync_to_async
-    def create_chat_message(self, message, rag_response: bool):
+    def create_chat_message(self, message, rag_response, source_nodes):
         thread = self.thread
         user = self.scope["user"]
-        ChatMessage.objects.create(thread=thread, user=user, message=message, rag_response=rag_response)
+        ChatMessage.objects.create(thread=thread, user=user, message=message, rag_response=rag_response, source_nodes=source_nodes)
         print("\nChat message saved\n")
         return
     
-    async def query_engine_streamer(self, query):
-        response = self.query_engine.query(query)
+    async def query_engine_streamer(self, response):
+        # response = self.query_engine.query(query)
+        # source_nodes = response.source_nodes
+        # source_nodes_dict = dict()
+        # for node in source_nodes:
+        #     node_id = node.id_
+        #     node_text = response.text
+        #     source_nodes_dict[node_id] = node_text
+        # source_nodes_json = json.dumps(source_nodes_dict)
         response_gen = response.response_gen
-
         try:
             while True:
                 yield next(response_gen)
