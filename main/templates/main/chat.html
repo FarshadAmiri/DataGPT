@@ -157,6 +157,13 @@
   </ul>
   <hr>
   </div>
+  <ul class="nav nav-pills flex-column">
+    <li class="nav-item" style="margin-top: 14px;">
+      <a href="{% url 'main:delete_thread' active_thread_id %}" id="delete-thread-btn" class="btn btn-danger nav-link active text-center">
+        Delete this thread
+      </a>
+    </li>
+  </ul>
   {% endif %}
 </div>
 {% endif %}
@@ -181,6 +188,7 @@
           <select class="form-select" name="base-collection-id">
             <option value='None'>None</option>
             <optgroup label="Document collections">
+            <option value='all_docs_collection'>*All Documents*</option>
               {% for collection in collections %}
                 <option value='{{ collection.id }}'>{{ collection.name }}</option>
               {% endfor %}
@@ -470,6 +478,9 @@ function checkNewName(event) {
   if (threadNames.includes(inputName)) {
     event.preventDefault();
     alert("This thread name already exists! try another name");
+  } else if (inputName == "") {
+    event.preventDefault();
+    alert("You must provide a name for this RAG thread!");
   }
 };
 

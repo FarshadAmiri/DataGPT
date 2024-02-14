@@ -30,7 +30,6 @@ def get_folder_names(directory_path):
     return folder_names
 
 
-
 def copy_folder_contents(source, destination, exclude_folder):
     for item in os.listdir(source):
         source_path = os.path.join(source, item)
@@ -41,7 +40,7 @@ def copy_folder_contents(source, destination, exclude_folder):
             else:
                 shutil.copy2(source_path, destination_path)
 
-    
+
 def hash_file(file_path):
     # BUF_SIZE is totally arbitrary, change for your app!
     BUF_SIZE = 65536  # lets read stuff in 64kb chunks!

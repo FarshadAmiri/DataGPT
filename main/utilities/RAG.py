@@ -19,8 +19,14 @@ import chromadb
 from pathlib import Path
 import accelerate
 import torch
-import time
+import time, os
 from pprint import pprint
+from main.models import Collection
+from users.models import User
+
+
+all_docs_collection_name = "ALL_DOCS_COLLECTION"
+all_docs_collection_path = os.path.join("collections", all_docs_collection_name)
 
 
 def load_model(model_name="TheBloke/Llama-2-7b-Chat-GPTQ", device='gpu'):
@@ -80,6 +86,18 @@ def llm_inference(plain_text, model, tokenizer, device, streamer=None, max_lengt
 def create_rag(path):
     db = chromadb.PersistentClient(path=path)
     chroma_collection = db.get_or_create_collection("default")
+    return
+
+
+def create_all_docs_collection():
+    global all_docs_collection_path, all_docs_collection_name
+    if not os.path.exists(all_docs_collection_path):
+        db = chromadb.PersistentClient(path=all_docs_collection_path)
+        chroma_collection = db.get_or_create_collection("default")
+        all_docs_creator = User.objects.filter(username="admin").first()
+        if all_docs_creator == None:
+            all_docs_creator = User.objects.filter(groups__name='Admin').first()
+        Collection.objects.create(name=all_docs_collection_name, user_created=all_docs_creator, loc=all_docs_collection_path)
     return
 
 

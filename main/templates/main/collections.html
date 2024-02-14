@@ -44,8 +44,9 @@
         <div class="d-flex w-100 align-items-center justify-content-between">
           <strong class="mb-1 collection_name">{{ collection.name }}</strong>
         </div>
+        {% comment %} <div class="col-10 mb-1 small" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">@{{ collection.user_created }}</div> {% endcomment %}
         {% with collection.id as collection_id %}
-        <div class="col-10 mb-1 small" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ collections.total_docs }}</div>
+        <div class="col-10 mb-1 small" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">By <span style="font-weight: Bold;">@{{ collection.user_created }}</span>  |  <span style="font-weight: Bold;">{{ collection.total_docs }} docs</span> </div>
         {% endwith %}
       </a>
       {% endfor %}
