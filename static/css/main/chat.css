@@ -8,6 +8,11 @@
   src: url("..\\..\\fonts\\Exo2-Bold.ttf");
 }
 
+@font-face {
+  font-family: IranSans;
+  src: url("..\\..\\fonts\\IranSans.ttf");
+}
+
 .sidebar {
   align-items: left;
   justify-content: left;
@@ -50,9 +55,17 @@
   overflow: auto; /* for chat like view */ 
 }
 
-.msg {
+.msg.rag-response, .msg.user-query {
   font-family: RobotoSlab;
   font-size: 18px;
+}
+
+.msg.rag-response-Fa {
+  font-family: IranSans;
+  font-size: 16px;
+  /* font-weight: bold; */
+  text-align: right;
+  direction: rtl;
 }
 
 
@@ -216,15 +229,37 @@ body{
 }
 
 #copy-icon {
-  content: url("..\\..\\icons\\copy-2.png");
-  width: 22px;
-  height: 22px;
+  content: url("..\\..\\icons\\copy-4.png");
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding-bottom: 2px;
+}
+
+.copy-btn {
+  font-family: RobotoSlab ;
+  font-size: 16px;
+  font-weight: normal;
+  color: #ffffff;
+  text-align: right;
+  border-width: 0px;
+  /* display: flex; */
+  align-items: center;
+  justify-content: center;
+}
+
+#translate-icon {
+  content: url("..\\..\\icons\\translate_3.svg");
+  width: 27px;
+  height: 27px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
 }
 
-.copy-btn {
+.translate-btn {
   font-family: RobotoSlab ;
   font-size: 16px;
   font-weight: normal;

@@ -17,6 +17,7 @@ from llama_index.postprocessor import SimilarityPostprocessor
 from main.views import model, tokenizer, streamer, device
 from main.models import Thread, ChatMessage
 from main.utilities.RAG import llm_inference
+from main.utilities.translation import translate_en_fa
 
 
 class RAGConsumer(AsyncConsumer):
@@ -134,49 +135,71 @@ class RAGConsumer(AsyncConsumer):
         client_data = event.get('text', None)
         if client_data is not None:
             dict_data = json.loads(client_data)
+            translation_task = dict_data.get("translate_to_fa")
             msg = dict_data.get("message")
-            username = self.user.username
-            print(f"msg: {msg}")
-            await self.create_chat_message(msg, rag_response=False, source_nodes=None)
-            response_dict = {
-                "message": "",
-                "username": username,
-                "mode": "new",
-            }
-            await self.send({
-                "type": "websocket.send",
-                "text": json.dumps(response_dict),
-            })
-
-            full_response = ""
-            # response_generator = self.query_engine_streamer(msg)
-            ########
-            response = self.query_engine.query(msg)
-            source_nodes = response.source_nodes
-            source_nodes_dict = dict()
-            for node in source_nodes:
-                metadata = node.node.relationships
-                key = list(metadata.keys())[0]
-                node_id = metadata[key].node_id
-                node_text = node.text
-                source_nodes_dict[node_id] = node_text
-            source_nodes_json = json.dumps(source_nodes_dict)
-            response_generator = self.query_engine_streamer(response)
-            #############
-            async for response_txt in response_generator:
-                response_txt = response_txt.replace("</s>", "")
-                response_txt = response_txt.replace("<|im_end|>", "")
-                full_response = full_response + response_txt
+            if translation_task is not None:
+                message_id = dict_data.get("message_id")
+                persian_translation = self.translate_to_fa(translation_task)
                 response_dict = {
-                    "message": response_txt,
-                    "username": username,
-                    "mode": "continue",
+                    "persian_translation": persian_translation,
+                    "message_id": message_id,
+                    "mode": "translation",
                 }
                 await self.send({
                     "type": "websocket.send",
                     "text": json.dumps(response_dict),
                 })
-            await self.create_chat_message(full_response, rag_response=True, source_nodes=source_nodes_json)
+            else:
+                username = self.user.username
+                print(f"msg: {msg}")
+                await self.create_chat_message(msg, rag_response=False, source_nodes=None)
+                response_dict = {
+                    "message": "",
+                    "username": username,
+                    "mode": "new",
+                }
+                await self.send({
+                    "type": "websocket.send",
+                    "text": json.dumps(response_dict),
+                })
+
+                full_response = ""
+                # response_generator = self.query_engine_streamer(msg)
+                ########
+                response = self.query_engine.query(msg)
+                source_nodes = response.source_nodes
+                source_nodes_dict = dict()
+                for node in source_nodes:
+                    metadata = node.node.relationships
+                    key = list(metadata.keys())[0]
+                    node_id = metadata[key].node_id
+                    node_text = node.text
+                    source_nodes_dict[node_id] = node_text
+                source_nodes_json = json.dumps(source_nodes_dict)
+                response_generator = self.query_engine_streamer(response)
+                #############
+                async for response_txt in response_generator:
+                    response_txt = response_txt.replace("</s>", "")
+                    response_txt = response_txt.replace("<|im_end|>", "")
+                    full_response = full_response + response_txt
+                    response_dict = {
+                        "message": response_txt,
+                        "username": username,
+                        "mode": "continue",
+                    }
+                    await self.send({
+                        "type": "websocket.send",
+                        "text": json.dumps(response_dict),
+                    })
+                message_id = await self.create_chat_message(full_response, rag_response=True, source_nodes=source_nodes_json)
+                response_dict = {
+                    "message_id": message_id,
+                    "mode": "last",
+                    }
+                await self.send({
+                    "type": "websocket.send",
+                    "text": json.dumps(response_dict),
+                    })
 
 
     async def websocket_disconnect(self, event):
@@ -190,19 +213,11 @@ class RAGConsumer(AsyncConsumer):
     def create_chat_message(self, message, rag_response, source_nodes):
         thread = self.thread
         user = self.scope["user"]
-        ChatMessage.objects.create(thread=thread, user=user, message=message, rag_response=rag_response, source_nodes=source_nodes)
+        msg = ChatMessage.objects.create(thread=thread, user=user, message=message, rag_response=rag_response, source_nodes=source_nodes)
         print("\nChat message saved\n")
-        return
+        return msg.id
     
     async def query_engine_streamer(self, response):
-        # response = self.query_engine.query(query)
-        # source_nodes = response.source_nodes
-        # source_nodes_dict = dict()
-        # for node in source_nodes:
-        #     node_id = node.id_
-        #     node_text = response.text
-        #     source_nodes_dict[node_id] = node_text
-        # source_nodes_json = json.dumps(source_nodes_dict)
         response_gen = response.response_gen
         try:
             while True:
@@ -210,3 +225,7 @@ class RAGConsumer(AsyncConsumer):
                 await asyncio.sleep(0)
         except StopIteration:
             pass
+
+    def translate_to_fa(self, text):
+        persian_translation = translate_en_fa(text)
+        return persian_translation

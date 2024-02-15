@@ -1,0 +1,15 @@
+<?xml version="1.0" ?>
+<!DOCTYPE svg  PUBLIC '-//W3C//DTD SVG 1.1//EN'  'http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd'>
+<!-- Uploaded to: SVG Repo, www.svgrepo.com, Generator: SVG Repo Mixer Tools -->
+<svg width="800px" height="800px" viewBox="0 0 82.205 82.205" enable-background="new 0 0 82.205 82.205" id="圖層_1" version="1.1" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g>
+<circle cx="40.98" cy="41.103" fill="#FFFFFF" r="22.347" stroke="#040000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="3"/>
+<path d="   M40.98,76.103c19.33,0,35-15.67,35-35" fill="none" stroke="#040000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="3"/>
+<path d="   M40.98,6.103c-19.33,0-35,15.67-35,35" fill="none" stroke="#040000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="3"/>
+<ellipse cx="40.98" cy="41.103" fill="none" rx="12.551" ry="22.347" stroke="#040000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="3"/>
+<line fill="none" stroke="#040000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="3" x1="40.98" x2="40.98" y1="18.755" y2="63.449"/>
+<line fill="none" stroke="#040000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="3" x1="18.633" x2="63.326" y1="41.103" y2="41.103"/>
+<polyline fill="none" points="   12.182,31.81 5.981,41.101 2.005,30.661  " stroke="#040000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="3"/>
+<polyline fill="none" points="   80.2,51.375 75.816,41.084 69.965,50.592  " stroke="#040000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="3"/>
+</g>
+</svg>
