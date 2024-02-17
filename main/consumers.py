@@ -15,23 +15,26 @@ from llama_index.retrievers import VectorIndexRetriever
 from llama_index.query_engine import RetrieverQueryEngine
 from llama_index.postprocessor import SimilarityPostprocessor
 from main.views import model, tokenizer, streamer, device
-from main.models import Thread, ChatMessage
+from main.models import Thread, ChatMessage, Document
 from main.utilities.RAG import llm_inference
-from main.utilities.translation import translate_en_fa
+from main.utilities.translation import translate_en_fa, translate_fa_en, detect_language
 
 
 class RAGConsumer(AsyncConsumer):
     async def websocket_connect(self, event):
         print("connected", event)
         self.user = self.scope["user"]
-        chat_id = self.scope["url_route"]["kwargs"]["chat_id"]
-        thread = await self.get_thread(chat_id=chat_id)
-        self.thread = thread
-        print(f"\nthread.loc: {thread.loc}\n")
-        db = chromadb.PersistentClient(path=thread.loc)
-        chroma_collection = db.get_or_create_collection("default")
-        vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
-        storage_context = StorageContext.from_defaults(vector_store=vector_store)
+        try:
+            chat_id = self.scope["url_route"]["kwargs"]["chat_id"]
+            thread = await self.get_thread(chat_id=chat_id)
+            self.thread = thread
+            print(f"\nthread.loc: {thread.loc}\n")
+            db = chromadb.PersistentClient(path=thread.loc)
+            chroma_collection = db.get_or_create_collection("default")
+            vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
+            storage_context = StorageContext.from_defaults(vector_store=vector_store)
+        except:
+            pass
         # Create a system prompt
         system_prompt = """<s>[INST] <<SYS>>
         You are a helpful, respectful and honest assistant. Always answer as
@@ -63,25 +66,28 @@ class RAGConsumer(AsyncConsumer):
         )
         # And set the service context
         set_global_service_context(service_context)
-        index = VectorStoreIndex.from_vector_store(vector_store, storage_context=storage_context)
-        # query_engine = index.as_query_engine()
+        try: 
+            index = VectorStoreIndex.from_vector_store(vector_store, storage_context=storage_context)
+            # query_engine = index.as_query_engine()
 
-        # Customize query engine
-        retriever = VectorIndexRetriever(
-            index=index,
-            similarity_top_k=3,
-        )
+            # Customize query engine
+            retriever = VectorIndexRetriever(
+                index=index,
+                similarity_top_k=3,
+            )
 
-        # configure response synthesizer
-        response_synthesizer = get_response_synthesizer(streaming=True)
+            # configure response synthesizer
+            response_synthesizer = get_response_synthesizer(streaming=True)
 
-        # assemble query engine
-        query_engine = RetrieverQueryEngine(
-            retriever=retriever,
-            response_synthesizer=response_synthesizer,
-            node_postprocessors=[SimilarityPostprocessor(similarity_cutoff=0.1)],
-        )
-        self.query_engine = query_engine
+            # assemble query engine
+            query_engine = RetrieverQueryEngine(
+                retriever=retriever,
+                response_synthesizer=response_synthesizer,
+                node_postprocessors=[SimilarityPostprocessor(similarity_cutoff=0.1)],
+            )
+            self.query_engine = query_engine
+        except:
+            pass
 
 
 
@@ -135,9 +141,10 @@ class RAGConsumer(AsyncConsumer):
         client_data = event.get('text', None)
         if client_data is not None:
             dict_data = json.loads(client_data)
-            translation_task = dict_data.get("translate_to_fa")
+            mode = dict_data.get("mode")
             msg = dict_data.get("message")
-            if translation_task is not None:
+            if mode == "translation":
+                translation_task = dict_data.get("translate_to_fa")
                 message_id = dict_data.get("message_id")
                 persian_translation = self.translate_to_fa(translation_task)
                 response_dict = {
@@ -149,6 +156,22 @@ class RAGConsumer(AsyncConsumer):
                     "type": "websocket.send",
                     "text": json.dumps(response_dict),
                 })
+
+            elif mode == "context":
+                message_id = dict_data.get("message_id")
+                contexts = await self.get_context(message_id)
+                contexts = json.loads(contexts)
+
+                response_dict = {
+                    "mode": "context",
+                    "message_id": message_id,
+                    "contexts": contexts,
+                }
+                await self.send({
+                    "type": "websocket.send",
+                    "text": json.dumps(response_dict),
+                })
+
             else:
                 username = self.user.username
                 print(f"msg: {msg}")
@@ -163,6 +186,10 @@ class RAGConsumer(AsyncConsumer):
                     "text": json.dumps(response_dict),
                 })
 
+                # Translate the question if it is Persian
+                if detect_language(msg) == "Persian":
+                    msg = translate_fa_en(msg)
+                
                 full_response = ""
                 # response_generator = self.query_engine_streamer(msg)
                 ########
@@ -173,8 +200,9 @@ class RAGConsumer(AsyncConsumer):
                     metadata = node.node.relationships
                     key = list(metadata.keys())[0]
                     node_id = metadata[key].node_id
+                    doc_name = await self.get_doc_name(node_id)
                     node_text = node.text
-                    source_nodes_dict[node_id] = node_text
+                    source_nodes_dict[doc_name] = node_text
                 source_nodes_json = json.dumps(source_nodes_dict)
                 response_generator = self.query_engine_streamer(response)
                 #############
@@ -217,6 +245,20 @@ class RAGConsumer(AsyncConsumer):
         print("\nChat message saved\n")
         return msg.id
     
+    @database_sync_to_async
+    def get_doc_name(self, node_id):
+        doc_id = node_id.split("_")[0]
+        doc_name = Document.objects.get(id=doc_id).name
+        return doc_name
+
+    @database_sync_to_async
+    def get_context(self, message_id):
+        message_obj = ChatMessage.objects.get(id=message_id)
+        contexts_json = message_obj.source_nodes
+        # contexts_dict = json.loads(contexts_json)
+        return contexts_json
+    
+
     async def query_engine_streamer(self, response):
         response_gen = response.response_gen
         try:

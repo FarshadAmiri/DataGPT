@@ -40,7 +40,8 @@ def chat_view(request, thread_id=None):
             thread_id = int(threads[0].id)
             return redirect('main:chat', thread_id=thread_id)
         elif len(threads) == 0:
-            context = {"no_threads": True, "active_thread_id": 0,}
+            collections = Collection.objects.exclude(name=all_docs_collection_name).values('id', 'name')
+            context = {"no_threads": True, "active_thread_id": 0, 'collections': collections,}
             return render(request, 'main/chat.html', context)
         threads_preview = dict()
         for thread in threads:
@@ -77,6 +78,8 @@ def chat_view(request, thread_id=None):
         rag_docs = active_thread.docs.all()
         base_collection_name = None if active_thread.base_collection == None else active_thread.base_collection.name
         collections = Collection.objects.exclude(name=all_docs_collection_name).values('id', 'name')
+        print(f"\ncollections: {collections}\n")
+
         context = {"chat_threads": threads, "active_thread_id": thread_id, "active_thread_name": active_thread_name, "rag_docs": rag_docs,
                    "base_collection_name": base_collection_name ,"messages": messages, "threads_preview": threads_preview, 'collections': collections,}
         print(f"\n\n{active_thread_name}\n\n")

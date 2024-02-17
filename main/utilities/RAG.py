@@ -30,7 +30,6 @@ all_docs_collection_path = os.path.join("collections", all_docs_collection_name)
 
 
 def load_model(model_name="TheBloke/Llama-2-7b-Chat-GPTQ", device='gpu'):
-    
     # setting device
     if device == 'gpu':
         gpu=0
@@ -44,16 +43,12 @@ def load_model(model_name="TheBloke/Llama-2-7b-Chat-GPTQ", device='gpu'):
 
     # Create tokenizer
     tokenizer = AutoTokenizer.from_pretrained(model_name
-        # ,cache_dir='./model/'
-        # ,use_auth_token=auth_token
         ,device_map='cuda'                 
         )
 
     # Define model
     model = AutoModelForCausalLM.from_pretrained(model_name
         ,cache_dir=r"C:\Users\user2\.cache\huggingface\hub"
-        # ,cache_dir='./model/'
-        # ,use_auth_token=auth_token
         ,device_map='cuda'  
         # , torch_dtype=torch.float16
         # ,low_cpu_mem_usage=True
@@ -62,6 +57,7 @@ def load_model(model_name="TheBloke/Llama-2-7b-Chat-GPTQ", device='gpu'):
         ).to(device)
 
     streamer = TextStreamer(tokenizer, skip_prompt=True, skip_special_tokens=True)
+
     model_obj = {"model": model, "tokenizer": tokenizer, "streamer": streamer, "device": device,  }
     return model_obj
 
@@ -141,11 +137,41 @@ def add_docs(vdb_path: str, docs_paths: list):
 
 
 def index_builder(vdb_path: str):
-    db = chromadb.PersistentClient(path = vdb_path)
-    chroma_collection = db.get_or_create_collection("default")
-    vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
-    storage_context = StorageContext.from_defaults(vector_store=vector_store)
-    index = VectorStoreIndex.from_vector_store(vector_store, storage_context=storage_context)
+    try:
+        db = chromadb.PersistentClient(path = vdb_path)
+        chroma_collection = db.get_or_create_collection("default")
+        vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
+        storage_context = StorageContext.from_defaults(vector_store=vector_store)
+        index = VectorStoreIndex.from_vector_store(vector_store, storage_context=storage_context)
+    except:
+        from main.utilities.variables import system_prompt, query_wrapper_prompt
+        from main.views import model, tokenizer
+        llm = HuggingFaceLLM(context_window=4096,
+                    max_new_tokens=512,
+                    system_prompt=system_prompt,
+                    query_wrapper_prompt=query_wrapper_prompt,
+                    model=model,
+                    tokenizer=tokenizer)
+
+        embeddings = LangchainEmbedding(
+            HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+        )
+        # Create new service context instance
+        service_context = ServiceContext.from_defaults(
+            chunk_size=1024,
+            chunk_overlap=20,
+            llm=llm,
+            embed_model=embeddings
+        )
+
+        # And set the service context
+        set_global_service_context(service_context)
+
+        db = chromadb.PersistentClient(path = vdb_path)
+        chroma_collection = db.get_or_create_collection("default")
+        vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
+        storage_context = StorageContext.from_defaults(vector_store=vector_store)
+        index = VectorStoreIndex.from_vector_store(vector_store, storage_context=storage_context)
 
     return index
 

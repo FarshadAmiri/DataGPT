@@ -1,14 +1,83 @@
-<ul class="nav nav-pills flex-column" id="#chats">
-  <input type="hidden" id="active-thread" value="{{active_thread_id}}">
-  {% for thread in chat_threads %}
-  <a href="{% url 'main:chat' thread.id %}" class="list-group-item list-group-item-action py-3 lh-tight rag-thread {% if active_thread_id == thread.id %}current{% endif %}" id="{{thread.id}}" style="margin-bottom: 10px;">
-    <div class="d-flex w-100 align-items-center justify-content-between">
-      <strong class="mb-1">{{ thread.name }}</strong>
-      <small class="text-muted">Tues</small>
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-md-2 col-lg-2 col-xl-2 sidebar-wrapper">
+      <div class="d-flex flex-column flex-shrink-0 p-3 text-white bg-dark sidebar">
+        <a href="{% url 'main:main_chat' %}" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-white text-decoration-none">
+        </a>
+        <hr>
+        <ul class="nav nav-pills flex-column">
+          <li class="nav-item">
+            <a href="{% url 'main:create_rag' %}" id="new-rag-btn" class="nav-link active text-center" aria-current="page" data-bs-toggle="modal" data-bs-target="#newRagModal" data-bs-whatever="@getbootstrap">
+              Create a new RAG thread
+            </a>
+          </li>
+          {% if user|has_group:"Admin" or user|has_group:"Advanced_user" or user.is_superuser%}
+          <li class="nav-item" style="margin-top: 10px;">
+            <a href="{% url 'main:main_collection' %}" id="new-collection-btn" class="nav-link active text-center">
+              Manage collections
+            </a>
+          </li>
+          {% endif %}
+        </ul>
+        <br>
+        <div style="max-height: 800px; overflow-y: auto;">
+          <ul class="nav nav-pills flex-column" id="#chats">
+            <input type="hidden" id="active-thread" value="{{active_thread_id}}">
+            {% for thread in chat_threads %}
+            <a href="{% url 'main:chat' thread.id %}" class="list-group-item" id="{{thread.id}}" style="margin-bottom: 10px;">
+              <div class="d-flex w-100 align-items-center justify-content-between">
+                <strong class="mb-1 thread_name {% if active_thread_id == thread.id %}current{% endif %}">{{ thread.name }}</strong>
+                <small class="text-muted"></small>
+              </div>
+              {% with thread.id as thread_id %}
+              <div class="col-10 mb-1 small" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ threads }}</div>
+              {% endwith %}
+            </a>
+            {% endfor %}
+          </ul>
+        </div>
+        <div class="mt-auto">
+          <hr>
+          <div class="dropdown">
+            <a href="#" class="d-flex align-items-center text-white text-decoration-none dropdown-toggle mb" id="dropdownUser1" data-bs-toggle="dropdown" aria-expanded="false">
+              <img id="profile-img" alt="" width="32" height="32" class="rounded-circle me-2">
+              <strong>@{{request.user.username}}</strong>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-dark text-small shadow" aria-labelledby="dropdownUser1">
+              <li><a class="dropdown-item" href="{% url 'users:profile' %}">Profile</a></li>
+              <li><hr class="dropdown-divider"></li>
+              <li><a class="dropdown-item" href="{% url 'users:logout' %}">Sign out</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
     </div>
-    {% with thread.id as thread_id %}
-    <div class="col-10 mb-1 small" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ threads_preview|get_dict_value:thread_id }}</div>
-    {% endwith %}
-  </a>
-  {% endfor %}
-</ul>
+    <div class="col-md-8 col-lg-8 col-xl-8 chat-wrapper">
+      <div class="chat-box">
+        <div class="messages" id="board">
+          {% for message in messages %}
+          {% if message.rag_response == False %}
+          <div class="container darker">
+            <img src="{% static 'icons/ai_icon.png' %}" alt="Avatar" style="width: 42px; height: 42px;">
+            <p class="msg user-query" style="line-break: auto;">{{message.message|linebreaksbr}}</p>
+            <span class="time-right">{{message.timestamp}}</span>
+          </div>
+          {% else %}
+          <div class="container">
+            <input type="hidden" class="rag-response-id" id="{{message.id}}" value="{{message.id}}">
+            <img src="{% static 'icons/user.jpg' %}" alt="Avatar" style="width: 42px; height: 42px;">
+            <p class="msg rag-response" style="line-break: auto;">{{message.message|linebreaksbr}}</p>
+            <p class="msg rag-response-Fa" style="line-break: auto; display: none;"></p>
+            <span class="time-left">{{message.timestamp}}</span>
+          </div>
+          {% endif %}
+          {% endfor %}
+        </div>
+        <div class="input-group">
+          <textarea class="form-control" placeholder="Type your message..." id="user-input"></textarea>
+          <button class="btn btn-primary" id="send-btn">Send</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

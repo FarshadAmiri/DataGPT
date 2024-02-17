@@ -16,6 +16,7 @@ application = ProtocolTypeRouter({
         AuthMiddlewareStack(
             URLRouter([
                 path("<chat_id>/", RAGConsumer.as_asgi()),
+                path("", RAGConsumer.as_asgi()),
             ])
         )
     )

@@ -94,6 +94,7 @@
             <span class="time-right">{{message.timestamp}}</span>
             <button class="copy-btn" onclick="showMessage('Copied!', this)"><img id="copy-icon"></button>
             <button class="translate-btn" onclick="translateThis(this)"><img id="translate-icon"></button>
+            <button class="context-btn" aria-current="page" data-bs-toggle="modal" data-bs-target="#contextModal" onclick="getContext(this)"><img id="context-icon"></button>
         </div>
     {% endif %}
     {% endfor %}
@@ -213,8 +214,11 @@
           <div id="uploadedDocuments" class="mt-3"></div>
       </div>
       <div class="modal-footer">
+        <div class="spinner-border text-primary" id="spinner_loader" role="status" style="display: none;">
+          <span class="sr-only"></span>
+        </div>
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Discard</button>
-        <button type="submit" class="btn btn-primary" onclick="checkNewName(event)">Create</button>
+        <button type="submit" class="btn btn-primary" onclick="checkNewName(event); spinnerAppears()">Create</button>
       </div>
       </form>
     </div>
@@ -250,10 +254,26 @@
           <div id="uploadedDocuments" class="mt-3"></div>
       </div>
       <div class="modal-footer">
+        <div class="spinner-border text-primary" id="spinner_loader_2" role="status" style="display: none;">
+          <span class="sr-only"></span>
+        </div>
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Discard</button>
-        <button type="submit" class="btn btn-primary">Add documents</button>
+        <button type="submit" class="btn btn-primary" onclick="spinnerAppears2()">Add documents</button>
       </div>
       </form>
+    </div>
+  </div>
+</div>
+<div class="modal fade" id="contextModal" tabindex="0" aria-labelledby="context" aria-hidden="true">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="context">Response contexts</h5>
+      </div>
+      <div class="modal-body">
+          <div class="mb-3" id="context-div">
+          </div>
+      </div>
     </div>
   </div>
 </div>
@@ -261,6 +281,8 @@
 <script>
 var copyButtons = document.getElementsByClassName('copy-btn');
 var spinner = document.getElementById("spinner");
+var spinnerLoader = document.getElementById("spinner_loader");
+var spinnerLoader2 = document.getElementById("spinner_loader_2");
 var deleteThreadBtn = document.getElementById("delete-thread-btn");
 
 // Add event listener to each copy button
@@ -328,7 +350,12 @@ const rag_response = '<div class="container">' +
 '<span class="time-right">{time}</span>' +
 '<button class=\'copy-btn\' onclick=\"showMessage(\'Copied!\', this)\"><img id=\'copy-icon\'></button>' +
 '<button class="translate-btn" onclick="translateThis(this)"><img id="translate-icon"></button>' +
+'<button class="context-btn" aria-current="page" data-bs-toggle="modal" data-bs-target="#contextModal" onclick="getContext(this)"><img id="context-icon"></button>' +
 '</div>'
+
+const contextField = '<label for="{context_id}" class="col-form-label">{context_label}</label>' + 
+'<textarea type="text" class="form-control" rows="5" id="{context_id}" disabled>{context_text}</textarea>'
+
 
 
 function translateThis(element) {
@@ -338,7 +365,9 @@ function translateThis(element) {
   if (persianTranslationElement.textContent === "") {
     var messageId = container.querySelector('.rag-response-id').value;
     var messageText = messageElement.textContent;
+    messageText = messageText.replace('<br>',"\n");
     var data = {
+      "mode": "translation",
       'message_id': messageId,
       'translate_to_fa': messageText,
       }
@@ -391,6 +420,20 @@ socket.onmessage = function(e) {
       persianTextBox.textContent = persianTranslation;
       persianTextBox.style.display = "block";
       englishTextBox.style.display = "none";
+    } else if (chatMsgData.mode === "context") {
+        var contexts = chatMsgData.contexts;
+        Object.keys(contexts).forEach(function(key, index) {
+          var contextId = "context-" + (index + 1);
+          var contextLabel = "#" + (index + 1) + ": " + key;
+          var contextText = contexts[key];
+          
+          var context = contextField.replace("{context_id}", contextId);
+          context = context.replace("{context_label}", contextLabel);
+          context = context.replace("{context_text}", contextText);
+          
+          var contextDiv = document.getElementById("context-div");
+          contextDiv.innerHTML += context;
+        });
     } else if (chatMsgData.mode === "new") {
       spinner.style.display = 'none'
       var field = rag_response.replace('{rag_response}', chatMsgData.message);
@@ -477,17 +520,22 @@ window.onload = function() {
   // Place scroller at the active thread area
   var activeThreadId = document.getElementById('active-thread').value;
   var activeThreadElement = document.getElementById(activeThreadId);
-  var isVisible = isElementVisible(activeThreadElement);
 
   // Scroll the scrollbar to the area where the active thread exists
-  if (activeThreadElement && !isVisible) {
+  if (activeThreadElement !== null) {
+    var isVisible = isElementVisible(activeThreadElement);
+    if (activeThreadElement && !isVisible) {
     activeThreadElement.scrollIntoView();
   }
+  }
+
+
   // Place scroller at the last message area
   var containers = document.querySelectorAll(".container");
+  if (containers.length > 0) {
   var lastContainer = containers[containers.length - 1];
   lastContainer.scrollIntoView();
-
+  }
 };
 
 // Function to check if an element is visible in the viewport
@@ -549,8 +597,26 @@ const docForm = document.getElementById('docForm');
   });
 
 
+function getContext(button) {
+  var contextDiv = document.getElementById("context-div");
+  contextDiv.innerHTML = "";
+  var container = button.parentNode;
+  var messageId = container.querySelector('.rag-response-id').value;
+  var data = {
+  "mode": "context",
+  'message_id': messageId,
+  }
+  socket.send(JSON.stringify(data));
+}
 
 
+function spinnerAppears() {
+  spinnerLoader.style.display = 'inline-block' ;
+}
+
+function spinnerAppears2() {
+  spinnerLoader2.style.display = 'inline-block' ;
+}
 
 </script>
 </body>

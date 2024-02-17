@@ -179,8 +179,11 @@
           <div id="uploadedDocuments" class="mt-3"></div>
       </div>
       <div class="modal-footer">
+        <div class="spinner-border text-primary" id="spinner_loader" role="status" style="display: none;">
+          <span class="sr-only"></span>
+        </div>
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Discard</button>
-        <button type="submit" class="btn btn-primary" onclick="checkNewName(event)">Create</button>
+        <button type="submit" class="btn btn-primary" onclick="checkNewName(event); spinnerAppears()">Create</button>
       </div>
       </form>
     </div>
@@ -216,8 +219,14 @@
           <div id="uploadedDocuments" class="mt-3"></div>
       </div>
       <div class="modal-footer">
+        <div class="spinner-border text-primary" id="spinner_loader" role="status" style="display: none;">
+          <span class="sr-only"></span>
+        </div>
+        <div class="spinner-border text-primary" id="spinner_loader_2" role="status" style="display: none;">
+          <span class="sr-only"></span>
+        </div>
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Discard</button>
-        <button type="submit" class="btn btn-primary">Add documents</button>
+        <button type="submit" class="btn btn-primary" onclick="spinnerAppears2()">Add documents</button>
       </div>
       </form>
     </div>
@@ -227,6 +236,8 @@
 <script>
 var copyButtons = document.getElementsByClassName('copy-btn');
 var spinner = document.getElementById("spinner");
+var spinnerLoader = document.getElementById("spinner_loader");
+var spinnerLoader2 = document.getElementById("spinner_loader_2");
 
 // Add event listener to each copy button
 Array.from(copyButtons).forEach(function(button) {
@@ -294,6 +305,14 @@ function checkNewName(event) {
     alert("This collection name already exists! try another name");
   }
 };
+
+function spinnerAppears() {
+  spinnerLoader.style.display = 'inline-block' ;
+}
+
+function spinnerAppears2() {
+  spinnerLoader2.style.display = 'inline-block' ;
+}
 </script>
 </body>
 </html>
