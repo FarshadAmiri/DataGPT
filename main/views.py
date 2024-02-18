@@ -22,6 +22,7 @@ all_docs_collection_name = "ALL_DOCS_COLLECTION"
 all_docs_collection_path = os.path.join(collections_path, all_docs_collection_name)
 # model_name = "TheBloke/Mistral-7B-Instruct-v0.2-AWQ"
 model_name = "TheBloke/CapybaraHermes-2.5-Mistral-7B-AWQ"
+# model_name="TheBloke/Llama-2-7b-Chat-GPTQ"
 
 model_obj = load_model(model_name)
 model = model_obj["model"]

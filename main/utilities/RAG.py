@@ -49,6 +49,7 @@ def load_model(model_name="TheBloke/Llama-2-7b-Chat-GPTQ", device='gpu'):
     # Define model
     model = AutoModelForCausalLM.from_pretrained(model_name
         ,cache_dir=r"C:\Users\henry\.cache\huggingface\hub"
+        # ,cache_dir=r"C:\Users\user2\.cache\huggingface\hub"
         ,device_map='cuda'  
         # , torch_dtype=torch.float16
         # ,low_cpu_mem_usage=True
