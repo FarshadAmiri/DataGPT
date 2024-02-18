@@ -297,15 +297,16 @@ function copyToClipboard(text) {
 
 
 function copyThis(button) {
-  var ragResponse = button.parentNode.querySelector('.rag-response');
-  var ragResponsePersian = button.parentNode.querySelector('.rag-response-Fa');
-  var messageText = ragResponse.textContent;
-  var messageTextPersian = ragResponsePersian.textContent;
-  if (ragResponse.style.display === 'none') {
-    copyToClipboard(messageTextPersian);
-  } else {
-    copyToClipboard(messageText);
-  }
+    var ragResponse = button.parentNode.querySelector('.rag-response');
+    var ragResponsePersian = button.parentNode.querySelector('.rag-response-Fa');
+    var messageText = ragResponse.textContent;
+    var messageTextPersian = ragResponsePersian.textContent;
+    var displayStyle = window.getComputedStyle(ragResponse).display;
+    if (displayStyle === 'none') {
+        copyToClipboard(messageTextPersian);
+    } else {
+        copyToClipboard(messageText);
+    }
 }
 
 // Add event listener to each copy button
