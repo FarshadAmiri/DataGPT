@@ -475,7 +475,6 @@ socket.onmessage = function(e) {
       var updatedRagResponse = lastRagResponse.innerHTML + chatMsgData.message;
       updatedRagResponse = updatedRagResponse.replace(/\n/g, '<br>');
       lastRagResponse.innerHTML = updatedRagResponse;
-      scrolltoend();
 
       //var last_response_text = $('.rag-response:last')[0].textContent;
       //last_response_text = last_response_text.replace(/\n/g, '<br>');
