@@ -18,6 +18,7 @@ from main.views import model, tokenizer, streamer, device
 from main.models import Thread, ChatMessage, Document
 from main.utilities.RAG import llm_inference
 from main.utilities.translation import translate_en_fa, translate_fa_en, detect_language
+from main.utilities.variables import system_prompt, query_wrapper_prompt
 
 
 class RAGConsumer(AsyncConsumer):
@@ -36,17 +37,17 @@ class RAGConsumer(AsyncConsumer):
         except:
             pass
         # Create a system prompt
-        system_prompt = """<s>[INST] <<SYS>>
-        You are a helpful, respectful and honest assistant. Always answer as
-        helpfully as possible, while being safe.`
-        If a question does not make any sense, or is not factually coherent, explain
-        why instead of answering something not correct. If you don't know the answer
-        to a question, please don't share false information.
-        Try to be exact in information and numbers you tell.
-        Your goal is to provide answers completely based on the information provided
-        and avoid to use yourown knowledge.<</SYS>>
-        """
-        query_wrapper_prompt = SimpleInputPrompt("{query_str} [/INST]")
+        # system_prompt = """<s>[INST] <<SYS>>
+        # You are a helpful, respectful and honest assistant. Always answer as
+        # helpfully as possible, while being safe.`
+        # If a question does not make any sense, or is not factually coherent, explain
+        # why instead of answering something not correct. If you don't know the answer
+        # to a question, please don't share false information.
+        # Try to be exact in information and numbers you tell.
+        # Your goal is to provide answers completely based on the information provided
+        # and avoid to use yourown knowledge.<</SYS>>
+        # """
+        # query_wrapper_prompt = SimpleInputPrompt("{query_str} [/INST]")
         llm = HuggingFaceLLM(context_window=4096,
                      max_new_tokens=512,
                      system_prompt=system_prompt,
@@ -73,7 +74,7 @@ class RAGConsumer(AsyncConsumer):
             # Customize query engine
             retriever = VectorIndexRetriever(
                 index=index,
-                similarity_top_k=3,
+                similarity_top_k=6,
             )
 
             # configure response synthesizer
@@ -83,7 +84,7 @@ class RAGConsumer(AsyncConsumer):
             query_engine = RetrieverQueryEngine(
                 retriever=retriever,
                 response_synthesizer=response_synthesizer,
-                node_postprocessors=[SimilarityPostprocessor(similarity_cutoff=0.1)],
+                node_postprocessors=[SimilarityPostprocessor(similarity_cutoff=0.4)],
             )
             self.query_engine = query_engine
         except:

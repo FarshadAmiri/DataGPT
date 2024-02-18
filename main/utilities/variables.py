@@ -15,48 +15,68 @@ torch.cuda.get_device_name(0)
 
 
 # Define model name and hf token
-name = "TheBloke/Llama-2-7b-Chat-GPTQ"
-# name = "TheBloke/Mistral-7B-Instruct-v0.1-GPTQ"
+# model_name = "TheBloke/Llama-2-7b-Chat-GPTQ"
+# model_name = "TheBloke/Mistral-7B-Instruct-v0.1-GPTQ"
+# model_name = "TheBloke/CapybaraHermes-2.5-Mistral-7B-AWQ"
 
 # hugginf face auth token
-file_path = "huggingface_credentials.txt"
-with open(file_path, "r") as file:
-    auth_token = file.read().strip()
+#file_path = "huggingface_credentials.txt"
+#with open(file_path, "r") as file:
+#    auth_token = file.read().strip()
 
 
 
 # Create tokenizer
-tokenizer = AutoTokenizer.from_pretrained(name
-    # ,cache_dir='./model/'
-    ,use_auth_token=auth_token
-    ,device_map='cuda'                 
-    )
+#tokenizer = AutoTokenizer.from_pretrained(model_name
+#    # ,cache_dir='./model/'
+#    ,use_auth_token=auth_token
+#    ,device_map='cuda'                 
+#    )
 
 
 # Define model
-model = AutoModelForCausalLM.from_pretrained(name
-    ,cache_dir=r"C:\Users\user2\.cache\huggingface\hub"
-    # ,cache_dir='./model/'
-    ,use_auth_token=auth_token
-    ,device_map='cuda'
-    # , torch_dtype=torch.float16
-    # ,low_cpu_mem_usage=True
-    # ,rope_scaling={"type": "dynamic", "factor": 2}
-    # ,load_in_8bit=True,
-    ).to(device)
+#model = AutoModelForCausalLM.from_pretrained(model_name
+#    ,cache_dir=r"C:\Users\user2\.cache\huggingface\hub"
+#    # ,cache_dir='./model/'
+#    ,use_auth_token=auth_token
+#    ,device_map='cuda'
+#    # , torch_dtype=torch.float16
+#    # ,low_cpu_mem_usage=True
+#    # ,rope_scaling={"type": "dynamic", "factor": 2}
+#    # ,load_in_8bit=True,
+#    ).to(device)
 
 
-streamer = TextStreamer(tokenizer, skip_prompt=True, skip_special_tokens=True)
+#streamer = TextStreamer(tokenizer, skip_prompt=True, skip_special_tokens=True)
+
+# Llama2
+# system_prompt = """<s>[INST] <<SYS>>
+# You are a helpful, respectful and honest assistant. Always answer as
+# helpfully as possible, while being safe.
+# If a question does not make any sense, or is not factually coherent, explain
+# why instead of answering something not correct. If you don't know the answer
+# to a question, please express that you do not have informaion or knowledge in that context and please don't share false information.
+# Try to be exact in information and numbers you tell.
+# Your goal is to provide answers based on the information provided and your other knowledge.<</SYS>>
+# """
+
+# query_wrapper_prompt = SimpleInputPrompt("{query_str} [/INST]")
 
 
-system_prompt = """<s>[INST] <<SYS>>
-You are a helpful, respectful and honest assistant. Always answer as
-helpfully as possible, while being safe.
+# Mistral
+system_prompt = """<|im_start|>system
+You are a helpful, respectful and honest assistant.
+Always answer as helpfully as possible, while being safe.
 If a question does not make any sense, or is not factually coherent, explain
 why instead of answering something not correct. If you don't know the answer
-to a question, please express that you do not have informaion or knowledge in that context and please don't share false information.
+to a question, please express that you do not have informaion or knowledge in
+that context and please don't share false information.
 Try to be exact in information and numbers you tell.
-Your goal is to provide answers based on the information provided and your other knowledge.<</SYS>>
+Your goal is to provide answers based on the information provided, so do not
+use your prior knowledge.<|im_end|>
+<|im_start|>user
 """
 
-query_wrapper_prompt = SimpleInputPrompt("{query_str} [/INST]")
+query_wrapper_prompt = SimpleInputPrompt("""{query_str} <|im_end|>
+<|im_start|>assistant
+""")
