@@ -92,7 +92,7 @@
             <p class="msg rag-response" style="line-break: auto;">{{message.message|linebreaksbr}}</p>
             <p class="msg rag-response-Fa" style="line-break: auto; display: none;"></p>
             <span class="time-right">{{message.timestamp}}</span>
-            <button class="copy-btn" onclick="showMessage('Copied!', this)"><img id="copy-icon"></button>
+            <button class="copy-btn" onclick="copyThis(this); showMessage('Copied!', this)"><img id="copy-icon"></button>
             <button class="translate-btn" onclick="translateThis(this)"><img id="translate-icon"></button>
             <button class="context-btn" aria-current="page" data-bs-toggle="modal" data-bs-target="#contextModal" onclick="getContext(this)"><img id="context-icon"></button>
         </div>
@@ -295,20 +295,33 @@ function copyToClipboard(text) {
     document.body.removeChild(tempInput);
 }
 
+
+function copyThis(button) {
+  var ragResponse = button.parentNode.querySelector('.rag-response');
+  var ragResponsePersian = button.parentNode.querySelector('.rag-response-Fa');
+  var messageText = ragResponse.textContent;
+  var messageTextPersian = ragResponsePersian.textContent;
+  if (ragResponse.style.display === 'none') {
+    copyToClipboard(messageTextPersian);
+  } else {
+    copyToClipboard(messageText);
+  }
+}
+
 // Add event listener to each copy button
-Array.from(copyButtons).forEach(function(button) {
-    button.addEventListener('click', function() {
-        var ragResponse = this.parentNode.querySelector('.rag-response');
-        var ragResponsePersian = this.parentNode.querySelector('.rag-response-Fa');
-        var messageText = this.parentNode.querySelector('.rag-response').textContent;
-        var messageTextPersian = this.parentNode.querySelector('.rag-response-Fa').textContent;
-        if (ragResponse.style.display === 'none') {
-          copyToClipboard(messageTextPersian);
-        } else {
-          copyToClipboard(messageText);
-        }
-    });
-});
+//Array.from(copyButtons).forEach(function(button) {
+//    button.addEventListener('click', function() {
+//        var ragResponse = this.parentNode.querySelector('.rag-response');
+//        var ragResponsePersian = this.parentNode.querySelector('.rag-response-Fa');
+//        var messageText = this.parentNode.querySelector('.rag-response').textContent;
+//        var messageTextPersian = this.parentNode.querySelector('.rag-response-Fa').textContent;
+//        if (ragResponse.style.display === 'none') {
+//          copyToClipboard(messageTextPersian);
+//        } else {
+//          copyToClipboard(messageText);
+//        }
+//    });
+//});
 
 
 function showMessage(message, button) {
