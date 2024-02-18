@@ -285,6 +285,16 @@ var spinnerLoader = document.getElementById("spinner_loader");
 var spinnerLoader2 = document.getElementById("spinner_loader_2");
 var deleteThreadBtn = document.getElementById("delete-thread-btn");
 
+// Function to copy text to clipboard
+function copyToClipboard(text) {
+    var tempInput = document.createElement('input');
+    tempInput.value = text;
+    document.body.appendChild(tempInput);
+    tempInput.select();
+    document.execCommand('copy');
+    document.body.removeChild(tempInput);
+}
+
 // Add event listener to each copy button
 Array.from(copyButtons).forEach(function(button) {
     button.addEventListener('click', function() {
@@ -300,15 +310,6 @@ Array.from(copyButtons).forEach(function(button) {
     });
 });
 
-// Function to copy text to clipboard
-function copyToClipboard(text) {
-    var tempInput = document.createElement('input');
-    tempInput.value = text;
-    document.body.appendChild(tempInput);
-    tempInput.select();
-    document.execCommand('copy');
-    document.body.removeChild(tempInput);
-}
 
 function showMessage(message, button) {
   const messageBox = document.createElement('div');
@@ -483,20 +484,6 @@ socket.onmessage = function(e) {
     }
 }
 
-
-
-//socket.onmessage = function(e) {
-//    console.log ("ws message:", e)
-//    var chatMsgData = JSON.parse(e.data)
-//    console.log ("response: ", chatMsgData)
-//    var today = new Date();
-//    var time = today.getHours() + ":" + today.getMinutes();
-//    var field = rag_response.replace('{rag_response}', chatMsgData.message);
-//    field = field.replace(/\n/g, '<br>');
-//    field = field.replace('{time}', time);
-//    $('#board').append(field);
-//    scrolltoend();
-//}
 
 socket.onerror  = function(e) {
     console.log ("error", e)
