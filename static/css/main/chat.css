@@ -385,11 +385,6 @@ body{
   display: none;
 }
 
-@media (max-width: 400px) {
-  .sidebar {
-    display: none;
-  }
-}
 
 /* .options-container {
   position: relative;
