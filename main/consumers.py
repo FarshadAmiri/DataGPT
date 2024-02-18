@@ -100,7 +100,7 @@ class RAGConsumer(AsyncConsumer):
             query_engine_10 = RetrieverQueryEngine(
                 retriever=retriever_10,
                 response_synthesizer=response_synthesizer,
-                node_postprocessors=[SimilarityPostprocessor(similarity_cutoff=0.25)],
+                node_postprocessors=[SimilarityPostprocessor(similarity_cutoff=0.2)],
             )
 
             query_engine_00 = RetrieverQueryEngine(
