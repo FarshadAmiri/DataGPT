@@ -217,7 +217,7 @@ class RAGConsumer(AsyncConsumer):
                         full_response = "No relevant information was found in the document sources; here is the LLM response generated to address your question:\n"
 
                 response_dict = {
-                    "message": "",
+                    "message": full_response,
                     "username": username,
                     "mode": "new",
                 }
