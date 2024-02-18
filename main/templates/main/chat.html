@@ -442,7 +442,6 @@ socket.onmessage = function(e) {
           contextDiv.innerHTML += context;
         });
     } else if (chatMsgData.mode === "new") {
-      spinner.style.display = 'none'
       var field = rag_response.replace('{rag_response}', chatMsgData.message);
       field = field.replace('{time}', time);
       $('#board').append(field);
@@ -464,6 +463,7 @@ socket.onmessage = function(e) {
       id_input.id = messageId;
       id_input.value = messageId;
     } else {
+      spinner.style.display = 'none'
       //const ragResponses = document.getElementsByClassName('rag-response');
       //const lastRagResponse = ragResponses[ragResponses.length - 1];
       //var updatedRagResponse = lastRagResponse.textContent + chatMsgData.message;
