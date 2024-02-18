@@ -288,8 +288,15 @@ var deleteThreadBtn = document.getElementById("delete-thread-btn");
 // Add event listener to each copy button
 Array.from(copyButtons).forEach(function(button) {
     button.addEventListener('click', function() {
+        var ragResponse = this.parentNode.querySelector('.rag-response');
+        var ragResponsePersian = this.parentNode.querySelector('.rag-response-Fa');
         var messageText = this.parentNode.querySelector('.rag-response').textContent;
-        copyToClipboard(messageText);
+        var messageTextPersian = this.parentNode.querySelector('.rag-response-Fa').textContent;
+        if (ragResponse.style.display === 'none') {
+          copyToClipboard(messageTextPersian);
+        } else {
+          copyToClipboard(messageText);
+        }
     });
 });
 
