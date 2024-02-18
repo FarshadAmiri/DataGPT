@@ -94,13 +94,13 @@ class RAGConsumer(AsyncConsumer):
             query_engine = RetrieverQueryEngine(
                 retriever=retriever,
                 response_synthesizer=response_synthesizer,
-                node_postprocessors=[SimilarityPostprocessor(similarity_cutoff=0.5)],
+                node_postprocessors=[SimilarityPostprocessor(similarity_cutoff=0.3)],
             )
 
             query_engine_10 = RetrieverQueryEngine(
                 retriever=retriever_10,
                 response_synthesizer=response_synthesizer,
-                node_postprocessors=[SimilarityPostprocessor(similarity_cutoff=0.4)],
+                node_postprocessors=[SimilarityPostprocessor(similarity_cutoff=0.15)],
             )
 
             query_engine_00 = RetrieverQueryEngine(
@@ -201,15 +201,6 @@ class RAGConsumer(AsyncConsumer):
                 username = self.user.username
                 print(f"msg: {msg}")
                 await self.create_chat_message(msg, rag_response=False, source_nodes=None)
-                response_dict = {
-                    "message": "",
-                    "username": username,
-                    "mode": "new",
-                }
-                await self.send({
-                    "type": "websocket.send",
-                    "text": json.dumps(response_dict),
-                })
 
                 # Translate the question if it is Persian
                 if detect_language(msg) == "Persian":
@@ -224,6 +215,17 @@ class RAGConsumer(AsyncConsumer):
                     if len(response.source_nodes) == 0 :
                         response = self.query_engine_00.query(msg)
                         full_response = "No relevant information was found in the document sources; here is the LLM response generated to address your question:\n"
+
+                response_dict = {
+                    "message": "",
+                    "username": username,
+                    "mode": "new",
+                }
+                await self.send({
+                    "type": "websocket.send",
+                    "text": json.dumps(response_dict),
+                })
+
                 source_nodes = response.source_nodes
                 source_nodes_dict = dict()
                 for node in source_nodes:
