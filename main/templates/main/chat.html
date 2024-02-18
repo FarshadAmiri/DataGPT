@@ -602,11 +602,14 @@ function getContext(button) {
   contextDiv.innerHTML = "";
   var container = button.parentNode;
   var messageId = container.querySelector('.rag-response-id').value;
-  var data = {
-  "mode": "context",
-  'message_id': messageId,
+  if (messageId !== "{{message.id}}") {
+    var data = {
+    "mode": "context",
+    'message_id': messageId,
+    }
+    socket.send(JSON.stringify(data));
   }
-  socket.send(JSON.stringify(data));
+
 }
 
 
