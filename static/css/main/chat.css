@@ -16,7 +16,6 @@
 .sidebar {
   align-items: left;
   justify-content: left;
-  /* width: 300px; */
   width: 16vw;
   background-color: #f8f9fa;
   height: 100vh;
@@ -25,22 +24,29 @@
 .sidebar-right {
   align-items: right;
   justify-content: right;
-  /* width: 300px; */
   width: 16vw;
   background-color: #f8f9fa;
   height: 100vh;
 }
 
-
 .messages {
   height: 88vh;
-  /* width: 1200px; */
   width: 65vw;
   align-items: center;
   border-width: 2px;
   margin-top: 16px;
   overflow-y: auto;
 }
+
+@media (max-width: 800px) {
+  .sidebar-right {
+    display: none; /* Hide the right sidebar */
+  }
+  .messages {
+    width: 84vw; /* Increase the width of the messages div */
+  }
+}
+
 
 #page_title {
   font-family: Exo2;
