@@ -44,7 +44,7 @@
     </ul>
     <br>
     <div style="max-height: 800px; overflow-y: auto;">
-    <ul class="nav nav-pills flex-column" id="#chats">
+    <ul class="nav nav-pills flex-column" id="chats">
       <input type="hidden" id="active-thread" value="{{active_thread_id}}">
       {% for thread in chat_threads %}
       <a href="{% url 'main:chat' thread.id %}" class="list-group-item list-group-item-action py-3 lh-tight rag-thread {% if active_thread_id == thread.id %}current{% endif %}" id="{{thread.id}}" style="margin-bottom: 10px;">
@@ -75,7 +75,7 @@
     </div>
   </div>
   </div>
-  <div class="col-md-8" style="margin-bottom: 0px; padding-bottom: 0px;">
+  <div class="col-md-8" style="margin-bottom: 0px; padding-bottom: 0px; margin-left: 0px; padding-left: 0px; border-left: 0px;;">
   <div class="chat-box">
     <div class="messages" id="board">
     {% for message in messages %}

@@ -20,6 +20,8 @@
   min-width: 170px;
   background-color: #f8f9fa;
   height: 100vh;
+  margin-right: 0px;
+  padding-right: 0px;
 }
 
 .sidebar-right {
