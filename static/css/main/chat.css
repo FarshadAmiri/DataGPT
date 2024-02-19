@@ -14,6 +14,8 @@
 }
 
 .sidebar {
+  display: flex;
+  flex-direction: column;
   align-items: left;
   justify-content: left;
   /* width: 300px; */
