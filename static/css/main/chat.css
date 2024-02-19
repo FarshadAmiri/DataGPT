@@ -16,7 +16,7 @@
 .sidebar {
   align-items: left;
   justify-content: left;
-  width: 16vw;
+  width: calc(16vw - 10px);
   min-width: 170px;
   background-color: #f8f9fa;
   height: 100vh;
@@ -25,7 +25,7 @@
 .sidebar-right {
   align-items: right;
   justify-content: right;
-  width: 16vw;
+  width: calc(16vw - 10px);
   min-width: 170px;
   background-color: #f8f9fa;
   height: 100vh;
@@ -39,6 +39,19 @@
   margin-top: 16px;
   overflow-y: auto;
 }
+
+@media (max-width: 992px) {
+  .sidebar-right {
+    display: none; /* Hide the right sidebar */
+  }
+  .sidebar {
+    width: 16vw; /* Adjust the width of the left sidebar to occupy the space */
+  }
+  .messages {
+    width: 100vw; /* Expand the messages width to occupy the whole area */
+  }
+}
+
 
 #page_title {
   font-family: Exo2;
