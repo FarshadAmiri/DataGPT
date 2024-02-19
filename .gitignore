@@ -167,3 +167,4 @@ documents_db/
 .collections/
 collections/
 *.pdf
+~$RAG.pptx
