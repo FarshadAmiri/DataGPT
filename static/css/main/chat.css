@@ -17,6 +17,7 @@
   align-items: left;
   justify-content: left;
   width: 16vw;
+  min-width: 200px;
   background-color: #f8f9fa;
   height: 100vh;
 }
@@ -25,6 +26,7 @@
   align-items: right;
   justify-content: right;
   width: 16vw;
+  min-width: 200px;
   background-color: #f8f9fa;
   height: 100vh;
 }
