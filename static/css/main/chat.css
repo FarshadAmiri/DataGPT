@@ -38,16 +38,6 @@
   overflow-y: auto;
 }
 
-@media (max-width: 800px) {
-  .sidebar-right {
-    display: none; /* Hide the right sidebar */
-  }
-  .messages {
-    width: 84vw; /* Increase the width of the messages div */
-  }
-}
-
-
 #page_title {
   font-family: Exo2;
   font-weight: bolder;
