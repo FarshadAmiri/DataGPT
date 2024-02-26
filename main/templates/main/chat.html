@@ -409,8 +409,8 @@ function decrypt_text(text) {
     var aesRawKey = localStorage.getItem("aesRawKey_rag");
     var aesKey = CryptoJS.enc.Utf8.parse(aesRawKey);
     var decryptedText = CryptoJS.AES.decrypt(text, aesKey, {mode: CryptoJS.mode.ECB});
-    var decryptedTextValue = decryptedSourceText.toString(CryptoJS.enc.Utf8);
-    decryptedTextValue = decryptedSourceTextValue.replace(/[\x00-\x09\x0B-\x1F\x7F-\x9F]/g, '');
+    var decryptedTextValue = decryptedText.toString(CryptoJS.enc.Utf8);
+    decryptedTextValue = decryptedTextValue.replace(/[\x00-\x09\x0B-\x1F\x7F-\x9F]/g, '');
     return decryptedTextValue;
 }
 
@@ -447,7 +447,7 @@ socket.onopen = function(e) {
         var msgVal = msgInput.val()
         var aesRawKey = generateRandomKey(16);
         var aesKey = CryptoJS.enc.Utf8.parse(aesRawKey);
-        localStorage.setItem("aesRawKey_rag", aesRawKey);\
+        localStorage.setItem("aesRawKey_rag", aesRawKey);
         var encryptedMsgVal = CryptoJS.AES.encrypt(msgVal, aesKey, {mode: CryptoJS.mode.ECB}).toString();
         var encrypt = new JSEncrypt();
         encrypt.setPublicKey(publicKey);
@@ -536,7 +536,7 @@ socket.onmessage = function(e) {
       //var last_response_text = $('.rag-response:last')[0].textContent;
       //last_response_text = last_response_text.replace(/\n/g, '<br>');
       //$('.rag-response:last')[0].textContent = last_response_text + chatMsgData.message;
-      //scrolltoend();
+      scrolltoend();
     }
 }
 
