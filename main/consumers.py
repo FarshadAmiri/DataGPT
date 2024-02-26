@@ -169,11 +169,16 @@ class RAGConsumer(AsyncConsumer):
             dict_data = json.loads(client_data)
             mode = dict_data.get("mode")
             if mode == "translation":
-                translation_task = dict_data.get("translate_to_fa")
+                encrypted_translation_task = dict_data.get("encrypted_message")
+                encrypted_aes_key = dict_data.get("encrypted_aes_key")
+                aes_key = decrypt_aes_key(encrypted_aes_key)
+                translation_task = decrypt_AES_ECB(encrypted_translation_task, aes_key)
+                translation_task = msg.replace("\x02", "")
                 message_id = dict_data.get("message_id")
                 persian_translation = self.translate_to_fa(translation_task)
+                encrypted_persian_translation = encrypt_AES_ECB(persian_translation, aes_key).decode('utf-8')
                 response_dict = {
-                    "persian_translation": persian_translation,
+                    "encrypted_persian_translation": encrypted_persian_translation,
                     "message_id": message_id,
                     "mode": "translation",
                 }

@@ -422,10 +422,18 @@ function translateThis(element) {
     var messageId = container.querySelector('.rag-response-id').value;
     var messageText = messageElement.textContent;
     messageText = messageText.replace('<br>',"\n");
+    var aesRawKey = generateRandomKey(16);
+    var aesKey = CryptoJS.enc.Utf8.parse(aesRawKey);
+    localStorage.setItem("aesRawKey_rag", aesRawKey);
+    var encryptedMessageText = CryptoJS.AES.encrypt(messageText, aesKey, {mode: CryptoJS.mode.ECB}).toString();
+    var encrypt = new JSEncrypt();
+    encrypt.setPublicKey(publicKey);
+    var encryptedAesKey = encrypt.encrypt(aesKey.toString(CryptoJS.enc.Base64));
     var data = {
       "mode": "translation",
       'message_id': messageId,
-      'translate_to_fa': messageText,
+      'encrypted_message': encryptedMessageText,
+      'encrypted_aes_key' : encryptedAesKey
       }
     socket.send(JSON.stringify(data));
   } else { 
@@ -474,7 +482,8 @@ socket.onmessage = function(e) {
     var today = new Date();
     var time = today.getHours() + ":" + today.getMinutes();
     if (chatMsgData.mode === "translation") {
-      var persianTranslation = chatMsgData.persian_translation;
+      var encryptedPersianTranslation = chatMsgData.encrypted_persian_translation;
+      var persianTranslation = decrypt_text(encryptedPersianTranslation)
       var messageId = chatMsgData.message_id;
       var container = document.getElementById(messageId).parentNode;
       var persianTextBox = container.querySelector('.msg.rag-response-Fa');
