@@ -6,6 +6,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="connect-src 'self' ws://127.0.0.1:8000">
+    <title>RAG Chat</title>
     <script type="text/javascript" src="{% static 'jquery-3.7.1.min.js' %}"></script>
     <link rel="icon" href="{% static 'icons/favicon5.ico' %}" type="image/x-icon">
     <link rel="shortcut icon" href="{% static 'icons/favicon5.ico' %}" type="image/x-icon">
@@ -14,7 +15,108 @@
     <link rel="stylesheet" type="text/css" href="{% static 'css/main/chat.css' %}">
     <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
     <script src="{% static 'js/sidebars.js' %}"></script>
-    <title>RAG Chat</title>
+    <script src="{% static 'crypto-js.js' %}"></script>
+    <script src="{% static 'jsencrypt.js' %}"></script>
+    <script>
+    var publicKey = "-----BEGIN PUBLIC KEY-----\n" +
+          "MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAvRW2QcbKbzDobMdkLqvY\n" +
+          "Fb66Ih41T1+X3spW1WP6UduM1kS+bVh7HwG23pt8e/XJAf9G4IhWTZfkgVBdMsFP\n" +
+          "UfCJDiP/9cbQBgNDtT85jlFHjB1dBlJ51Hh8kDkx/1/dgy2b/ZjJ0YwAFLpk2k8W\n" +
+          "ZO8wtIOEHMSdLryVh8Jkpk1qSYZPZZuW+QEE/G+TJcF286mLEpTfZ/RQN4mg/nCS\n" +
+          "FhW4Rv9wnF8dhgU43kTiLwV8wVgOTKxAseDxMyvbjKiiH+u5YByZNN1hPVFSYQNx\n" +
+          "06IK0Ea7wk0UTRhCwLFu2AOPGL3AylFnjlHCd+/vbDrW3WDj3KRTbZFxtysYqn3B\n" +
+          "SnNZy6D1xPn79nsgWfKrgQo9KTgP9gpSoebBZwFIRmBD5Q2BpwZvbZj5lJgEYJpe\n" +
+          "xH5LW6Rfv2GZjU+S5SEPNXMlSf6kmfbJAEhsyqKj+tWZtri3AfEBhG7hkmmz51zA\n" +
+          "32JwSGV/IFqblOHsONsZizOl4OxzSytgfhCyOkAg6zcb5Hcd3Zod0SHscgkYPAeO\n" +
+          "9ZZvD6pneRrcB1tgBPz3CSp6UOe9ktK0Lo5ZlapNUmpIR1Av/immdBnfRfB6m+ax\n" +
+          "efNjY6Myl8/aepuND/E1MJviOMCm3cyrmOsNj5rwg2AIGO4vw4hdjXqOLez87t/X\n" +
+          "OYNP74TrWvLmcNmlKfQNfMsCAwEAAQ==\n" +
+          "-----END PUBLIC KEY-----";
+
+    function generateRandomKey(length) {
+      var charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+      var result = "";
+      for (var i = 0; i < length; i++) {
+        result += charset.charAt(Math.floor(Math.random() * charset.length));
+      }
+      return result;
+    }
+
+    function encryptText(event, query) {
+      var publicKey = "-----BEGIN PUBLIC KEY-----\n" +
+                "MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAvRW2QcbKbzDobMdkLqvY\n" +
+                "Fb66Ih41T1+X3spW1WP6UduM1kS+bVh7HwG23pt8e/XJAf9G4IhWTZfkgVBdMsFP\n" +
+                "UfCJDiP/9cbQBgNDtT85jlFHjB1dBlJ51Hh8kDkx/1/dgy2b/ZjJ0YwAFLpk2k8W\n" +
+                "ZO8wtIOEHMSdLryVh8Jkpk1qSYZPZZuW+QEE/G+TJcF286mLEpTfZ/RQN4mg/nCS\n" +
+                "FhW4Rv9wnF8dhgU43kTiLwV8wVgOTKxAseDxMyvbjKiiH+u5YByZNN1hPVFSYQNx\n" +
+                "06IK0Ea7wk0UTRhCwLFu2AOPGL3AylFnjlHCd+/vbDrW3WDj3KRTbZFxtysYqn3B\n" +
+                "SnNZy6D1xPn79nsgWfKrgQo9KTgP9gpSoebBZwFIRmBD5Q2BpwZvbZj5lJgEYJpe\n" +
+                "xH5LW6Rfv2GZjU+S5SEPNXMlSf6kmfbJAEhsyqKj+tWZtri3AfEBhG7hkmmz51zA\n" +
+                "32JwSGV/IFqblOHsONsZizOl4OxzSytgfhCyOkAg6zcb5Hcd3Zod0SHscgkYPAeO\n" +
+                "9ZZvD6pneRrcB1tgBPz3CSp6UOe9ktK0Lo5ZlapNUmpIR1Av/immdBnfRfB6m+ax\n" +
+                "efNjY6Myl8/aepuND/E1MJviOMCm3cyrmOsNj5rwg2AIGO4vw4hdjXqOLez87t/X\n" +
+                "OYNP74TrWvLmcNmlKfQNfMsCAwEAAQ==\n" +
+                "-----END PUBLIC KEY-----";
+      var plainText = document.getElementById('source_text').value;
+      var mode_element = document.getElementById('mode');
+
+      // Generate a random 128-bit (16 bytes) AES key
+      var aesRawKey = generateRandomKey(16);
+      var aesKey = CryptoJS.enc.Utf8.parse(aesRawKey);
+      localStorage.setItem("aesRawKey_rag", aesRawKey);
+      // Encrypt the text with the AES key
+      var encryptedText = CryptoJS.AES.encrypt(plainText, aesKey, {mode: CryptoJS.mode.ECB}).toString();
+
+      // RSA Encryption on AES key using RSA public key
+      var encrypt = new JSEncrypt();
+      encrypt.setPublicKey(publicKey);
+      var encryptedAesKey = encrypt.encrypt(aesKey.toString(CryptoJS.enc.Base64));
+
+      // Embed AES key and encrypted text into the form
+      var hiddenEncodedText = document.createElement("input");
+      hiddenEncodedText.type = "hidden";
+      hiddenEncodedText.name = "encryptedText";
+      hiddenEncodedText.id = "encryptedText";
+      hiddenEncodedText.value = encryptedText;
+      
+      var hiddenEncryptedAESKey = document.createElement("input");
+      hiddenEncryptedAESKey.type = "hidden";
+      hiddenEncryptedAESKey.name = "encryptedAesKey";
+      hiddenEncryptedAESKey.id = "encryptedAesKey";
+      hiddenEncryptedAESKey.value = encryptedAesKey;
+      // Append the hidden input to the form
+      var form = document.getElementById("translation_form");
+      form.appendChild(mode_element);
+      form.appendChild(hiddenEncodedText);
+      form.appendChild(hiddenEncryptedAESKey);
+
+      if (query === "saving") {
+          var hiddenEncryptedTranslation = document.createElement("input");
+          hiddenEncryptedTranslation.type = "hidden";
+          hiddenEncryptedTranslation.name = "encryptedTranslation";
+          hiddenEncryptedTranslation.id = "encryptedTranslation";
+          hiddenEncryptedTranslation.value = encryptedTranslation;
+
+          form.appendChild(hiddenEncryptedTranslation);
+      }
+
+      if (query === "back" && mode.value === "supervisor") {
+      var selected_user = document.getElementById("selected_user");
+      form.appendChild(selected_user);
+      }
+      
+      var source_lang = document.getElementById("source_lang");
+      form.appendChild(source_lang);
+      var target_lang = document.getElementById("target_lang");
+      form.appendChild(target_lang);
+
+      // Return the encrypted text and encrypted AES key
+      return {
+      encryptedText: encryptedText,
+      encryptedAesKey: encryptedAesKey
+      };
+  }
+    </script>
 </head>
 <body>
 <div class="container-fluid">
@@ -378,7 +480,14 @@ const rag_response = '<div class="container">' +
 const contextField = '<label for="{context_id}" class="col-form-label">{context_label}</label>' + 
 '<textarea type="text" class="form-control" rows="5" id="{context_id}" disabled>{context_text}</textarea>'
 
-
+function decrypt_text(text) {
+    var aesRawKey = localStorage.getItem("aesRawKey_rag");
+    var aesKey = CryptoJS.enc.Utf8.parse(aesRawKey);
+    var decryptedText = CryptoJS.AES.decrypt(text, aesKey, {mode: CryptoJS.mode.ECB});
+    var decryptedTextValue = decryptedSourceText.toString(CryptoJS.enc.Utf8);
+    decryptedTextValue = decryptedSourceTextValue.replace(/[\x00-\x09\x0B-\x1F\x7F-\x9F]/g, '');
+    return decryptedTextValue;
+}
 
 function translateThis(element) {
   var container = element.parentNode;
@@ -410,8 +519,17 @@ socket.onopen = function(e) {
     console.log ("open", e)
     formData.submit(function(event) {
         event.preventDefault();
+        var msgVal = msgInput.val()
+        var aesRawKey = generateRandomKey(16);
+        var aesKey = CryptoJS.enc.Utf8.parse(aesRawKey);
+        localStorage.setItem("aesRawKey_rag", aesRawKey);\
+        var encryptedMsgVal = CryptoJS.AES.encrypt(msgVal, aesKey, {mode: CryptoJS.mode.ECB}).toString();
+        var encrypt = new JSEncrypt();
+        encrypt.setPublicKey(publicKey);
+        var encryptedAesKey = encrypt.encrypt(aesKey.toString(CryptoJS.enc.Base64));
         var data = {
-            'message': msgInput.val(),
+            'encrypted_message': encryptedMsgVal,
+            'encrypted_aes_key' : encryptedAesKey
         }
         socket.send(JSON.stringify(data));
         var today = new Date();
@@ -427,9 +545,7 @@ socket.onopen = function(e) {
 }
 
 socket.onmessage = function(e) {
-    console.log ("ws message:", e)
     var chatMsgData = JSON.parse(e.data)
-    console.log ("response: ", chatMsgData)
     var today = new Date();
     var time = today.getHours() + ":" + today.getMinutes();
     if (chatMsgData.mode === "translation") {
@@ -479,6 +595,7 @@ socket.onmessage = function(e) {
       id_input.value = messageId;
     } else {
       spinner.style.display = 'none'
+      var msgText = decrypt_text(chatMsgData.message)
       //const ragResponses = document.getElementsByClassName('rag-response');
       //const lastRagResponse = ragResponses[ragResponses.length - 1];
       //var updatedRagResponse = lastRagResponse.textContent + chatMsgData.message;
@@ -487,7 +604,7 @@ socket.onmessage = function(e) {
       //scrolltoend();
       const ragResponses = document.getElementsByClassName('rag-response');
       const lastRagResponse = ragResponses[ragResponses.length - 1];
-      var updatedRagResponse = lastRagResponse.innerHTML + chatMsgData.message;
+      var updatedRagResponse = lastRagResponse.innerHTML + msgText;
       updatedRagResponse = updatedRagResponse.replace(/\n/g, '<br>');
       lastRagResponse.innerHTML = updatedRagResponse;
 

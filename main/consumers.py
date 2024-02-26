@@ -19,6 +19,7 @@ from main.models import Thread, ChatMessage, Document
 from main.utilities.RAG import llm_inference
 from main.utilities.translation import translate_en_fa, translate_fa_en, detect_language
 from main.utilities.variables import system_prompt, query_wrapper_prompt
+from main.utilities.encryption import *
 
 
 class RAGConsumer(AsyncConsumer):
@@ -167,7 +168,6 @@ class RAGConsumer(AsyncConsumer):
         if client_data is not None:
             dict_data = json.loads(client_data)
             mode = dict_data.get("mode")
-            msg = dict_data.get("message")
             if mode == "translation":
                 translation_task = dict_data.get("translate_to_fa")
                 message_id = dict_data.get("message_id")
@@ -199,6 +199,10 @@ class RAGConsumer(AsyncConsumer):
 
             else:
                 username = self.user.username
+                encrypted_message = dict_data.get("encrypted_message")
+                encrypted_aes_key = dict_data.get("encrypted_aes_key")
+                aes_key = decrypt_aes_key(encrypted_aes_key)
+                msg = decrypt_AES_ECB(encrypted_message, aes_key)
                 print(f"msg: {msg}")
                 await self.create_chat_message(msg, rag_response=False, source_nodes=None)
 
@@ -241,9 +245,10 @@ class RAGConsumer(AsyncConsumer):
                 async for response_txt in response_generator:
                     response_txt = response_txt.replace("</s>", "")
                     response_txt = response_txt.replace("<|im_end|>", "")
+                    encrypted_response_txt = encrypt_AES_ECB(response_txt, aes_key).decode('utf-8')
                     full_response = full_response + response_txt
                     response_dict = {
-                        "message": response_txt,
+                        "message": encrypted_response_txt,
                         "username": username,
                         "mode": "continue",
                     }
