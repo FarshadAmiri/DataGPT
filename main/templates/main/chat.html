@@ -661,10 +661,17 @@ function getContext(button) {
   contextDiv.innerHTML = "";
   var container = button.parentNode;
   var messageId = container.querySelector('.rag-response-id').value;
+  var aesRawKey = generateRandomKey(16);
+  var aesKey = CryptoJS.enc.Utf8.parse(aesRawKey);
+  localStorage.setItem("aesRawKey_rag", aesRawKey);
+  var encrypt = new JSEncrypt();
+  encrypt.setPublicKey(publicKey);
+  var encryptedAesKey = encrypt.encrypt(aesKey.toString(CryptoJS.enc.Base64));
   if (messageId !== "{{message.id}}") {
     var data = {
     "mode": "context",
     'message_id': messageId,
+    "encrypted_aes_key": encryptedAesKey
     }
     socket.send(JSON.stringify(data));
   }
