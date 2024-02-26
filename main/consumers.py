@@ -191,11 +191,12 @@ class RAGConsumer(AsyncConsumer):
                 message_id = dict_data.get("message_id")
                 contexts = await self.get_context(message_id)
                 contexts = json.loads(contexts)
+                encrypted_contexts = encrypt_AES_ECB(contexts, aes_key).decode('utf-8')
 
                 response_dict = {
                     "mode": "context",
                     "message_id": message_id,
-                    "contexts": contexts,
+                    "encrypted_contexts": encrypted_contexts,
                 }
                 await self.send({
                     "type": "websocket.send",
