@@ -192,6 +192,8 @@ class RAGConsumer(AsyncConsumer):
                 contexts = await self.get_context(message_id)
                 contexts = json.loads(contexts)
                 encrypted_contexts = encrypt_AES_ECB(contexts, aes_key).decode('utf-8')
+                print(f"\ncontexts type: {type(contexts)}\n")
+                print(f"\ncontexts: {contexts}\n")
 
                 response_dict = {
                     "mode": "context",
