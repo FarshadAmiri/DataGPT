@@ -497,7 +497,7 @@ socket.onmessage = function(e) {
         Object.keys(encryptedContexts).forEach(function(key, index) {
           var contextId = "context-" + (index + 1);
           var contextLabel = "#" + (index + 1) + ": " + key;
-          var encryptedContextText = contexts[key];
+          var encryptedContextText = encryptedContexts[key];
           var contextText = decrypt_text(encryptedContextText)
           
           var context = contextField.replace("{context_id}", contextId);
