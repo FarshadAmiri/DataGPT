@@ -216,7 +216,9 @@ class RAGConsumer(AsyncConsumer):
                 encrypted_aes_key = dict_data.get("encrypted_aes_key")
                 aes_key = decrypt_aes_key(encrypted_aes_key)
                 msg = decrypt_AES_ECB(encrypted_message, aes_key)
-                msg = msg.replace("\x02", "")
+                non_printable = ["\x00", "\x02", "\x03", "\x07", "\x09", "\x0A", "\x0D", "\x1B", "\x7F"]
+                for char in non_printable:
+                    msg = msg.replace(char, "")
                 print(f"msg: {msg}")
                 await self.create_chat_message(msg, rag_response=False, source_nodes=None)
 
