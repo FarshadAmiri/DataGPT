@@ -493,7 +493,7 @@ socket.onmessage = function(e) {
       persianTextBox.style.display = "block";
       englishTextBox.style.display = "none";
     } else if (chatMsgData.mode === "context") {
-        var encryptedContexts = chatMsgData.contexts;
+        var encryptedContexts = chatMsgData.encrypted_contexts;
         Object.keys(encryptedContexts).forEach(function(key, index) {
           var contextId = "context-" + (index + 1);
           var contextLabel = "#" + (index + 1) + ": " + key;
