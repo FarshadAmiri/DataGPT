@@ -193,15 +193,17 @@ class RAGConsumer(AsyncConsumer):
                 encrypted_aes_key = dict_data.get("encrypted_aes_key")
                 aes_key = decrypt_aes_key(encrypted_aes_key)
                 contexts = json.loads(contexts)
+                encrypted_contexts = dict()
                 for context_key in contexts:
-                    contexts[context_key] = encrypt_AES_ECB(contexts[context_key], aes_key).decode('utf-8')
+                    encrypted_context_key = encrypt_AES_ECB(context_key, aes_key).decode('utf-8')
+                    encrypted_contexts[encrypted_context_key] = encrypt_AES_ECB(contexts[context_key], aes_key).decode('utf-8')
                 print(f"\ncontexts type: {type(contexts)}\n")
                 print(f"\ncontexts: {contexts}\n")
 
                 response_dict = {
                     "mode": "context",
                     "message_id": message_id,
-                    "encrypted_contexts": contexts,
+                    "encrypted_contexts": encrypted_contexts,
                 }
                 await self.send({
                     "type": "websocket.send",

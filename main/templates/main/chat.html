@@ -494,10 +494,11 @@ socket.onmessage = function(e) {
       englishTextBox.style.display = "none";
     } else if (chatMsgData.mode === "context") {
         var encryptedContexts = chatMsgData.encrypted_contexts;
-        Object.keys(encryptedContexts).forEach(function(key, index) {
+        Object.keys(encryptedContexts).forEach(function(encryptedKey, index) {
           var contextId = "context-" + (index + 1);
+          var key = decrypt_text(encryptedKey)
           var contextLabel = "#" + (index + 1) + ": " + key;
-          var encryptedContextText = encryptedContexts[key];
+          var encryptedContextText = encryptedContexts[encryptedKey];
           var contextText = decrypt_text(encryptedContextText)
           
           var context = contextField.replace("{context_id}", contextId);
