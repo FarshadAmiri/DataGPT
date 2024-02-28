@@ -4,7 +4,12 @@ import accelerate
 import torch
 import time
 from pprint import pprint
+from main.views import model_name
 
+if "llama" in model_name.lower():
+    model_type = 'llama'
+elif "mistral" in model_name.lower():
+    model_type ='mistral'
 
 # setting device
 gpu=0
@@ -49,22 +54,24 @@ torch.cuda.get_device_name(0)
 
 #streamer = TextStreamer(tokenizer, skip_prompt=True, skip_special_tokens=True)
 
-# Llama2
-# system_prompt = """<s>[INST] <<SYS>>
-# You are a helpful, respectful and honest assistant. Always answer as
-# helpfully as possible, while being safe.
-# If a question does not make any sense, or is not factually coherent, explain
-# why instead of answering something not correct. If you don't know the answer
-# to a question, please express that you do not have informaion or knowledge in that context and please don't share false information.
-# Try to be exact in information and numbers you tell.
-# Your goal is to provide answers based on the information provided and your other knowledge.<</SYS>>
-# """
 
-# query_wrapper_prompt = SimpleInputPrompt("{query_str} [/INST]")
+
+# Llama2
+system_prompt_llama = """<s>[INST] <<SYS>>
+You are a helpful, respectful and honest assistant. Always answer as
+helpfully as possible, while being safe.
+If a question does not make any sense, or is not factually coherent, explain
+why instead of answering something not correct. If you don't know the answer
+to a question, please express that you do not have informaion or knowledge in that context and please don't share false information.
+Try to be exact in information and numbers you tell.
+Your goal is to provide answers based on the information provided and your other knowledge.<</SYS>>
+"""
+
+query_wrapper_prompt_llama = SimpleInputPrompt("{query_str} [/INST]")
 
 
 # Mistral
-system_prompt = """<|im_start|>system
+system_prompt_mistral = """<|im_start|>system
 You are a helpful, respectful and honest assistant.
 Always answer as helpfully as possible, while being safe.
 If a question does not make any sense, or is not factually coherent, explain
@@ -77,6 +84,14 @@ use your prior knowledge.<|im_end|>
 <|im_start|>user
 """
 
-query_wrapper_prompt = SimpleInputPrompt("""{query_str} <|im_end|>
+query_wrapper_prompt_mistral = SimpleInputPrompt("""{query_str} <|im_end|>
 <|im_start|>assistant
 """)
+
+
+if model_type == 'llama':
+    system_prompt = system_prompt_llama
+    query_wrapper_prompt = query_wrapper_prompt_llama
+elif model_type == 'mistral':
+    system_prompt = system_prompt_mistral
+    query_wrapper_prompt = query_wrapper_prompt_mistral

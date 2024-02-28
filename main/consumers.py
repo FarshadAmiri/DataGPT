@@ -75,7 +75,7 @@ class RAGConsumer(AsyncConsumer):
             # Customize query engine
             retriever = VectorIndexRetriever(
                 index=index,
-                similarity_top_k=6,
+                similarity_top_k=3,
             )
 
             retriever_10 = VectorIndexRetriever(
@@ -216,7 +216,7 @@ class RAGConsumer(AsyncConsumer):
                 encrypted_aes_key = dict_data.get("encrypted_aes_key")
                 aes_key = decrypt_aes_key(encrypted_aes_key)
                 msg = decrypt_AES_ECB(encrypted_message, aes_key)
-                non_printable = ["\x00", "\x02", "\x03", "\x04", "\x07", "\x09", "\x0A", "\x0D", "\x1B", "\x7F"]
+                non_printable = ["\x00", "\x02", "\x03", "\x04", "\x07", "\x08", "\x09", "\x10" ,"\x0A", "\x0D", "\x1B", "\x7F"]
                 for char in non_printable:
                     msg = msg.replace(char, "")
                 print(f"msg: {msg}")
