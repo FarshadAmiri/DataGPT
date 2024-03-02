@@ -20,6 +20,7 @@ from main.utilities.RAG import llm_inference
 from main.utilities.translation import translate_en_fa, translate_fa_en, detect_language
 from main.utilities.variables import system_prompt, query_wrapper_prompt
 from main.utilities.encryption import *
+from main.utilities.helper_functions import remove_non_printable
 
 
 class RAGConsumer(AsyncConsumer):
@@ -216,16 +217,16 @@ class RAGConsumer(AsyncConsumer):
                 encrypted_aes_key = dict_data.get("encrypted_aes_key")
                 aes_key = decrypt_aes_key(encrypted_aes_key)
                 msg = decrypt_AES_ECB(encrypted_message, aes_key)
-                non_printable = ["\x00", "\x02", "\x03", "\x04", "\x07", "\x08", "\x09", "\x10" ,"\x0A", "\x0D", "\x1B", "\x7F"]
-                for char in non_printable:
-                    msg = msg.replace(char, "")
+                msg = remove_non_printable(msg)
                 print(f"msg: {msg}")
                 await self.create_chat_message(msg, rag_response=False, source_nodes=None)
 
                 # Translate the question if it is Persian
                 if detect_language(msg) == "Persian":
                     msg = translate_fa_en(msg)
-                
+                    if msg.strip() == "":
+                        msg = "Empty message"
+                print("msg: ", msg)
                 full_response = ""
                 # response_generator = self.query_engine_streamer(msg)
                 ########
@@ -236,15 +237,15 @@ class RAGConsumer(AsyncConsumer):
                         response = self.query_engine_00.query(msg)
                         full_response = "No relevant information was found in the document sources; here is the LLM response generated to address your question:\n"
 
-                response_dict = {
-                    "message": full_response,
-                    "username": username,
-                    "mode": "new",
-                }
-                await self.send({
-                    "type": "websocket.send",
-                    "text": json.dumps(response_dict),
-                })
+                # response_dict = {
+                #     "message": full_response,
+                #     "username": username,
+                #     "mode": "new",
+                # }
+                # await self.send({
+                #     "type": "websocket.send",
+                #     "text": json.dumps(response_dict),
+                # })
 
                 source_nodes = response.source_nodes
                 source_nodes_dict = dict()
@@ -258,7 +259,33 @@ class RAGConsumer(AsyncConsumer):
                 source_nodes_json = json.dumps(source_nodes_dict)
                 response_generator = self.query_engine_streamer(response)
                 #############
+                counter = 0
                 async for response_txt in response_generator:
+                    if counter == 0:
+                        response_dict = {
+                            "message": full_response,
+                            "username": username,
+                            "mode": "new",
+                        }
+                        await self.send({
+                            "type": "websocket.send",
+                            "text": json.dumps(response_dict),
+                        })
+                    if response_txt == r"%%%END%%%":
+                        counter += 1
+                        response_txt = "RAG has no answer to your question"
+                        encrypted_response_txt = encrypt_AES_ECB(response_txt, aes_key).decode('utf-8')
+                        full_response = full_response + response_txt
+                        response_dict = {
+                            "message": encrypted_response_txt,
+                            "username": username,
+                            "mode": "continue",
+                        }
+                        await self.send({
+                            "type": "websocket.send",
+                            "text": json.dumps(response_dict),
+                        })
+                        break
                     response_txt = response_txt.replace("</s>", "")
                     response_txt = response_txt.replace("<|im_end|>", "")
                     encrypted_response_txt = encrypt_AES_ECB(response_txt, aes_key).decode('utf-8')
@@ -272,6 +299,7 @@ class RAGConsumer(AsyncConsumer):
                         "type": "websocket.send",
                         "text": json.dumps(response_dict),
                     })
+                    counter += 1
                 message_id = await self.create_chat_message(full_response, rag_response=True, source_nodes=source_nodes_json)
                 response_dict = {
                     "message_id": message_id,
@@ -313,7 +341,11 @@ class RAGConsumer(AsyncConsumer):
     
 
     async def query_engine_streamer(self, response):
-        response_gen = response.response_gen
+        try:
+            response_gen = response.response_gen
+        except:
+            yield r"%%%END%%%"
+            return
         try:
             while True:
                 yield next(response_gen)

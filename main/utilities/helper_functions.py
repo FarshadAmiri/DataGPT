@@ -1,5 +1,6 @@
 import os, shutil
 import hashlib
+import re
 
 
 def create_folder(path):
@@ -61,3 +62,9 @@ def hash_file(file_path):
     hashes["sha256"] = sha256.hexdigest()
     
     return hashes
+
+
+def remove_non_printable(text):
+    pattern = r'[\x00-\x1F\x7F-\xFF]'
+    cleaned_text = re.sub(pattern, '', text)
+    return cleaned_text
