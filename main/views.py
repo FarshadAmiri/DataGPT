@@ -38,10 +38,7 @@ def chat_view(request, thread_id=None):
     if request.method == "GET":
         threads = Thread.objects.filter(user=user).annotate(last_message_timestamp=Max('chatmessage__timestamp'))
         threads = threads.order_by('-last_message_timestamp')
-        if (thread_id is None) and (len(threads) > 0):
-            thread_id = int(threads[0].id)
-            return redirect('main:chat', thread_id=thread_id)
-        elif len(threads) == 0:
+        if len(threads) == 0:
             collections = Collection.objects.exclude(name=all_docs_collection_name).values('id', 'name')
             context = {"no_threads": True, "active_thread_id": 0, 'collections': collections,}
             return render(request, 'main/chat.html', context)
@@ -73,13 +70,19 @@ def chat_view(request, thread_id=None):
         except:
             pass
 
+        collections = Collection.objects.exclude(name=all_docs_collection_name).values('id', 'name')
+        if (thread_id is None):
+            thread_id = int(threads[0].id)
+            # return redirect('main:chat', thread_id=thread_id)
+            context = {"chat_threads": threads, "threads_preview": threads_preview, 'collections': collections, "no_active_thread": True,
+                       "no_threads": True, "active_thread_id": 0,}
+            return render(request, 'main/chat.html', context)
         thread_id = int(thread_id)
         messages = ChatMessage.objects.filter(user=user, thread=thread_id)
         active_thread = Thread.objects.get(id=thread_id)
         active_thread_name = active_thread.name
         rag_docs = active_thread.docs.all()
         base_collection_name = None if active_thread.base_collection == None else active_thread.base_collection.name
-        collections = Collection.objects.exclude(name=all_docs_collection_name).values('id', 'name')
         print(f"\ncollections: {collections}\n")
 
         context = {"chat_threads": threads, "active_thread_id": thread_id, "active_thread_name": active_thread_name, "rag_docs": rag_docs,

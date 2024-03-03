@@ -46,7 +46,7 @@
 <body>
 <div class="container-fluid">
     <div class="row">
-      <div class="col-md-2" style="padding: 0;">
+      <div class="col-2" style="padding: 0;">
         <div class="d-flex flex-column flex-shrink-0 p-3 text-white bg-dark sidebar" style="margin-left: 0;">
     <a href="{% url 'main:main_chat' %}" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-white text-decoration-none">
       <svg class="bi me-2" width="40" height="32"><use xlink:href="#bootstrap"></use></svg>
@@ -102,7 +102,8 @@
     </div>
   </div>
   </div>
-  <div class="col-md-8" style="margin-bottom: 0px; padding-bottom: 0px; margin-left: 0px; padding-left: 0px; border-left: 0px;;">
+  {% if no_active_thread != True %}
+  <div class="col-8" style="margin-bottom: 0px; padding-bottom: 0px; margin-left: 0px; padding-left: 0px; border-left: 0px;">
   <div class="chat-box">
     <div class="messages" id="board">
     {% for message in messages %}
@@ -150,9 +151,16 @@
             </div>
             </div>
         </form>
-    </div> 
+    </div>
 </div>
-<div class="col-md-2" style="padding: 0;">
+    {% else %}
+    <div class="col-md-8 landing-page">
+      <div class="landing">
+        <img id="landing-img">
+      </div>
+    </div>
+    {% endif %}
+<div class="col-2" style="padding: 0;">
   {% if no_threads != True %}
   <div class="d-flex flex-column flex-shrink-0 p-3 text-white bg-dark sidebar-right" style="margin-right: 0;">
   <h3 id="thread-name-right-sidebar">{{ active_thread_name }}</h3>

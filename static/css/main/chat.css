@@ -182,6 +182,33 @@
   border-color: rgb(255, 255, 255);
 }
 
+.landing-page {
+  margin-bottom: 0px;
+  padding-bottom: 0px;
+  margin-left: 0px;
+  padding-left: 0px;
+  border-left: 0px;
+  display: flex; /* Add this line to enable flexbox */
+  align-items: center;
+  justify-content: center;
+}
+
+.landing {
+  background-color: #212529;
+  border-radius: 14px;
+  padding-bottom: 0px;
+  margin-bottom: 0px;
+  display: flex; /* Add this line to enable flexbox */
+  align-items: center;
+  justify-content: center;
+}
+
+#landing-img {
+  content: url("..\\..\\bcg\\rag_landing_img-4.png");
+  width: 70%;
+  height: 70%;
+  margin: auto; /* Add this line to center the image horizontally */
+}
 
 body{
   background-color: #212529;
@@ -327,7 +354,6 @@ body{
   align-items: center;
   justify-content: center;
 }
-
 
 
 #delete-thread-btn {
