@@ -169,8 +169,8 @@
         <form action="{%  url 'main:create_collection' %}" method="post" enctype="multipart/form-data">
         {% csrf_token %}
           <div class="mb-3">
-            <label for="rag-name" class="col-form-label">Collection name</label>
-            <input type="text" class="form-control" id="rag-name" name="new-collection-name">
+            <label for="new-collection-name" class="col-form-label">Collection name</label>
+            <input type="text" class="form-control" id="new-collection-name" name="new-collection-name">
           </div>
           <div class="mb-3">
             <label for="docForm" class="form-label">Add primary knowledge sources (you can add later)</label>
@@ -183,7 +183,7 @@
           <span class="sr-only"></span>
         </div>
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Discard</button>
-        <button type="submit" class="btn btn-primary" onclick="checkNewName(event); spinnerAppears()">Create</button>
+        <button type="submit" class="btn btn-primary" onclick="spinnerAppears(); checkNewName(event)">Create</button>
       </div>
       </form>
     </div>
@@ -201,15 +201,15 @@
         <form action="{%  url 'main:collection_add_docs' active_collection_id %}" method="post" enctype="multipart/form-data">
         {% csrf_token %}
           <div class="mb-3">
-            <label for="rag-name" class="col-form-label">RAG name</label>
-            <input type="text" class="form-control" id="rag-name" name="new-collection-name" value="{{ active_collection_name }}" disabled>
+            <label for="collection-name-add" class="col-form-label">Collection name</label>
+            <input type="text" class="form-control" id="collection-name-add" name="new-collection-name" value="{{ active_collection_name }}" disabled>
           </div>
           <div class="mb-3">
           <label for="llm" class="col-form-label">LLM</label>
           <select class="form-select" id="llm" aria-label="Disabled select example" disabled>
-            <option selected>Llama2 7B</option>
+            <option>Llama2 7B</option>
             <option value="2">Llama2 13B</option>
-            <option value="1">Mistral 7B</option>
+            <option value="1" selected>Mistral 7B</option>
           </select>
           </div>
           <div class="mb-3">
@@ -219,9 +219,6 @@
           <div id="uploadedDocuments" class="mt-3"></div>
       </div>
       <div class="modal-footer">
-        <div class="spinner-border text-primary" id="spinner_loader" role="status" style="display: none;">
-          <span class="sr-only"></span>
-        </div>
         <div class="spinner-border text-primary" id="spinner_loader_2" role="status" style="display: none;">
           <span class="sr-only"></span>
         </div>
@@ -292,17 +289,22 @@ document.getElementById("delete-collection-btn").addEventListener("click", funct
 });
 
 function checkNewName(event) {
-  var collections = document.getElementsByClassName("collection_name");
-  var collectionNames = []
+  var threads = document.getElementsByClassName("collection_name");
+  var threadNames = []
 
-  for (var i = 0; i < collections.length; i++) {
-    var collectionName = collections[i].innerHTML;
-    collectionNames.push(collectionName);
+  for (var i = 0; i < threads.length; i++) {
+    var threadName = threads[i].innerHTML;
+    threadNames.push(threadName);
 }
-  inputName = document.getElementById("rag-name").value
-  if (collectionNames.includes(inputName)) {
+  inputName = document.getElementById("new-collection-name").value
+  if (threadNames.includes(inputName)) {
     event.preventDefault();
+    spinnerDisappears();
     alert("This collection name already exists! try another name");
+  } else if (inputName == "") {
+    event.preventDefault();
+    spinnerDisappears();
+    alert("You must provide a name for this collection!");
   }
 };
 
@@ -313,6 +315,15 @@ function spinnerAppears() {
 function spinnerAppears2() {
   spinnerLoader2.style.display = 'inline-block' ;
 }
+
+function spinnerDisappears() {
+  spinnerLoader.style.display = 'none' ;
+}
+
+function spinnerDisappears2() {
+  spinnerLoader2.style.display = 'none' ;
+}
+
 </script>
 </body>
 </html>

@@ -1,0 +1,32 @@
+<div class="col-2">
+...
+</div>
+<div class="col-8">
+...
+</div>
+<div class="col-2">
+...
+</div>
+
+
+function inferTextareaLanguage(content) {
+  
+  // Regular expression for matching Persian characters
+  const persianRegex = /[\u0600-\u06FF]/g;
+  
+  // Extracting the first 20 characters
+  const first20Chars = content.slice(0, 20);
+  
+  // Counting the number of Persian characters
+  const persianMatches = first20Chars.match(persianRegex);
+  const persianCount = persianMatches ? persianMatches.length : 0;
+  
+  const totalCharacters = first20Chars.length;
+  const persianPercentage = (persianCount / totalCharacters) * 100;
+  
+  if (persianPercentage >= 70) {
+    return 'Persian';
+  } else {
+    return 'English';
+  }
+}

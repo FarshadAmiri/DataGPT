@@ -164,7 +164,6 @@ class RAGConsumer(AsyncConsumer):
 
 
     async def websocket_receive(self, event):
-        print("receive", event)
         client_data = event.get('text', None)
         if client_data is not None:
             dict_data = json.loads(client_data)

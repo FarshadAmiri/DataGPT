@@ -46,7 +46,7 @@
 <body>
 <div class="container-fluid">
     <div class="row">
-      <div class="col-2" style="padding: 0;">
+      <div class="col-lg-2 col-md-12" style="padding: 0;" id="left-sidebar">
         <div class="d-flex flex-column flex-shrink-0 p-3 text-white bg-dark sidebar" style="margin-left: 0;">
     <a href="{% url 'main:main_chat' %}" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-white text-decoration-none">
       <svg class="bi me-2" width="40" height="32"><use xlink:href="#bootstrap"></use></svg>
@@ -62,7 +62,7 @@
         </a>
       </li>
       {% if user|has_group:"Admin" or user|has_group:"Advanced_user" or user.is_superuser%}
-      <li class="nav-item" style="margin-top: 10px;">
+      <li class="nav-item" style="margin-top: 10px; margin-bottom: 10px">
         <a href="{% url 'main:main_collection' %}" id="new-collection-btn" class="nav-link active text-center">
           Manage collections
         </a>
@@ -80,7 +80,7 @@
           <small class="text-muted"></small>
         </div>
         {% with thread.id as thread_id %}
-        <div class="col-10 mb-1 small" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ threads_preview|get_dict_value:thread_id }}</div>
+        <div class="col-10 mb-1 text-small" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ threads_preview|get_dict_value:thread_id }}</div>
         {% endwith %}
       </a>
       {% endfor %}
@@ -103,7 +103,7 @@
   </div>
   </div>
   {% if no_active_thread != True %}
-  <div class="col-8" style="margin-bottom: 0px; padding-bottom: 0px; margin-left: 0px; padding-left: 0px; border-left: 0px;">
+  <div class="col-lg-8 col-md-12" style="margin-bottom: 0px; padding-bottom: 0px; margin-left: 0px; padding-left: 0px; border-left: 0px;">
   <div class="chat-box">
     <div class="messages" id="board">
     {% for message in messages %}
@@ -119,8 +119,8 @@
             <img src="{% static 'icons/user.jpg' %}" alt="Avatar" style="width: 42px; height: 42px;">
             <p class="msg rag-response" style="line-break: auto;">{{message.message|linebreaksbr}}</p>
             <p class="msg rag-response-Fa" style="line-break: auto; display: none;"></p>
-            <span class="time-right">{{message.timestamp}}</span>
-            <button class="copy-btn" onclick="copyThis(this); showMessage('Copied!', this)"><img id="copy-icon"></button>
+            <span class="time-left">{{message.timestamp}}</span>
+            <button class="copy-btn" onclick="copyThis(this.parentNode); showMessage('Copied!', this)"><img id="copy-icon"></button>
             <button class="translate-btn" onclick="translateThis(this)"><img id="translate-icon"></button>
             <button class="context-btn" aria-current="page" data-bs-toggle="modal" data-bs-target="#contextModal" onclick="getContext(this)"><img id="context-icon"></button>
         </div>
@@ -139,6 +139,7 @@
     </div>
     </div>
     <div class="row" style="margin-bottom: 0px; padding-bottom: 0px;">
+    <div class="col-12">
         <form method="post" class="form-group" id="msg-form">
             {% csrf_token %}
             <div class="input-group mb-3" style="margin-bottom: 0px; padding-bottom: 0px;">
@@ -151,16 +152,17 @@
             </div>
             </div>
         </form>
+        </div>
     </div>
 </div>
     {% else %}
-    <div class="col-md-8 landing-page">
+    <div class="col-lg-8 col-md-12 landing-page">
       <div class="landing">
         <img id="landing-img">
       </div>
     </div>
     {% endif %}
-<div class="col-2" style="padding: 0;">
+<div class="col-lg-2 col-md-12" style="padding: 0;" id="right-sidebar">
   {% if no_threads != True %}
   <div class="d-flex flex-column flex-shrink-0 p-3 text-white bg-dark sidebar-right" style="margin-right: 0;">
   <h3 id="thread-name-right-sidebar">{{ active_thread_name }}</h3>
@@ -192,7 +194,7 @@
   <h3>Base collection:</h3>
   <div style="max-height: 800px; overflow-y: auto;">
   <ul class="nav nav-pills flex-column doc-name-sidebar">
-      <li data-toggle="tooltip" data-placement="top" title='"{{ doc.loc|path_end_part }}" in RAG database' style="margin-bottom: 15px;">* {{  base_collection_name }}</li>  
+      <li data-toggle="tooltip" data-placement="top" title='"{{ doc.loc|path_end_part }}" in RAG database' style="margin-bottom: 15px;">{{  base_collection_name }}</li>  
   </ul>
   <hr>
   </div>
@@ -253,7 +255,7 @@
           <span class="sr-only"></span>
         </div>
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Discard</button>
-        <button type="submit" class="btn btn-primary" onclick="checkNewName(event); spinnerAppears()">Create</button>
+        <button type="submit" class="btn btn-primary" onclick="spinnerAppears(); checkNewName(event)">Create</button>
       </div>
       </form>
     </div>
@@ -321,26 +323,19 @@ var spinnerLoader = document.getElementById("spinner_loader");
 var spinnerLoader2 = document.getElementById("spinner_loader_2");
 var deleteThreadBtn = document.getElementById("delete-thread-btn");
 
-// Function to copy text to clipboard
-function copyToClipboard(text) {
-    var tempInput = document.createElement('input');
-    tempInput.value = text;
-    document.body.appendChild(tempInput);
-    tempInput.select();
-    document.execCommand('copy');
-    document.body.removeChild(tempInput);
-}
 
-
-function copyThis(button) {
-  var ragResponse = button.parentNode.querySelector('.rag-response');
-  var ragResponsePersian = button.parentNode.querySelector('.rag-response-Fa');
+function copyThis(container) {
+  var ragResponse = container.querySelector('.rag-response');
+  var ragResponsePersian = 0 ;
+  var ragResponsePersian = container.querySelector('.rag-response-Fa');
   var messageText = ragResponse.textContent;
   var messageTextPersian = ragResponsePersian.textContent;
-  if (ragResponse.style.display === 'none') {
-    copyToClipboard(messageTextPersian);
+  if (ragResponsePersian.style.display === 'block') {
+    // Copy to clipboard
+    window.navigator.clipboard.writeText(messageTextPersian);
   } else {
-    copyToClipboard(messageText);
+    // Copy to clipboard
+    window.navigator.clipboard.writeText(messageText);
   }
 }
 
@@ -405,7 +400,7 @@ const rag_response = '<div class="container">' +
 '<p class="msg rag-response" style="line-break: auto;">{rag_response}</p>' +
 '<p class="msg rag-response-Fa" style="line-break: auto; display: none;"></p>' +
 '<span class="time-right">{time}</span>' +
-'<button class="copy-btn" onclick="copyThis(this); showMessage(\'Copied!\', this)"><img id="copy-icon"></button>' +
+'<button class="copy-btn" onclick="copyThis(this.parentNode); showMessage(\'Copied!\', this)"><img id="copy-icon"></button>' +
 '<button class="translate-btn" onclick="translateThis(this)"><img id="translate-icon"></button>' +
 '<button class="context-btn" aria-current="page" data-bs-toggle="modal" data-bs-target="#contextModal" onclick="getContext(this)"><img id="context-icon"></button>' +
 '</div>'
@@ -423,6 +418,8 @@ function decrypt_text(text) {
 }
 
 function translateThis(element) {
+  var translateIcon = element.querySelector('#translate-icon');
+  translateIcon.classList.add('spin-animation');
   var container = element.parentNode;
   var messageElement = container.querySelector('.msg.rag-response');
   var persianTranslationElement = container.querySelector('.msg.rag-response-Fa');
@@ -448,12 +445,13 @@ function translateThis(element) {
     if (persianTranslationElement.style.display === 'block') {
       persianTranslationElement.style.display = 'none';
       messageElement.style.display = 'block';
+      translateIcon.classList.remove('spin-animation');
   } else {
     persianTranslationElement.style.display = 'block';
     messageElement.style.display = 'none';
-  }
-  }
-}
+    translateIcon.classList.remove('spin-animation');
+  }}
+};
 
 
 socket.onopen = function(e) {
@@ -478,6 +476,18 @@ socket.onopen = function(e) {
         var field = user_prompt.replace('{prompt}', msgInput.val());
         field = field.replace('{time}', time);
         $('#board').append(field);
+        var userQueries = document.getElementsByClassName("user-query");
+        lastUserQuery = userQueries[userQueries.length - 1];
+        if (inferTextareaLanguage(lastUserQuery.textContent) === 'Persian') {
+          lastUserQuery.classList.remove('user-query');
+          lastUserQuery.classList.add('user-query-Fa');
+          lastUserQuery.style.fontFamily = "IranSans";
+          lastUserQuery.style.fontSize = '15px';
+          lastUserQuery.style.fontWeight = 'bold';
+          lastUserQuery.style.textAlign = 'right';
+          lastUserQuery.dir = 'rtl';
+          lastUserQuery.style.paddingRight = '10px';
+        }
         scrolltoend();
         msgInput.val('');
         formData[0].reset();
@@ -500,6 +510,14 @@ socket.onmessage = function(e) {
       persianTextBox.textContent = persianTranslation;
       persianTextBox.style.display = "block";
       englishTextBox.style.display = "none";
+      persianTextBox.style.fontFamily = "IranSans";
+      persianTextBox.style.fontSize = '15px';
+      persianTextBox.style.fontWeight = 'bold';
+      persianTextBox.style.textAlign = 'right';
+      persianTextBox.dir = 'rtl';
+      persianTextBox.style.paddingRight = '10px';
+      var translateIcon = container.querySelector('#translate-icon');
+      translateIcon.classList.remove('spin-animation');
     } else if (chatMsgData.mode === "context") {
         var encryptedContexts = chatMsgData.encrypted_contexts;
         Object.keys(encryptedContexts).forEach(function(encryptedKey, index) {
@@ -585,6 +603,19 @@ function scrolltoend() {
   }
 
 window.onload = function() {
+  const userQueries = document.querySelectorAll('.msg.user-query');
+  userQueries.forEach((p) => {
+    if (inferTextareaLanguage(p.textContent) === 'Persian') {
+      p.classList.remove('user-query');
+      p.classList.add('user-query-Fa');
+      p.style.fontFamily = "IranSans";
+      p.style.fontSize = '15px';
+      p.style.fontWeight = 'bold';
+      p.style.textAlign = 'right';
+      p.dir = 'rtl';
+      p.style.paddingRight = '10px';
+    }
+  });
   // Place scroller at the active thread area
   var activeThreadId = document.getElementById('active-thread').value;
   var activeThreadElement = document.getElementById(activeThreadId);
@@ -642,9 +673,11 @@ function checkNewName(event) {
   inputName = document.getElementById("rag-name").value
   if (threadNames.includes(inputName)) {
     event.preventDefault();
+    spinnerDisappears();
     alert("This thread name already exists! try another name");
   } else if (inputName == "") {
     event.preventDefault();
+    spinnerDisappears();
     alert("You must provide a name for this RAG thread!");
   }
 };
@@ -691,10 +724,62 @@ function spinnerAppears() {
   spinnerLoader.style.display = 'inline-block' ;
 }
 
+
 function spinnerAppears2() {
   spinnerLoader2.style.display = 'inline-block' ;
 }
 
+function spinnerDisappears() {
+  spinnerLoader.style.display = 'none' ;
+}
+
+function spinnerDisappears2() {
+  spinnerLoader2.style.display = 'none' ;
+}
+
+// JavaScript to handle the sidebar collapse functionality
+  const leftSidebar = document.getElementById('left-sidebar');
+  const rightSidebar = document.getElementById('right-sidebar');
+
+  function toggleLeftSidebar() {
+    leftSidebar.classList.toggle('collapse');
+  }
+
+  function toggleRightSidebar() {
+    rightSidebar.classList.toggle('collapse');
+  }
+
+  window.addEventListener('resize', function() {
+    if (window.innerWidth < 992) {
+      leftSidebar.classList.add('collapse');
+      rightSidebar.classList.add('collapse');
+    } else {
+      leftSidebar.classList.remove('collapse');
+      rightSidebar.classList.remove('collapse');
+    }
+  });
+
+function inferTextareaLanguage(content) {
+  
+  // Regular expression for matching Persian characters
+  const persianRegex = /[\u0600-\u06FF]/g;
+  
+  // Extracting the first 20 characters
+  const first20Chars = content.slice(0, 20);
+  
+  // Counting the number of Persian characters
+  const persianMatches = first20Chars.match(persianRegex);
+  const persianCount = persianMatches ? persianMatches.length : 0;
+  
+  const totalCharacters = first20Chars.length;
+  const persianPercentage = (persianCount / totalCharacters) * 100;
+  
+  if (persianPercentage >= 70) {
+    return 'Persian';
+  } else {
+    return 'English';
+  }
+}
 </script>
 </body>
 </html>
