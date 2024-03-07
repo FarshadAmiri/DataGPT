@@ -4,37 +4,37 @@ from django.contrib.auth.models import Group
 
 
 class Document(models.Model):
-    user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE)
-    name = models.CharField(max_length=256)
-    loc =  models.CharField(max_length=512)
-    public = models.BooleanField(default=False)
-    description = models.TextField(max_length=1024, null=True)
-    time_created  =  models.DateTimeField(auto_now_add=True)
-    sha256 = models.CharField(max_length=64, default=None)
+    user =         models.ForeignKey(get_user_model(), on_delete=models.CASCADE)
+    name =         models.CharField(max_length=256)
+    loc =          models.CharField(max_length=512)
+    public =       models.BooleanField(default=False)
+    description =  models.TextField(max_length=1024, null=True)
+    time_created = models.DateTimeField(auto_now_add=True)
+    sha256 =       models.CharField(max_length=64, default=None)
 
 
 class Collection(models.Model):
     user_created =   models.ForeignKey(get_user_model(), on_delete=models.CASCADE)
-    name =   models.CharField(max_length=128)
-    docs =   models.ManyToManyField(Document, related_name='collections')
+    name =           models.CharField(max_length=128)
+    docs =           models.ManyToManyField(Document, related_name='collections')
     allowed_groups = models.ManyToManyField(Group, related_name='allowed_collections')
-    description = models.TextField(max_length=1024, null=True)
-    time_created   =  models.DateTimeField(auto_now_add=True) 
-    loc  =  models.CharField(max_length=512)
+    description =    models.TextField(max_length=1024, null=True)
+    time_created  =  models.DateTimeField(auto_now_add=True) 
+    loc  =           models.CharField(max_length=512)
 
 
 class Thread(models.Model):
-    user =   models.ForeignKey(get_user_model(), on_delete=models.CASCADE)
-    name =   models.CharField(max_length=32)
-    docs =   models.ManyToManyField(Document, related_name='vector_dbs')
-    loc  =   models.CharField(max_length=512)
-    description = models.TextField(max_length=1024, null=True)
-    time_created   =  models.DateTimeField(auto_now_add=True)
+    user =            models.ForeignKey(get_user_model(), on_delete=models.CASCADE)
+    name =            models.CharField(max_length=32)
+    docs =            models.ManyToManyField(Document, related_name='vector_dbs')
+    loc  =            models.CharField(max_length=512)
+    description =     models.TextField(max_length=1024, null=True)
+    time_created  =   models.DateTimeField(auto_now_add=True)
     base_collection = models.ForeignKey(Collection, null=True, on_delete=models.SET_NULL)
 
     
 class ChatMessage(models.Model):
-    thread   =  models.ForeignKey(Thread, on_delete=models.CASCADE)
+    thread   =     models.ForeignKey(Thread, on_delete=models.CASCADE)
     user        =  models.ForeignKey(get_user_model(), verbose_name='sender', on_delete=models.CASCADE)
     rag_response = models.BooleanField(default=False)
     message     =  models.TextField()

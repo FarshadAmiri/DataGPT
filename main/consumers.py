@@ -169,12 +169,13 @@ class RAGConsumer(AsyncConsumer):
             dict_data = json.loads(client_data)
             mode = dict_data.get("mode")
             if mode == "translation":
-                encrypted_translation_task = dict_data.get("encrypted_message")
+                message_id = dict_data.get("message_id")
+                translation_task = await self.get_message(message_id)
+                # encrypted_translation_task = dict_data.get("encrypted_message")
                 encrypted_aes_key = dict_data.get("encrypted_aes_key")
                 aes_key = decrypt_aes_key(encrypted_aes_key)
-                translation_task = decrypt_AES_ECB(encrypted_translation_task, aes_key)
-                translation_task = translation_task.replace("\x02", "")
-                message_id = dict_data.get("message_id")
+                # translation_task = decrypt_AES_ECB(encrypted_translation_task, aes_key)
+                # translation_task = translation_task.replace("\x02", "")
                 persian_translation = self.translate_to_fa(translation_task)
                 encrypted_persian_translation = encrypt_AES_ECB(persian_translation, aes_key).decode('utf-8')
                 response_dict = {
@@ -316,6 +317,10 @@ class RAGConsumer(AsyncConsumer):
     @database_sync_to_async
     def get_thread(self, chat_id):
         return Thread.objects.get(id=chat_id)
+    
+    @database_sync_to_async
+    def get_message(self, message_id):
+        return ChatMessage.objects.get(id=message_id).message
     
     @database_sync_to_async
     def create_chat_message(self, message, rag_response, source_nodes):

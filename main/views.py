@@ -14,6 +14,7 @@ from pathlib import Path
 import os, shutil, random, string
 from llama_index import SimpleDirectoryReader
 from llama_index import Document as llama_index_doc
+from main.utilities.encryption import *
 
 
 vector_db_path = "vector_dbs"
@@ -35,7 +36,10 @@ streamer = model_obj["streamer"]
 def chat_view(request, thread_id=None):
     print(f"\nchat_id: {thread_id}\n")
     user = request.user
-    if request.method == "GET":
+    if request.method in ["POST" , "GET"]:
+        if request.method == "POST":
+            encrypted_aes_key = request.POST.get("encrypted_aes_key", None)
+            aes_key = decrypt_aes_key(encrypted_aes_key)
         threads = Thread.objects.filter(user=user).annotate(last_message_timestamp=Max('chatmessage__timestamp'))
         threads = threads.order_by('-last_message_timestamp')
         if len(threads) == 0:
@@ -54,7 +58,9 @@ def chat_view(request, thread_id=None):
         print(f"\nthreads_preview: {threads_preview}\n")
         print(f"\nthread_id: {thread_id}\n")
         print(f"\nactive_thread_id: {type(thread_id)} {thread_id}\n")
-              
+        threads_ids = [type(th.id) for th in threads]
+        print(f"\nthreads: {threads}\n")
+        print(f"\nthreads_ids: {threads_ids}\n")
         # Delete threads directories that their model instance have been removed before.
         try:
             threads_names = ["vdb_" + x for x in list(threads.values_list("name", flat=True))]
@@ -72,19 +78,20 @@ def chat_view(request, thread_id=None):
 
         collections = Collection.objects.exclude(name=all_docs_collection_name).values('id', 'name')
         if (thread_id is None):
-            thread_id = int(threads[0].id)
             # return redirect('main:chat', thread_id=thread_id)
             context = {"chat_threads": threads, "threads_preview": threads_preview, 'collections': collections, "no_active_thread": True,
                        "no_threads": True, "active_thread_id": 0,}
             return render(request, 'main/chat.html', context)
         thread_id = int(thread_id)
         messages = ChatMessage.objects.filter(user=user, thread=thread_id)
+        for message in messages:
+            encrypted_message = encrypt_AES_ECB(message.message, aes_key).decode('utf-8')
+            message.message = encrypted_message
         active_thread = Thread.objects.get(id=thread_id)
         active_thread_name = active_thread.name
         rag_docs = active_thread.docs.all()
         base_collection_name = None if active_thread.base_collection == None else active_thread.base_collection.name
         print(f"\ncollections: {collections}\n")
-
         context = {"chat_threads": threads, "active_thread_id": thread_id, "active_thread_name": active_thread_name, "rag_docs": rag_docs,
                    "base_collection_name": base_collection_name ,"messages": messages, "threads_preview": threads_preview, 'collections': collections,}
         print(f"\n\n{active_thread_name}\n\n")
