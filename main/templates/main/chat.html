@@ -639,7 +639,9 @@ window.onload = function() {
   const allMessages = document.querySelectorAll('.msg');
   const userQueries = document.querySelectorAll('.msg.user-query');
   allMessages.forEach((p) => {
-  p.innerHTML = decrypt_text(p.innerHTML)
+    var decryptedTextTemp = decrypt_text(p.innerHTML)
+    decryptedTextTemp = decryptedTextTemp.replace(/\n/g, '<br>');
+    p.innerHTML = decryptedTextTemp;
   });
   userQueries.forEach((p) => {
     if (inferTextareaLanguage(p.textContent) === 'Persian') {

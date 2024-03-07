@@ -87,6 +87,7 @@ def chat_view(request, thread_id=None):
         for message in messages:
             encrypted_message = encrypt_AES_ECB(message.message, aes_key).decode('utf-8')
             message.message = encrypted_message
+            # print(decrypt_AES_ECB(encrypted_message ,aes_key))
         active_thread = Thread.objects.get(id=thread_id)
         active_thread_name = active_thread.name
         rag_docs = active_thread.docs.all()
