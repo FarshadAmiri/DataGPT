@@ -1,5 +1,7 @@
 from django.utils.safestring import mark_safe
 from django import template
+from datetime import datetime, timedelta, timezone
+import pytz
 import json ,os
 
 register = template.Library()
@@ -31,3 +33,21 @@ def get_dict_value(dictionary, key):
 @register.filter
 def path_end_part(path):
     return os.path.basename(path)
+
+
+@register.filter
+def time_template(timestamp):
+    ir_tz = pytz.timezone('Asia/Tehran')
+    timestamp = timestamp.astimezone(ir_tz)
+    today_date = datetime.today().date()
+    timestamp_date = timestamp.date()
+    output = None
+    if today_date == timestamp_date:
+        # today
+        output = f"Today  {timestamp.strftime('%H:%M')}"
+    elif today_date == timestamp_date + timedelta(days=1):
+        # yesterday
+        output = f"Yesterday  {timestamp.strftime('%H:%M')}"
+    else:
+        output = f"{timestamp.strftime('%d %b')}   {timestamp.strftime('%H:%M')}"
+    return output

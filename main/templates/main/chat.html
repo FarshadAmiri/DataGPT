@@ -77,9 +77,8 @@
     <div class="row">
       <div class="col-lg-2 col-md-12" style="padding: 0;" id="left-sidebar">
         <div class="d-flex flex-column flex-shrink-0 p-3 text-white bg-dark sidebar" style="margin-left: 0;">
-    <a href="{% url 'main:main_chat' %}" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-white text-decoration-none">
-      <svg class="bi me-2" width="40" height="32"><use xlink:href="#bootstrap"></use></svg>
-      <span class="fs-4" id="page_title">RAG Chat &nbsp<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" fill="currentColor" class="bi bi-chat-left-dots-fill" viewBox="0 0 16 16">
+    <a href="{% url 'main:main_chat' %}" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-white text-decoration-none justify-content-center" id="page_title_a">
+      <span class="fs-2" id="page_title">RAG Chat &nbsp<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" class="bi bi-chat-left-dots-fill" viewBox="0 0 16 16">
   <path d="M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4.414a1 1 0 0 0-.707.293L.854 15.146A.5.5 0 0 1 0 14.793zm5 4a1 1 0 1 0-2 0 1 1 0 0 0 2 0m4 0a1 1 0 1 0-2 0 1 1 0 0 0 2 0m3 1a1 1 0 1 0 0-2 1 1 0 0 0 0 2"/>
 </svg></span>
     </a>
@@ -141,16 +140,16 @@
     {% for message in messages %}
     {% if message.rag_response == False %}
         <div class="container darker">
-            <img id="user-img" alt="Avatar" style="width: 42px; height: 42px;">
+            {% comment %} <img id="user-img" alt="Avatar" style="width: 42px; height: 42px;"> {% endcomment %}
             <p class="msg user-query" style="line-break: auto;">{{message.message|linebreaksbr}}</p>
-            <span class="time-right">{{message.timestamp}}</span>
+            <span class="time-right">{{message.timestamp|time_template}}</span>
         </div>
     {% else %}
         <div class="container">
             <input type="hidden" class="rag-response-id" id="{{message.id}}" value="{{message.id}}" >
             <p class="msg rag-response" style="line-break: auto;">{{message.message|linebreaksbr}}</p>
             <p class="msg rag-response-Fa" style="line-break: auto; display: none;"></p>
-            <span class="time-left">{{message.timestamp}}</span>
+            <span class="time-left">{{message.timestamp|time_template}}</span>
             <button class="copy-btn" onclick="copyThis(this.parentNode); showMessage('Copied!', this)"><img id="copy-icon"></button>
             <button class="translate-btn" onclick="translateThis(this)"><img id="translate-icon"></button>
             <button class="context-btn" aria-current="page" data-bs-toggle="modal" data-bs-target="#contextModal" onclick="getContext(this)"><img id="context-icon"></button>
@@ -348,6 +347,7 @@
 {% endif %}
 
 <script>
+var status = "free";
 var copyButtons = document.getElementsByClassName('copy-btn');
 var spinner = document.getElementById("spinner");
 var spinnerLoader = document.getElementById("spinner_loader");
@@ -420,14 +420,13 @@ var msgInput = $("#msgInput")
 var board = $("#board")
 
 const user_prompt = '<div class="container darker">' + 
-'<img src="{% static 'icons/ai_icon.png' %}" alt="Avatar" style="width: 42px; height: 42px;">' +
+//'<img id="user-img" alt="Avatar" style="width: 42px; height: 42px;">' +
 '<p class="msg user-query" style="line-break: auto;">{prompt}</p>' + 
 '<span class="time-right">{time}</span>' +
 '</div>'
 
 const rag_response = '<div class="container">' +
 '<input type="hidden" class="rag-response-id" id="{{message.id}}" value="{{message.id}}" >' +
-'<img src="{% static 'icons/user.jpg' %}" alt="Avatar" style="width: 42px; height: 42px;">' + 
 '<p class="msg rag-response" style="line-break: auto;">{rag_response}</p>' +
 '<p class="msg rag-response-Fa" style="line-break: auto; display: none;"></p>' +
 '<span class="time-right">{time}</span>' +
@@ -449,6 +448,7 @@ function decrypt_text(text) {
 }
 
 function translateThis(element) {
+  if (status === "free") {
   var translateIcon = element.querySelector('#translate-icon');
   translateIcon.classList.add('spin-animation');
   var container = element.parentNode;
@@ -482,6 +482,7 @@ function translateThis(element) {
     messageElement.style.display = 'none';
     translateIcon.classList.remove('spin-animation');
   }}
+}
 };
 
 
@@ -489,6 +490,8 @@ socket.onopen = function(e) {
     console.log ("open", e)
     formData.submit(function(event) {
         event.preventDefault();
+        if (status === "free") {
+        status = "working";
         var msgVal = msgInput.val()
         var aesRawKey = generateRandomKey(16);
         var aesKey = CryptoJS.enc.Utf8.parse(aesRawKey);
@@ -503,9 +506,9 @@ socket.onopen = function(e) {
         }
         socket.send(JSON.stringify(data));
         var today = new Date();
-        var time = today.getHours() + ":" + today.getMinutes();
+        var time = today.getHours() + ":" + today.getMinutes().toString().padStart(2, '0');
         var field = user_prompt.replace('{prompt}', msgInput.val());
-        field = field.replace('{time}', time);
+        field = field.replace('{time}', "Today  " + time);
         $('#board').append(field);
         var userQueries = document.getElementsByClassName("user-query");
         lastUserQuery = userQueries[userQueries.length - 1];
@@ -524,13 +527,14 @@ socket.onopen = function(e) {
         msgInput.val('');
         formData[0].reset();
         spinner.style.display = 'block';
-    })
-}
+      }
+  })
+};
 
 socket.onmessage = function(e) {
     var chatMsgData = JSON.parse(e.data)
     var today = new Date();
-    var time = today.getHours() + ":" + today.getMinutes();
+    var time = today.getHours() + ":" + today.getMinutes().toString().padStart(2, '0');
     if (chatMsgData.mode === "translation") {
       var encryptedPersianTranslation = chatMsgData.encrypted_persian_translation;
       var persianTranslation = decrypt_text(encryptedPersianTranslation)
@@ -568,8 +572,9 @@ socket.onmessage = function(e) {
           contextDiv.innerHTML += context;
         });
     } else if (chatMsgData.mode === "new") {
+      status = "working";
       var field = rag_response.replace('{rag_response}', chatMsgData.message);
-      field = field.replace('{time}', time);
+      field = field.replace('{time}', "Today  " + time);
       $('#board').append(field);
       scrolltoend();
       copyButtons = document.getElementsByClassName('copy-btn');
@@ -588,6 +593,7 @@ socket.onmessage = function(e) {
       var id_input = container.querySelector('.rag-response-id');
       id_input.id = messageId;
       id_input.value = messageId;
+      status = "free";
     } else {
       spinner.style.display = 'none'
       var msgText = decrypt_text(chatMsgData.message)
@@ -739,6 +745,7 @@ const docForm = document.getElementById('docForm');
 
 
 function getContext(button) {
+  if (status === "free") {
   var contextDiv = document.getElementById("context-div");
   contextDiv.innerHTML = "";
   var container = button.parentNode;
@@ -757,7 +764,8 @@ function getContext(button) {
     }
     socket.send(JSON.stringify(data));
   }
-}
+  }
+};
 
 
 function spinnerAppears() {
@@ -823,6 +831,3 @@ function inferTextareaLanguage(content) {
 </script>
 </body>
 </html>
-
-
-

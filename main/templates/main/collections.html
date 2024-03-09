@@ -19,11 +19,10 @@
 <body>
 <div class="container-fluid">
     <div class="row">
-      <div class="col-md-2" style="padding: 0;">
+      <div class="col-lg-2 col-md-12" style="padding: 0;" id="left-sidebar">
         <div class="d-flex flex-column flex-shrink-0 p-3 text-white bg-dark sidebar" style="margin-left: 0;">
-    <a href="{% url 'main:main_chat' %}" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-white text-decoration-none">
-      <svg class="bi me-2" width="40" height="32"><use xlink:href="#bootstrap"></use></svg>
-      <span class="fs-4" id="page_title">RAG Chat &nbsp<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" fill="currentColor" class="bi bi-chat-left-dots-fill" viewBox="0 0 16 16">
+    <a href="{% url 'main:main_chat' %}" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-white text-decoration-none justify-content-center" id="page_title_a">
+      <span class="fs-2" id="page_title">RAG Chat &nbsp<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" class="bi bi-chat-left-dots-fill" viewBox="0 0 16 16">
   <path d="M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4.414a1 1 0 0 0-.707.293L.854 15.146A.5.5 0 0 1 0 14.793zm5 4a1 1 0 1 0-2 0 1 1 0 0 0 2 0m4 0a1 1 0 1 0-2 0 1 1 0 0 0 2 0m3 1a1 1 0 1 0 0-2 1 1 0 0 0 0 2"/>
 </svg></span>
     </a>
@@ -68,7 +67,7 @@
     </div>
   </div>
   </div>
-  <div class="col-md-8" style="margin-bottom: 0px; padding-bottom: 0px;">
+  <div class="col-lg-8 col-md-12" style="margin-bottom: 0px; padding-bottom: 0px;">
   <div class="messages">
   <table class="table">
     <thead>
@@ -134,7 +133,7 @@
         </form>
     </div>  {% endcomment %}
 </div>
-<div class="col-md-2" style="padding: 0;">
+<div class="col-lg-2 col-md-12" style="padding: 0;">
   {% if no_collections != True %}
   <div class="d-flex flex-column flex-shrink-0 p-3 text-white bg-dark sidebar" style="margin-right: 0;">
   <h3 id="collection-name-right-sidebar">{{ active_collection_name }}</h3>

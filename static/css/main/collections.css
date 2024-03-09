@@ -8,6 +8,11 @@
     src: url("..\\..\\fonts\\Exo2-Bold.ttf");
   }
   
+  @font-face {
+    font-family: Nexa-Heavy;
+    src: url("..\\..\\fonts\\Nexa-Heavy.ttf");
+  }
+
   .sidebar {
     align-items: left;
     justify-content: left;
@@ -17,16 +22,18 @@
   }
   
   #page_title {
-    font-family: Exo2;
+    font-family: Nexa-Heavy;
     font-weight: bolder;
-    font-size: 65px;
-    color: rgb(255, 153, 0);
+    color: rgb(192, 204, 31);
+    justify-content: center;
+    align-items: center;
+    padding-left: 30px;
   }
   
   #page_title:hover {
     background-color: rgba(0, 0, 0, 0.0);
     border-radius: 30px;
-    color: rgb(80, 219, 238);
+    color: rgb(231, 179, 66);
   }
   
   #version {
@@ -208,6 +215,12 @@
     /* background-color: #e0fffd; */
   }
 
+  #collection-name-right-sidebar{
+    color: rgb(255, 153, 0);
+    font-family: RobotoSlab;
+    font-weight: bold;
+    font-size: 26px;
+  }
 
   .small_text {
     font-size: 16px;
