@@ -14,19 +14,10 @@
 }
 
 @font-face {
-  font-family: Chopsic;
-  src: url("..\\..\\fonts\\Chopsic-K6Dp.ttf");
-}
-
-@font-face {
-  font-family: Revamped;
-  src: url("..\\..\\fonts\\Revamped-X3q1a.ttf");
-}
-
-@font-face {
   font-family: Nexa-Heavy;
   src: url("..\\..\\fonts\\Nexa-Heavy.ttf");
 }
+
 
 
 .sidebar {
@@ -122,7 +113,7 @@
 
 
 .msg.rag-response, .msg.user-query {
-  font-family: RobotoSlab;
+  font-family: Tahoma;
   font-size: 18px;
   font-weight: normal;
   padding-left: 10px;
@@ -340,7 +331,7 @@ body{
 
 
 .copy-btn {
-  font-family: RobotoSlab ;
+  font-family: Tahoma ;
   font-size: 16px;
   font-weight: normal;
   color: #ffffff;
@@ -361,7 +352,7 @@ body{
 }
 
 .translate-btn {
-  font-family: RobotoSlab ;
+  font-family: Tahoma ;
   font-size: 16px;
   font-weight: normal;
   color: #ffffff;
@@ -377,7 +368,7 @@ body{
 }
 
 .context-btn {
-  font-family: RobotoSlab ;
+  font-family: Tahoma ;
   font-size: 16px;
   font-weight: normal;
   color: #ffffff;
