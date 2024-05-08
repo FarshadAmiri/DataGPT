@@ -16,7 +16,7 @@ from llama_index.query_engine import RetrieverQueryEngine
 from llama_index.postprocessor import SimilarityPostprocessor
 from main.views import model, tokenizer, streamer, device
 from main.models import Thread, ChatMessage, Document
-from main.utilities.RAG import llm_inference
+from main.utilities.RAG import embedding_model, sentence_transformer_ef
 from main.utilities.translation import translate_en_fa, translate_fa_en, detect_language
 from main.utilities.variables import system_prompt, query_wrapper_prompt
 from main.utilities.encryption import *
@@ -33,7 +33,7 @@ class RAGConsumer(AsyncConsumer):
             self.thread = thread
             print(f"\nthread.loc: {thread.loc}\n")
             db = chromadb.PersistentClient(path=thread.loc)
-            chroma_collection = db.get_or_create_collection("default")
+            chroma_collection = db.get_or_create_collection("default", embedding_function=sentence_transformer_ef)
             vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
             storage_context = StorageContext.from_defaults(vector_store=vector_store)
         except:
@@ -57,15 +57,12 @@ class RAGConsumer(AsyncConsumer):
                      model=model,
                      tokenizer=tokenizer)
 
-        embeddings = LangchainEmbedding(    
-        HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")        
-        )
         # Create new service context instance
         service_context = ServiceContext.from_defaults(
             chunk_size=1024,
             chunk_overlap=20,
             llm=llm,
-            embed_model=embeddings
+            embed_model=embedding_model
         )
         # And set the service context
         set_global_service_context(service_context)

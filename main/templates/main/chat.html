@@ -354,21 +354,39 @@ var spinnerLoader = document.getElementById("spinner_loader");
 var spinnerLoader2 = document.getElementById("spinner_loader_2");
 var deleteThreadBtn = document.getElementById("delete-thread-btn");
 
+function copyTextToClipboard(text) {
+  var textarea = document.createElement("textarea");
+  textarea.value = text;
+  // Make the textarea non-editable to avoid focus and move outside of view
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "absolute";
+  textarea.style.left = "-9999px";
+  // Add the textarea to the HTML document
+  document.body.appendChild(textarea);
+  // Select and copy the text inside the textarea
+  textarea.select();
+  document.execCommand("copy");
+  // Remove the textarea from the document
+  document.body.removeChild(textarea);
+}
 
 function copyThis(container) {
   var ragResponse = container.querySelector('.rag-response');
-  var ragResponsePersian = 0 ;
   var ragResponsePersian = container.querySelector('.rag-response-Fa');
   var messageText = ragResponse.textContent;
   var messageTextPersian = ragResponsePersian.textContent;
+  
   if (ragResponsePersian.style.display === 'block') {
-    // Copy to clipboard
-    window.navigator.clipboard.writeText(messageTextPersian);
+    // Copy Persian text to clipboard
+    //window.navigator.clipboard.writeText(messageTextPersian);
+    copyTextToClipboard(messageTextPersian);
   } else {
-    // Copy to clipboard
-    window.navigator.clipboard.writeText(messageText);
+    // Copy regular text to clipboard
+    //window.navigator.clipboard.writeText(messageText);
+    copyTextToClipboard(messageText);
   }
 }
+
 
 // Add event listener to each copy button
 //Array.from(copyButtons).forEach(function(button) {
