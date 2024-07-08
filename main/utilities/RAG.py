@@ -30,10 +30,10 @@ from users.models import User
 all_docs_collection_name = "ALL_DOCS_COLLECTION"
 all_docs_collection_path = os.path.join("collections", all_docs_collection_name)
 
-# text_embedding_model = "all-MiniLM-L6-v2"
-embedding_model_name = "sentence-transformers/stsb-xlm-r-multilingual"
-# text_embedding_model = SentenceTransformer('sentence-transformers/stsb-xlm-r-multilingual')
-# text_embedding_model = "stsb-xlm-r-multilingual"
+embedding_model_name = "all-MiniLM-L6-v2"
+# embedding_model_name = "sentence-transformers/stsb-xlm-r-multilingual"
+# embedding_model_name = SentenceTransformer('sentence-transformers/stsb-xlm-r-multilingual')
+# embedding_model_name = "stsb-xlm-r-multilingual"
 
 embedding_model = LangchainEmbedding(
     # HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
