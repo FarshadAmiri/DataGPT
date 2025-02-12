@@ -1,4 +1,5 @@
 from transformers import AutoTokenizer, AutoModelForCausalLM, TextStreamer
+from huggingface_hub import login
 from llama_index import VectorStoreIndex, SimpleDirectoryReader, get_response_synthesizer
 from llama_index.vector_stores import ChromaVectorStore
 from llama_index.storage.storage_context import StorageContext
@@ -25,7 +26,6 @@ import time, os
 from pprint import pprint
 from main.models import Collection
 from users.models import User
-
 
 all_docs_collection_name = "ALL_DOCS_COLLECTION"
 all_docs_collection_path = os.path.join("collections", all_docs_collection_name)
@@ -56,6 +56,11 @@ def load_model(model_name="TheBloke/Llama-2-7b-Chat-GPTQ", device='gpu'):
     elif device == 'cpu':
         device = torch.device('cpu')
         torch.cuda.set_device(device)
+
+    with open('huggingface_credentials.txt', 'r') as file:
+        hf_token = file.readline().strip()
+
+    login(token=hf_token)
 
     # Create tokenizer
     tokenizer = AutoTokenizer.from_pretrained(model_name

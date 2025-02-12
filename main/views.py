@@ -5,6 +5,7 @@ from users.models import User
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import Group
+from django.contrib.auth import get_user_model
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from django.db.models import Max, Count
@@ -21,9 +22,13 @@ vector_db_path = "vector_dbs"
 collections_path = "collections"
 all_docs_collection_name = "ALL_DOCS_COLLECTION"
 all_docs_collection_path = os.path.join(collections_path, all_docs_collection_name)
-# model_name = "TheBloke/Mistral-7B-Instruct-v0.2-AWQ"
+model_name = "TheBloke/Mistral-7B-Instruct-v0.2-AWQ" 
+# model_name = "TechxGenus/Meta-Llama-3-8B-Instruct-AWQ" 
 # model_name = "TheBloke/CapybaraHermes-2.5-Mistral-7B-AWQ"
-model_name="TheBloke/Llama-2-7b-Chat-GPTQ"
+# model_name = "TheBloke/Llama-2-7b-Chat-GPTQ"
+# model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
+# model_name = "solidrust/dolphin-2.9-llama3-8b-AWQ"
+# model_name = "Farshad-Llama-3-8B-Instruct-AWQ"
 
 model_obj = load_model(model_name)
 model = model_obj["model"]
@@ -237,6 +242,7 @@ def collection_create_view(request,):
         index = index_builder(collection_path)
         all_docs_index = index_builder(all_docs_collection_path)
         collection_vdb = Collection.objects.create(user_created=user, name=collection_name, description=None, loc=collection_path)
+
         all_docs_collection_vdb = Collection.objects.get(name=all_docs_collection_name)
         collection_vdb.allowed_groups.set(allowed_groups)
         for file in uploaded_files:
@@ -264,7 +270,6 @@ def collection_create_view(request,):
                     doc = llama_index_doc(text=chunked_doc.text, id_=f"{doc_obj.id}_{idx}")
                     index.insert(doc)
                 collection_vdb.docs.add(doc_obj)
-
 
         return redirect('main:collection', collection_id=collection_vdb.id)
 

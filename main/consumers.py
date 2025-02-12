@@ -49,7 +49,21 @@ class RAGConsumer(AsyncConsumer):
         # Your goal is to provide answers completely based on the information provided
         # and avoid to use yourown knowledge.<</SYS>>
         # """
-        # query_wrapper_prompt = SimpleInputPrompt("{query_str} [/INST]")
+
+        # system_prompt = """<s>[INST] <<SYS>>
+        # You are a helpful, and honest assistant. Always answer as helpfully as possible, while being brief as possible.`
+        # If If you don't know the answer of a question , please don't share false information.
+        # Try to be exact in information and numbers you tell.
+        # Your goal is to provide answers whether with your information or with the
+        # provided context informations.<</SYS>>
+        # """
+        system_prompt = """<s>[INST] <<SYS>> شما یک دستیار مفید و صادق هستید. همیشه تا حد امکان مفید و در عین حال مختصر پاسخ دهید.`
+        اگر پاسخ سوالی را نمی دانید، لطفا اطلاعات نادرست را به اشتراک نگذارید.
+        سعی کنید در اطلاعات و اعدادی که می گویید دقیق باشید.
+        هدف شما ارائه پاسخ چه با اطلاعات خود و چه با اطلاعات است
+        اطلاعات زمینه را ارائه کرد.<</SYS>>
+        """
+        query_wrapper_prompt = SimpleInputPrompt("{query_str} [/INST]")
         llm = HuggingFaceLLM(context_window=4096,
                      max_new_tokens=512,
                      system_prompt=system_prompt,
@@ -219,10 +233,10 @@ class RAGConsumer(AsyncConsumer):
                 await self.create_chat_message(msg, rag_response=False, source_nodes=None)
 
                 # Translate the question if it is Persian
-                if detect_language(msg) == "Persian":
-                    msg = translate_fa_en(msg)
-                    if msg.strip() == "":
-                        msg = "Empty message"
+                # if detect_language(msg) == "Persian":
+                #     msg = translate_fa_en(msg)
+                #     if msg.strip() == "":
+                #         msg = "Empty message"
                 print("msg: ", msg)
                 full_response = ""
                 # response_generator = self.query_engine_streamer(msg)
