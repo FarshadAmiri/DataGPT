@@ -78,7 +78,7 @@
       <div class="col-lg-2 col-md-12" style="padding: 0;" id="left-sidebar">
         <div class="d-flex flex-column flex-shrink-0 p-3 text-white bg-dark sidebar" style="margin-left: 0;">
     <a href="{% url 'main:main_chat' %}" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-white text-decoration-none justify-content-center" id="page_title_a">
-      <span class="fs-2" id="page_title">RAG Chat &nbsp<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" class="bi bi-chat-left-dots-fill" viewBox="0 0 16 16">
+      <span id="page_title">RAG Chat &nbsp<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" fill="currentColor" class="bi bi-chat-left-dots-fill" viewBox="0 0 16 16">
   <path d="M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4.414a1 1 0 0 0-.707.293L.854 15.146A.5.5 0 0 1 0 14.793zm5 4a1 1 0 1 0-2 0 1 1 0 0 0 2 0m4 0a1 1 0 1 0-2 0 1 1 0 0 0 2 0m3 1a1 1 0 1 0 0-2 1 1 0 0 0 0 2"/>
 </svg></span>
     </a>
@@ -211,7 +211,7 @@
     </li>
   </ul>
   <hr>
-  <h3>Included documents:</h3>
+  <h4>Included documents:</h4>
   <div style="max-height: 800px; overflow-y: auto;">
   <ul class="nav nav-pills flex-column doc-name-sidebar">
   {% for doc in rag_docs %}
@@ -221,7 +221,7 @@
   <hr>
   </div>
   {% else %}
-  <h3>Base collection:</h3>
+  <h4>Base collection:</h4>
   <div style="max-height: 800px; overflow-y: auto;">
   <ul class="nav nav-pills flex-column doc-name-sidebar">
       <li data-toggle="tooltip" data-placement="top" title='"{{ doc.loc|path_end_part }}" in RAG database' style="margin-bottom: 15px;">{{  base_collection_name }}</li>  

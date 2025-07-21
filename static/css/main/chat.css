@@ -70,10 +70,12 @@
 #page_title {
   font-family: Nexa-Heavy;
   font-weight: bolder;
+  font-size: 30px;
   color: rgb(192, 204, 31);
   justify-content: center;
   align-items: center;
   padding-left: 30px;
+  padding-top: 10px;
 }
 
 #page_title:hover {
@@ -85,7 +87,7 @@
 #version {
   font-family: Nexa-Heavy;
   font-weight: normal;
-  font-size: 18px;
+  font-size: 17px;
   color: rgb(255, 153, 0);
 }
 
@@ -104,11 +106,11 @@
 }
 
 .thread_name {
-  font-size: 15px;
+  font-size: 14px;
 }
 
 .text-small {
-  font-size: 13px;
+  font-size: 12px;
 }
 
 
@@ -285,7 +287,7 @@ body{
   background-image: radial-gradient( circle 759px at -6.7% 50%,  rgb(110, 156, 105) 0%, rgb(148, 197, 142) 26.2%, rgb(168, 212, 161) 50.6%, rgb(144, 199, 137) 74.1%, rgb(108, 134, 105) 100.3% );
   /* background-color: rgb(66, 141, 66); */
   font-weight: 600;
-  font-size: 18px;
+  font-size: 16px;
   color: rgb(6, 46, 6);
   border-radius: 10px;
 }
@@ -294,7 +296,7 @@ body{
   background-color: #FBAB7E;
   background-image: linear-gradient(62deg, #FBAB7E 0%, #F7CE68 100%);
   font-weight: 600;
-  font-size: 18px;
+  font-size: 16px;
   color: rgb(6, 46, 6);
   border-radius: 10px;
 }
@@ -394,13 +396,13 @@ body{
   background-color: rgb(223, 94, 94);
   border-radius: 20px;
   font-family: RobotoSlab;
-  font-size: 17px;
+  font-size: 16px;
 }
 
 #add-docs-btn {
   border-radius: 20px;
   font-family: RobotoSlab;
-  font-size: 17px;
+  font-size: 16px;
 }
 
 .showing-message {
@@ -447,14 +449,14 @@ body{
   color: #6ce0da;
   font-family: RobotoSlab;
   font-weight: bold;
-  font-size: 26px;
+  font-size: 24px;
 }
 
 .doc-name-sidebar {
   color: #6ce089;
   font-family: RobotoSlab;
   font-weight: normal;
-  font-size: 17px;
+  font-size: 16px;
 }
 
 .spinner-grow {

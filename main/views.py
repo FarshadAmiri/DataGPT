@@ -22,6 +22,7 @@ vector_db_path = "vector_dbs"
 collections_path = "collections"
 all_docs_collection_name = "ALL_DOCS_COLLECTION"
 all_docs_collection_path = os.path.join(collections_path, all_docs_collection_name)
+
 model_name = "TheBloke/Mistral-7B-Instruct-v0.2-AWQ" 
 # model_name = "TechxGenus/Meta-Llama-3-8B-Instruct-AWQ" 
 # model_name = "TheBloke/CapybaraHermes-2.5-Mistral-7B-AWQ"
@@ -29,6 +30,7 @@ model_name = "TheBloke/Mistral-7B-Instruct-v0.2-AWQ"
 # model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
 # model_name = "solidrust/dolphin-2.9-llama3-8b-AWQ"
 # model_name = "Farshad-Llama-3-8B-Instruct-AWQ"
+
 
 model_obj = load_model(model_name)
 model = model_obj["model"]
@@ -48,6 +50,8 @@ def chat_view(request, thread_id=None):
         threads = Thread.objects.filter(user=user).annotate(last_message_timestamp=Max('chatmessage__timestamp'))
         threads = threads.order_by('-last_message_timestamp')
         if len(threads) == 0:
+            # Check whether All docs collection exists in Collection table and filesystem
+            create_all_docs_collection()
             collections = Collection.objects.exclude(name=all_docs_collection_name).values('id', 'name')
             context = {"no_threads": True, "active_thread_id": 0, 'collections': collections,}
             return render(request, 'main/chat.html', context)
@@ -66,6 +70,10 @@ def chat_view(request, thread_id=None):
         threads_ids = [type(th.id) for th in threads]
         print(f"\nthreads: {threads}\n")
         print(f"\nthreads_ids: {threads_ids}\n")
+
+        # Check whether All docs collection exists in Collection table and filesystem
+        create_all_docs_collection()
+
         # Delete threads directories that their model instance have been removed before.
         try:
             threads_names = ["vdb_" + x for x in list(threads.values_list("name", flat=True))]

@@ -111,7 +111,8 @@ def create_rag(path):
 
 def create_all_docs_collection():
     global all_docs_collection_path, all_docs_collection_name
-    if not os.path.exists(all_docs_collection_path):
+    exist = Collection.objects.filter(name=all_docs_collection_name).exists() and os.path.exists(all_docs_collection_path)
+    if not exist:
         db = chromadb.PersistentClient(path=all_docs_collection_path)
         chroma_collection = db.get_or_create_collection("default", embedding_function=sentence_transformer_ef)
         all_docs_creator = User.objects.filter(username="admin").first()
