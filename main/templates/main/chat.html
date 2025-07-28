@@ -228,6 +228,18 @@
   </ul>
   <hr>
   </div>
+<!-- RAG Toggle Switch -->
+<div class="form-check form-switch">
+  <input class="form-check-input" type="checkbox" id="chatModeSwitch" onchange="updateToggleLabel()">
+  <label class="form-check-label fw-bold" for="chatModeSwitch" id="chatModeLabel">Standard Chat</label>
+</div>
+<!-- END TOGGLE -->
+<!-- Similarity Cutoff Slider (Only used in RAG mode) -->
+<div id="similarityCutoffWrapper" class="mb-3">
+  <label for="similarityCutoff" class="form-label fw-bold">Similarity Cutoff: <span id="cutoffValue">0.30</span></label>
+  <input type="range" class="form-range" min="0.05" max="0.75" step="0.01" value="0.30" id="similarityCutoff" oninput="updateCutoffLabel()">
+</div>
+<!-- END TOGGLE -->
   <ul class="nav nav-pills flex-column">
     <li class="nav-item" style="margin-top: 14px;">
       <a href="{% url 'main:delete_thread' active_thread_id %}" id="delete-thread-btn" class="btn btn-danger nav-link active text-center">
@@ -505,49 +517,67 @@ function translateThis(element) {
 
 
 socket.onopen = function(e) {
-    console.log ("open", e)
-    formData.submit(function(event) {
-        event.preventDefault();
-        if (status === "free") {
-        status = "working";
-        var msgVal = msgInput.val()
-        var aesRawKey = generateRandomKey(16);
-        var aesKey = CryptoJS.enc.Utf8.parse(aesRawKey);
-        localStorage.setItem("aesRawKey_rag", aesRawKey);
-        var encryptedMsgVal = CryptoJS.AES.encrypt(msgVal, aesKey, {mode: CryptoJS.mode.ECB}).toString();
-        var encrypt = new JSEncrypt();
-        encrypt.setPublicKey(publicKey);
-        var encryptedAesKey = encrypt.encrypt(aesKey.toString(CryptoJS.enc.Base64));
-        var data = {
-            'encrypted_message': encryptedMsgVal,
-            'encrypted_aes_key' : encryptedAesKey
-        }
-        socket.send(JSON.stringify(data));
-        var today = new Date();
-        var time = today.getHours() + ":" + today.getMinutes().toString().padStart(2, '0');
-        var field = user_prompt.replace('{prompt}', msgInput.val());
-        field = field.replace('{time}', "Today  " + time);
-        $('#board').append(field);
-        var userQueries = document.getElementsByClassName("user-query");
-        lastUserQuery = userQueries[userQueries.length - 1];
-        if (inferTextareaLanguage(lastUserQuery.textContent) === 'Persian') {
-          lastUserQuery.classList.remove('user-query');
-          lastUserQuery.classList.add('user-query-Fa');
-          lastUserQuery.style.fontFamily = "IranSans";
-          lastUserQuery.style.fontSize = '15px';
-          lastUserQuery.style.fontWeight = 'bold';
-          lastUserQuery.style.textAlign = 'right';
-          lastUserQuery.dir = 'rtl';
-          lastUserQuery.style.paddingRight = '10px';
-          lastUserQuery.style.lineHeight = 1.65;
-        }
-        scrolltoend();
-        msgInput.val('');
-        formData[0].reset();
-        spinner.style.display = 'block';
+  console.log("open", e);
+
+  formData.submit(function(event) {
+    event.preventDefault();
+
+    if (status === "free") {
+      status = "working";
+      var msgVal = msgInput.val();
+
+      // Determine current chat mode from toggle
+      var isRagEnabled = document.getElementById("chatModeSwitch").checked;
+      var chatMode = isRagEnabled ? "rag" : "standard";
+
+      // Encrypt user message
+      var aesRawKey = generateRandomKey(16);
+      var aesKey = CryptoJS.enc.Utf8.parse(aesRawKey);
+      localStorage.setItem("aesRawKey_rag", aesRawKey);
+      var encryptedMsgVal = CryptoJS.AES.encrypt(msgVal, aesKey, { mode: CryptoJS.mode.ECB }).toString();
+
+      // Encrypt AES key with RSA
+      var encrypt = new JSEncrypt();
+      encrypt.setPublicKey(publicKey);
+      var encryptedAesKey = encrypt.encrypt(aesKey.toString(CryptoJS.enc.Base64));
+
+      // Send payload including chat mode
+      var data = {
+        encrypted_message: encryptedMsgVal,
+        encrypted_aes_key: encryptedAesKey,
+        chat_mode: chatMode
+      };
+      socket.send(JSON.stringify(data));
+
+      // UI update
+      var today = new Date();
+      var time = today.getHours() + ":" + today.getMinutes().toString().padStart(2, '0');
+      var field = user_prompt.replace('{prompt}', msgInput.val());
+      field = field.replace('{time}', "Today  " + time);
+      $('#board').append(field);
+
+      var userQueries = document.getElementsByClassName("user-query");
+      lastUserQuery = userQueries[userQueries.length - 1];
+      if (inferTextareaLanguage(lastUserQuery.textContent) === 'Persian') {
+        lastUserQuery.classList.remove('user-query');
+        lastUserQuery.classList.add('user-query-Fa');
+        lastUserQuery.style.fontFamily = "IranSans";
+        lastUserQuery.style.fontSize = '15px';
+        lastUserQuery.style.fontWeight = 'bold';
+        lastUserQuery.style.textAlign = 'right';
+        lastUserQuery.dir = 'rtl';
+        lastUserQuery.style.paddingRight = '10px';
+        lastUserQuery.style.lineHeight = 1.65;
       }
-  })
+
+      scrolltoend();
+      msgInput.val('');
+      formData[0].reset();
+      spinner.style.display = 'block';
+    }
+  });
 };
+
 
 socket.onmessage = function(e) {
     var chatMsgData = JSON.parse(e.data)
@@ -845,6 +875,23 @@ function inferTextareaLanguage(content) {
   } else {
     return 'English';
   }
+}
+
+function updateToggleLabel() {
+    const toggle = document.getElementById("chatModeSwitch");
+    const label = document.getElementById("chatModeLabel");
+    label.textContent = toggle.checked ? "RAG Enabled" : "Standard Chat";
+
+  // hide cutoff slider when in Standard mode
+  const cutoffWrapper = document.getElementById("similarityCutoffWrapper");
+  cutoffWrapper.style.display = toggle.checked ? "block" : "none";
+  }
+
+
+function updateCutoffLabel() {
+  const slider = document.getElementById("similarityCutoff");
+  const label = document.getElementById("cutoffValue");
+  label.textContent = parseFloat(slider.value).toFixed(2);
 }
 </script>
 </body>
