@@ -4,6 +4,8 @@ from django.contrib.auth import get_user_model
 from channels.consumer import AsyncConsumer
 from channels.db import database_sync_to_async
 import chromadb
+from transformers import AutoTokenizer, AutoModelForCausalLM
+import torch
 from llama_index.vector_stores import ChromaVectorStore
 from llama_index.storage.storage_context import StorageContext
 from llama_index.prompts.prompts import SimpleInputPrompt
@@ -14,174 +16,240 @@ from llama_index import VectorStoreIndex, ServiceContext, set_global_service_con
 from llama_index.retrievers import VectorIndexRetriever
 from llama_index.query_engine import RetrieverQueryEngine
 from llama_index.postprocessor import SimilarityPostprocessor
-from main.views import model, tokenizer, device
+from main.views import model, tokenizer, streamer, device
 from main.models import Thread, ChatMessage, Document
 from main.utilities.RAG import embedding_model, sentence_transformer_ef
 from main.utilities.translation import translate_en_fa, translate_fa_en, detect_language
-from main.utilities.variables import system_prompt, query_wrapper_prompt
+from main.utilities.variables import system_prompt, query_wrapper_prompt, keyword_extractor_prompt
 from main.utilities.encryption import *
 from main.utilities.helper_functions import remove_non_printable
 
+
 class RAGConsumer(AsyncConsumer):
     async def websocket_connect(self, event):
+        print("connected", event)
         self.user = self.scope["user"]
-        chat_id = self.scope["url_route"]["kwargs"]["chat_id"]
-        self.thread = await self.get_thread(chat_id)
+        await self._setup_vector_db()
+        await self.send({"type": "websocket.accept"})
 
+    async def _setup_vector_db(self):
+        """Initializes vector DB and stores index for dynamic query engine creation."""
         try:
-            db = chromadb.PersistentClient(path=self.thread.loc)
+            chat_id = self.scope["url_route"]["kwargs"]["chat_id"]
+            thread = await self.get_thread(chat_id=chat_id)
+            self.thread = thread
+            print(f"\nthread.loc: {thread.loc}\n")
+            db = chromadb.PersistentClient(path=thread.loc)
             chroma_collection = db.get_or_create_collection("default", embedding_function=sentence_transformer_ef)
             vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
             storage_context = StorageContext.from_defaults(vector_store=vector_store)
-
-            llm = HuggingFaceLLM(
-                context_window=4096,
-                max_new_tokens=512,
-                system_prompt=system_prompt,
-                query_wrapper_prompt=SimpleInputPrompt("{query_str} [/INST]"),
-                model=model,
-                tokenizer=tokenizer
-            )
-
-            service_context = ServiceContext.from_defaults(
-                chunk_size=1024,
-                chunk_overlap=20,
-                llm=llm,
-                embed_model=embedding_model
-            )
-            set_global_service_context(service_context)
-
-            self.index = VectorStoreIndex.from_vector_store(vector_store, storage_context=storage_context)
-
         except Exception as e:
-            print(f"RAG setup failed: {e}")
-            self.index = None
+            print(f"Vector DB setup failed: {e}")
+            return
 
-        await self.send({"type": "websocket.accept"})
+        # System prompt for LLM
+        sys_prompt = (
+            """
+            You are a helpful, respectful and honest assistant. Always answer as
+            helpfully as possible, while being safe.
+            If a question does not make any sense, or is not factually coherent, explain
+            why instead of answering something not correct. If you don't know the answer
+            to a question, please don't share false information.
+            Try to be exact in information and numbers you tell.
+            Your goal is to provide answers completely based on the information provided
+            and if you use yourown knowledge please inform the user.
+            and it is important to respond as breifly as possible.
+            """
+        )
+        query_prompt = SimpleInputPrompt("{query_str}  ")
+        llm = HuggingFaceLLM(
+            context_window=4096,
+            max_new_tokens=512,
+            system_prompt=sys_prompt,
+            query_wrapper_prompt=query_prompt,
+            model=model,
+            tokenizer=tokenizer,
+        )
+        service_context = ServiceContext.from_defaults(
+            chunk_size=1024,
+            chunk_overlap=20,
+            llm=llm,
+            embed_model=embedding_model,
+        )
+        set_global_service_context(service_context)
+        try:
+            self.index = VectorStoreIndex.from_vector_store(vector_store, storage_context=storage_context)
+        except Exception as e:
+            print(f"Query engine setup failed: {e}")
+
+    def _build_query_engine(self, index, top_k, cutoff):
+        retriever = VectorIndexRetriever(index=index, similarity_top_k=top_k)
+        response_synthesizer = get_response_synthesizer(streaming=True)
+        return RetrieverQueryEngine(
+            retriever=retriever,
+            response_synthesizer=response_synthesizer,
+            node_postprocessors=[SimilarityPostprocessor(similarity_cutoff=cutoff)],
+        )
 
     async def websocket_receive(self, event):
-        dict_data = json.loads(event.get("text", "{}"))
-        if dict_data.get("mode") == "translation":
-            await self.handle_translation(dict_data)
-        elif dict_data.get("mode") == "context":
-            await self.handle_context(dict_data)
+        client_data = event.get('text', None)
+        if not client_data:
+            return
+        dict_data = json.loads(client_data)
+        mode = dict_data.get("mode")
+        if mode == "translation":
+            await self._handle_translation(dict_data)
+        elif mode == "context":
+            await self._handle_context(dict_data)
         else:
-            await self.handle_user_query(dict_data)
+            await self._handle_chat(dict_data)
 
-    async def handle_user_query(self, dict_data):
+    async def _handle_translation(self, dict_data):
+        message_id = dict_data.get("message_id")
+        translation_task = await self.get_message(message_id)
+        encrypted_aes_key = dict_data.get("encrypted_aes_key")
+        aes_key = decrypt_aes_key(encrypted_aes_key)
+        persian_translation = self.translate_to_fa(translation_task)
+        encrypted_persian_translation = encrypt_AES_ECB(persian_translation, aes_key).decode('utf-8')
+        response_dict = {
+            "encrypted_persian_translation": encrypted_persian_translation,
+            "message_id": message_id,
+            "mode": "translation",
+        }
+        await self.send({
+            "type": "websocket.send",
+            "text": json.dumps(response_dict),
+        })
+
+    async def _handle_context(self, dict_data):
+        message_id = dict_data.get("message_id")
+        contexts = await self.get_context(message_id)
+        encrypted_aes_key = dict_data.get("encrypted_aes_key")
+        aes_key = decrypt_aes_key(encrypted_aes_key)
+        contexts = json.loads(contexts)
+        encrypted_contexts = {}
+        for context_key in contexts:
+            encrypted_context_key = encrypt_AES_ECB(context_key, aes_key).decode('utf-8')
+            encrypted_contexts[encrypted_context_key] = encrypt_AES_ECB(contexts[context_key], aes_key).decode('utf-8')
+        print(f"\ncontexts type: {type(contexts)}\n")
+        print(f"\ncontexts: {contexts}\n")
+        response_dict = {
+            "mode": "context",
+            "message_id": message_id,
+            "encrypted_contexts": encrypted_contexts,
+        }
+        await self.send({
+            "type": "websocket.send",
+            "text": json.dumps(response_dict),
+        })
+
+    async def _handle_chat(self, dict_data):
         username = self.user.username
         encrypted_message = dict_data.get("encrypted_message")
         encrypted_aes_key = dict_data.get("encrypted_aes_key")
-        chat_mode = dict_data.get("chat_mode")
-        cutoff = float(dict_data.get("similarity_cutoff", 0.3))
-
         aes_key = decrypt_aes_key(encrypted_aes_key)
         msg = decrypt_AES_ECB(encrypted_message, aes_key)
         msg = remove_non_printable(msg)
+        print(f"msg: {msg}")
         await self.create_chat_message(msg, rag_response=False, source_nodes=None)
-
+        print("msg: ", msg)
         full_response = ""
 
-        if chat_mode == "standard":
-            messages = [{"role": "user", "content": msg}]
-            inputs = tokenizer.apply_chat_template(
-                messages,
-                add_generation_prompt=True,
-                tokenize=True,
-                return_dict=True,
-                return_tensors="pt"
-            ).to(device)
+        # Get similarity_cutoff from client, default to 0.35 if not provided
+        similarity_cutoff = dict_data.get("similarity_cutoff", 0.35)
 
-            outputs = model.generate(
-                **inputs,
-                max_new_tokens=400,
-                do_sample=True,
-                temperature=0.7,
-                top_p=0.9
-            )
+        print(f"\ndict_data: {dict_data}\n")
+        print(f"\nsimilarity_cutoff: {similarity_cutoff}\n")
+        print(f"\ntype(similarity_cutoff): {type(similarity_cutoff)}\n")
 
-            full_response = tokenizer.decode(outputs[0][inputs["input_ids"].shape[-1]:], skip_special_tokens=True)
-            encrypted_text = encrypt_AES_ECB(full_response, aes_key).decode('utf-8')
-            await self.send({"type": "websocket.send", "text": json.dumps({
-                "message": encrypted_text,
-                "username": username,
-                "mode": "new"
-            })})
-            message_id = await self.create_chat_message(full_response, rag_response=False, source_nodes=None)
-            await self.send({"type": "websocket.send", "text": json.dumps({"message_id": message_id, "mode": "last"})})
-            return
+        # Always use top_k=3
+        query_engine_k3 = self._build_query_engine(self.index, top_k=3, cutoff=similarity_cutoff)
+        query_engine_k2 = self._build_query_engine(self.index, top_k=2, cutoff=similarity_cutoff)
+        query_engine_k1 = self._build_query_engine(self.index, top_k=5, cutoff=0.01)
 
-        if self.index is None:
-            error_text = encrypt_AES_ECB("RAG is not available.", aes_key).decode('utf-8')
-            await self.send({"type": "websocket.send", "text": json.dumps({"message": error_text, "username": username, "mode": "new"})})
-            return
+        keywords = self.keyword_extractor(msg, model, tokenizer, keyword_extractor_prompt)
+        print(f"\nkeywords: {keywords}\n")
+        
+        response = query_engine_k3.query(keywords)
+        print(f"\nquery_engine_k3: {response.source_nodes}\n")
 
-        retriever = VectorIndexRetriever(index=self.index, similarity_top_k=3)
-        response_synth = get_response_synthesizer(streaming=False)
+        # Query with fallback to less strict engines
+        if len(response.source_nodes) == 0:
+            response = query_engine_k2.query(msg)
+            print(f"\nquery_engine_k2: {response.source_nodes}\n")
+            if len(response.source_nodes) == 0:
+                response = query_engine_k1.query(msg)
+                print(f"\nquery_engine_k1: {response.source_nodes}\n")
+                full_response = "No relevant information was found in the document sources; here is the LLM response generated to address your question:\n"
+                full_response = ""
 
-        query_engine = RetrieverQueryEngine(
-            retriever=retriever,
-            response_synthesizer=response_synth,
-            node_postprocessors=[SimilarityPostprocessor(similarity_cutoff=cutoff)]
-        )
-
-        response = query_engine.query(msg)
-        source_nodes = response.source_nodes or []
-        if len(source_nodes) == 0:
-            full_response = "RAG could not find relevant content."
-        else:
-            full_response = response.response
-
-        encrypted_text = encrypt_AES_ECB(full_response, aes_key).decode('utf-8')
-        await self.send({"type": "websocket.send", "text": json.dumps({
-            "message": encrypted_text,
-            "username": username,
-            "mode": "new"
-        })})
-
-        node_dict = {}
+        # No fallback to other cutoffs, just use what client sent
+        source_nodes = response.source_nodes
+        source_nodes_dict = {}
         for node in source_nodes:
-            rels = node.node.relationships
-            key = list(rels.keys())[0]
-            doc_id = rels[key].node_id.split("_")[0]
-            doc_name = await self.get_doc_name(doc_id)
-            node_dict[doc_name] = node.text
-
-        message_id = await self.create_chat_message(full_response, rag_response=True, source_nodes=json.dumps(node_dict))
-        await self.send({"type": "websocket.send", "text": json.dumps({"message_id": message_id, "mode": "last"})})
+            metadata = node.node.relationships
+            key = list(metadata.keys())[0]
+            node_id = metadata[key].node_id
+            doc_name = await self.get_doc_name(node_id)
+            node_text = node.text
+            source_nodes_dict[doc_name] = node_text
+        source_nodes_json = json.dumps(source_nodes_dict)
+        response_generator = self.query_engine_streamer(response)
+        counter = 0
+        async for response_txt in response_generator:
+            if counter == 0:
+                response_dict = {
+                    "message": full_response,
+                    "username": username,
+                    "mode": "new",
+                }
+                await self.send({
+                    "type": "websocket.send",
+                    "text": json.dumps(response_dict),
+                })
+            if response_txt == r"%%%END%%%":
+                counter += 1
+                response_txt = "RAG has no answer to your question"
+                encrypted_response_txt = encrypt_AES_ECB(response_txt, aes_key).decode('utf-8')
+                full_response = full_response + response_txt
+                response_dict = {
+                    "message": encrypted_response_txt,
+                    "username": username,
+                    "mode": "continue",
+                }
+                await self.send({
+                    "type": "websocket.send",
+                    "text": json.dumps(response_dict),
+                })
+                break
+            response_txt = response_txt.replace("", "")
+            response_txt = response_txt.replace("<|im_end|>", "")
+            encrypted_response_txt = encrypt_AES_ECB(response_txt, aes_key).decode('utf-8')
+            full_response = full_response + response_txt
+            response_dict = {
+                "message": encrypted_response_txt,
+                "username": username,
+                "mode": "continue",
+            }
+            await self.send({
+                "type": "websocket.send",
+                "text": json.dumps(response_dict),
+            })
+            counter += 1
+        message_id = await self.create_chat_message(full_response, rag_response=True, source_nodes=source_nodes_json)
+        response_dict = {
+            "message_id": message_id,
+            "mode": "last",
+        }
+        await self.send({
+            "type": "websocket.send",
+            "text": json.dumps(response_dict),
+        })
 
     async def websocket_disconnect(self, event):
-        print("WebSocket disconnected")
+        print("disconnected", event)
 
-    async def handle_translation(self, dict_data):
-        message_id = dict_data.get("message_id")
-        encrypted_aes_key = dict_data.get("encrypted_aes_key")
-        aes_key = decrypt_aes_key(encrypted_aes_key)
-        translation_task = await self.get_message(message_id)
-        translated = translate_en_fa(translation_task)
-        encrypted_response = encrypt_AES_ECB(translated, aes_key).decode('utf-8')
-        await self.send({"type": "websocket.send", "text": json.dumps({
-            "encrypted_persian_translation": encrypted_response,
-            "message_id": message_id,
-            "mode": "translation"
-        })})
-
-    async def handle_context(self, dict_data):
-        message_id = dict_data.get("message_id")
-        encrypted_aes_key = dict_data.get("encrypted_aes_key")
-        aes_key = decrypt_aes_key(encrypted_aes_key)
-        contexts_json = await self.get_context(message_id)
-        contexts = json.loads(contexts_json)
-        encrypted_contexts = {
-            encrypt_AES_ECB(k, aes_key).decode('utf-8'): encrypt_AES_ECB(v, aes_key).decode('utf-8')
-            for k, v in contexts.items()
-        }
-        await self.send({"type": "websocket.send", "text": json.dumps({
-            "mode": "context",
-            "message_id": message_id,
-            "encrypted_contexts": encrypted_contexts
-        })})
-
+    # --- DB and utility methods ---
     @database_sync_to_async
     def get_thread(self, chat_id):
         return Thread.objects.get(id=chat_id)
@@ -192,18 +260,70 @@ class RAGConsumer(AsyncConsumer):
 
     @database_sync_to_async
     def create_chat_message(self, message, rag_response, source_nodes):
-        return ChatMessage.objects.create(
-            thread=self.thread,
-            user=self.scope["user"],
-            message=message,
-            rag_response=rag_response,
-            source_nodes=source_nodes
-        ).id
+        thread = self.thread
+        user = self.scope["user"]
+        msg = ChatMessage.objects.create(thread=thread, user=user, message=message, rag_response=rag_response, source_nodes=source_nodes)
+        print("\nChat message saved\n")
+        return msg.id
 
     @database_sync_to_async
-    def get_doc_name(self, doc_id):
-        return Document.objects.get(id=doc_id).name
+    def get_doc_name(self, node_id):
+        doc_id = node_id.split("_")[0]
+        doc_name = Document.objects.get(id=doc_id).name
+        return doc_name
 
     @database_sync_to_async
     def get_context(self, message_id):
-        return ChatMessage.objects.get(id=message_id).source_nodes
+        message_obj = ChatMessage.objects.get(id=message_id)
+        contexts_json = message_obj.source_nodes
+        return contexts_json
+
+    async def query_engine_streamer(self, response):
+        try:
+            response_gen = response.response_gen
+        except Exception:
+            yield r"%%%END%%%"
+            return
+        try:
+            while True:
+                yield next(response_gen)
+                await asyncio.sleep(0)
+        except StopIteration:
+            pass
+
+    def translate_to_fa(self, text):
+        return translate_en_fa(text)
+
+    
+    def keyword_extractor(self, text, model, tokenizer, keyword_extractor_prompt):
+        # ----- User query -----
+        user_query = text
+
+        # ----- Final prompt -----
+        prompt = f"{keyword_extractor_prompt}User: {user_query}\nKeywords:"
+
+        # ----- Tokenize -----
+        inputs = tokenizer(prompt, return_tensors="pt").to("cuda")
+
+        # ----- Generate -----
+        with torch.no_grad():
+            output = model.generate(
+                **inputs,
+                max_new_tokens=30,
+                temperature=0.7,
+                do_sample=False,
+                pad_token_id=tokenizer.eos_token_id
+            )
+
+        # ----- Decode and print result -----
+        generated_text = tokenizer.decode(output[0], skip_special_tokens=True)
+        print("---- Raw Output ----")
+        print(generated_text)
+
+        # ----- Extract only the keyword list -----
+        # This will remove the prompt and just keep the generated keywords
+        extracted_keywords = generated_text.split("Keywords:")[-1].strip()
+        print("\n---- Extracted Keywords ----")
+        print(extracted_keywords)
+
+        return extracted_keywords

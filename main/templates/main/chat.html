@@ -527,8 +527,8 @@ socket.onopen = function(e) {
       var msgVal = msgInput.val();
 
       // Determine current chat mode from toggle
-      var isRagEnabled = document.getElementById("chatModeSwitch").checked;
-      var chatMode = isRagEnabled ? "rag" : "standard";
+      const chatMode = document.getElementById("chatModeSwitch").checked ? "rag" : "standard";
+      const similarityCutoff = parseFloat(document.getElementById("similarityCutoff").value);
 
       // Encrypt user message
       var aesRawKey = generateRandomKey(16);
@@ -545,7 +545,8 @@ socket.onopen = function(e) {
       var data = {
         encrypted_message: encryptedMsgVal,
         encrypted_aes_key: encryptedAesKey,
-        chat_mode: chatMode
+        chat_mode: chatMode,
+        similarity_cutoff: similarityCutoff,
       };
       socket.send(JSON.stringify(data));
 

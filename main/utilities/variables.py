@@ -84,6 +84,30 @@ use your prior knowledge.<|im_end|>
 <|im_start|>user
 """
 
+# ----- keyword_extractor_prompt -----
+keyword_extractor_prompt = """You are a smart AI assistant helping with document retrieval.
+
+Your job is to extract only the essential keywords and phrases from a user query that can be used to retrieve relevant documents. Do NOT rewrite the query. Instead, return a minimal list of distinct, meaningful terms or short phrases.
+
+Do not include stopwords, pronouns, greetings, or irrelevant words. Focus on entities, topics, key terms, technical concepts, and specific content.
+
+Return keywords as a comma-separated list, and nothing else.
+
+Examples:
+
+User: What are the effects of climate change on polar bear populations?
+Keywords: climate change, polar bears, effects
+
+User: How does the Transformer architecture work in deep learning?
+Keywords: Transformer, deep learning, architecture
+
+User: سلام، بگو ببینم حافظه کاری در روانشناسی چی هست؟
+Keywords: حافظه کاری, روانشناسی
+
+Now extract keywords from the following query:
+"""
+
+
 query_wrapper_prompt_mistral = SimpleInputPrompt("""{query_str} <|im_end|>
 <|im_start|>assistant
 """)
