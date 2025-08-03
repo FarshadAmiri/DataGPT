@@ -4,7 +4,10 @@ import accelerate
 import torch
 import time
 from pprint import pprint
-from main.views import model_name
+
+
+model_name = "TheBloke/Mistral-7B-Instruct-v0.2-GPTQ"
+
 
 INDEXING_CHUNK_SIZE = 384
 INDEXING_CHUNK_OVERLAP = 64
