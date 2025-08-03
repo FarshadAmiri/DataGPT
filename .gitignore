@@ -171,3 +171,4 @@ collections/
 *.pptx
 *.pptx
 *.pem
+/tests

@@ -6,6 +6,10 @@ import time
 from pprint import pprint
 from main.views import model_name
 
+INDEXING_CHUNK_SIZE = 384
+INDEXING_CHUNK_OVERLAP = 64
+
+
 if "llama" in model_name.lower():
     model_type = 'llama'
 elif "mistral" in model_name.lower():
