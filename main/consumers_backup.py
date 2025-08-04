@@ -16,7 +16,7 @@ from llama_index.query_engine import RetrieverQueryEngine
 from llama_index.postprocessor import SimilarityPostprocessor
 from main.views import model, tokenizer, streamer, device
 from main.models import Thread, ChatMessage, Document
-from main.utilities.RAG import embedding_model, sentence_transformer_ef
+from main.utilities.RAG import embedding_model_st, embedding_model_st2
 from main.utilities.translation import translate_en_fa, translate_fa_en, detect_language
 from main.utilities.variables import system_prompt, query_wrapper_prompt
 from main.utilities.encryption import *
@@ -33,7 +33,7 @@ class RAGConsumer(AsyncConsumer):
             self.thread = thread
             print(f"\nthread.loc: {thread.loc}\n")
             db = chromadb.PersistentClient(path=thread.loc)
-            chroma_collection = db.get_or_create_collection("default", embedding_function=sentence_transformer_ef)
+            chroma_collection = db.get_or_create_collection("default", embedding_function=embedding_model_st2)
             vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
             storage_context = StorageContext.from_defaults(vector_store=vector_store)
         except:
@@ -77,7 +77,7 @@ class RAGConsumer(AsyncConsumer):
             chunk_size=1024,
             chunk_overlap=20,
             llm=llm,
-            embed_model=embedding_model
+            embed_model=embedding_model_st
         )
         # And set the service context
         set_global_service_context(service_context)

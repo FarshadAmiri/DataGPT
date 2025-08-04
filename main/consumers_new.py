@@ -13,7 +13,7 @@ from transformers import TextStreamer, TextIteratorStreamer
 from main.utilities.encryption import decrypt_AES_ECB, decrypt_aes_key, encrypt_AES_ECB
 from main.utilities.helper_functions import remove_non_printable
 from main.models import Thread, ChatMessage, Document
-from main.utilities.RAG import embedding_model, sentence_transformer_ef
+from main.utilities.RAG import embedding_model_st, embedding_model_st2
 from main.utilities.variables import system_prompt
 from main.views import model, tokenizer, device
 
@@ -25,7 +25,7 @@ class RAGConsumer(AsyncConsumer):
         try:
             self.thread = await self.get_thread(chat_id)
             db = chromadb.PersistentClient(path=self.thread.loc)
-            coll = db.get_or_create_collection("default", embedding_function=sentence_transformer_ef)
+            coll = db.get_or_create_collection("default", embedding_function=embedding_model_st2)
             vs = ChromaVectorStore(chroma_collection=coll)
             storage = StorageContext.from_defaults(vector_store=vs)
             set_global_service_context(ServiceContext.from_defaults(
@@ -35,7 +35,7 @@ class RAGConsumer(AsyncConsumer):
                     system_prompt=system_prompt,
                     query_wrapper_prompt=None,
                     model=model, tokenizer=tokenizer
-                ), embed_model=embedding_model
+                ), embed_model=embedding_model_st
             ))
             self.index = VectorStoreIndex.from_vector_store(vs, storage)
         except Exception as e:

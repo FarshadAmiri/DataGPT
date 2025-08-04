@@ -39,11 +39,16 @@ all_docs_collection_path = os.path.join("collections", all_docs_collection_name)
 #     HuggingFaceEmbeddings(model_name=embedding_model_name)
 # )
 
-embedding_model_name = "paraphrase-multilingual-MiniLM-L12-v2"
-embedding_model = SentenceTransformer(embedding_model_name)
+# embedding_model_name = "paraphrase-multilingual-MiniLM-L12-v2"
+# embedding_model_st = SentenceTransformer(embedding_model_name)
 
-sentence_transformer_ef = embedding_functions.SentenceTransformerEmbeddingFunction(model_name="paraphrase-multilingual-MiniLM-L12-v2")
+# sentence_transformer_ef = embedding_functions.SentenceTransformerEmbeddingFunction(model_name="paraphrase-multilingual-MiniLM-L12-v2")
 
+
+embedding_model_name = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+embedding_model_lc = LangchainEmbedding(HuggingFaceEmbeddings(model_name=embedding_model_name))
+embedding_model_st = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
+embedding_model_st2 = embedding_functions.SentenceTransformerEmbeddingFunction(model_name="paraphrase-multilingual-MiniLM-L12-v2")
 
 def load_model(model_name="TheBloke/Llama-2-7b-Chat-GPTQ", device='gpu'):
     # setting device
@@ -113,7 +118,7 @@ def create_all_docs_collection():
     exist = Collection.objects.filter(name=all_docs_collection_name).exists() and os.path.exists(all_docs_collection_path)
     if not exist:
         db = chromadb.PersistentClient(path=all_docs_collection_path)
-        chroma_collection = db.get_or_create_collection("default", embedding_function=sentence_transformer_ef)
+        chroma_collection = db.get_or_create_collection("default", embedding_function=embedding_model_st2)
         all_docs_creator = User.objects.filter(username="admin").first()
         if all_docs_creator == None:
             all_docs_creator = User.objects.filter(groups__name='Admin').first()
@@ -125,7 +130,7 @@ def add_docs(vdb_path: str, docs_paths: list):
     from main.utilities.variables import system_prompt, query_wrapper_prompt
     from main.views import model, tokenizer
     db = chromadb.PersistentClient(path = vdb_path)
-    chroma_collection = db.get_or_create_collection("default", embedding_function=sentence_transformer_ef)
+    chroma_collection = db.get_or_create_collection("default", embedding_function=embedding_model_st2)
     vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
     storage_context = StorageContext.from_defaults(vector_store=vector_store)
     llm = HuggingFaceLLM(context_window=4096,
@@ -140,7 +145,7 @@ def add_docs(vdb_path: str, docs_paths: list):
         chunk_size=INDEXING_CHUNK_SIZE,
         chunk_overlap=INDEXING_CHUNK_OVERLAP,
         llm=llm,
-        embed_model=embedding_model
+        embed_model=embedding_model_lc
     )
 
     # And set the service context
@@ -172,14 +177,14 @@ def index_builder(vdb_path: str):
             chunk_size=INDEXING_CHUNK_SIZE,
             chunk_overlap=INDEXING_CHUNK_OVERLAP,
             llm=llm,
-            embed_model=embedding_model
+            embed_model=embedding_model_lc
         )
 
         # And set the service context
         set_global_service_context(service_context)
         
         db = chromadb.PersistentClient(path = vdb_path)
-        chroma_collection = db.get_or_create_collection("default", embedding_function=sentence_transformer_ef)
+        chroma_collection = db.get_or_create_collection("default", embedding_function=embedding_model_st2)
         vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
         storage_context = StorageContext.from_defaults(vector_store=vector_store)
         index = VectorStoreIndex.from_vector_store(vector_store, storage_context=storage_context)
@@ -198,14 +203,14 @@ def index_builder(vdb_path: str):
             chunk_size=INDEXING_CHUNK_SIZE,
             chunk_overlap=INDEXING_CHUNK_OVERLAP,
             llm=llm,
-            embed_model=embedding_model
+            embed_model=embedding_model_lc
         )
 
         # And set the service context
         set_global_service_context(service_context)
 
         db = chromadb.PersistentClient(path = vdb_path)
-        chroma_collection = db.get_or_create_collection("default", embedding_function=sentence_transformer_ef)
+        chroma_collection = db.get_or_create_collection("default", embedding_function=embedding_model_st2)
         vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
         storage_context = StorageContext.from_defaults(vector_store=vector_store)
         index = VectorStoreIndex.from_vector_store(vector_store, storage_context=storage_context)
@@ -217,7 +222,7 @@ def add_docs2(vdb_path: str, vdb, docs_dict: dict):
     from main.utilities.variables import system_prompt, query_wrapper_prompt
     from main.views import model, tokenizer
     db = chromadb.PersistentClient(path = vdb_path)
-    chroma_collection = db.get_or_create_collection("default", embedding_function=sentence_transformer_ef)
+    chroma_collection = db.get_or_create_collection("default", embedding_function=embedding_model_st2)
     vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
     storage_context = StorageContext.from_defaults(vector_store=vector_store)
     llm = HuggingFaceLLM(context_window=4096,
@@ -232,7 +237,7 @@ def add_docs2(vdb_path: str, vdb, docs_dict: dict):
         chunk_size=INDEXING_CHUNK_SIZE,
         chunk_overlap=INDEXING_CHUNK_OVERLAP,
         llm=llm,
-        embed_model=embedding_model
+        embed_model=embedding_model_lc
     )
 
     # And set the service context
