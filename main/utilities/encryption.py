@@ -1,4 +1,4 @@
-from Cryptodome.PublicKey import RSA
+# from Cryptodome.PublicKey import RSA
 from Cryptodome.Cipher import PKCS1_v1_5
 from Crypto.Cipher import AES
 from Crypto.Protocol.KDF import PBKDF2
@@ -13,7 +13,7 @@ def decode_chuncks(encrypted_chunks, lang, chunkded=False):
     with open('private_key.pem', 'rb') as f:
         private_key_data = f.read()
     private_key = RSA.import_key(private_key_data)
-    print(f"\private_key: {private_key}\n")
+    # print(f"\private_key: {private_key}\n")
     cipher = PKCS1_v1_5.new(private_key)
 
     if chunkded == False:
@@ -43,7 +43,7 @@ def encrypt_and_chunck(text, lang):
     with open('public_key.pem', 'rb') as f:
         public_key_data = f.read()
     public_key = RSA.import_key(public_key_data)
-    print(f"\public_key: {public_key}\n")
+    # print(f"\public_key: {public_key}\n")
     cipher = PKCS1_v1_5.new(public_key)
 
     if lang == "Persian":
@@ -70,7 +70,7 @@ def decode_RSA(encrypted_text, private_key_path:str='private_key.pem'):
 def decrypt_AES_CBC(encrypted_text, encrypted_aes_key):
     aes_key = decode_RSA(encrypted_aes_key).encode('utf-8')
     aes_key = base64.b64decode(aes_key)
-    print(f"\naes_key: {aes_key}\n")
+    # print(f"\naes_key: {aes_key}\n")
     iv = aes_key  # Use the AES key as the initialization vector (IV)
     cipher = AES.new(aes_key, AES.MODE_CBC, iv)
     decrypted_text = cipher.decrypt(base64.b64decode(encrypted_text)).decode('utf-8').strip()
@@ -80,7 +80,7 @@ def decrypt_aes_key(encrypted_aes_key):
     # decrypting AES key with our RSA private key
     aes_key = decode_RSA(encrypted_aes_key).encode('utf-8')
     aes_key = base64.b64decode(aes_key)
-    print(f"\naes_key: {aes_key}\n")
+    # print(f"\naes_key: {aes_key}\n")
     return aes_key
 
 def decrypt_AES_ECB(encrypted_text, aes_key):

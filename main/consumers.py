@@ -22,7 +22,11 @@ class RAGConsumer(AsyncConsumer):
     async def websocket_connect(self, event):
         print("connected", event)
         self.user = self.scope["user"]
-        await self._setup_vector_db()
+        try:
+            await self._setup_vector_db()
+        except Exception as e:
+            print(f"No chat thread with Vector DB detected yet: {e}")
+            return
         await self.send({"type": "websocket.accept"})
 
     async def _setup_vector_db(self):
@@ -72,6 +76,7 @@ class RAGConsumer(AsyncConsumer):
         for i in sorted_indices:
             chunk_text = chunk_texts[i]
             chunk_id = results["ids"][i]  # e.g., "5_0"
+            print(f"\nchunk_id: {chunk_id}\n")
             doc_id = chunk_id.split("_")[0]
             try:
                 doc_id = int(doc_id)
@@ -80,8 +85,8 @@ class RAGConsumer(AsyncConsumer):
                 doc_name = "Unknown document"
             source_nodes_dict[doc_name] = chunk_text
             top_chunks.append(chunk_text)
-        print(f"top_chunks: {top_chunks}")
         top_text = "\n\n".join(top_chunks)
+        print(f"top_text: {top_text}")
 
 
         # Construct prompt
@@ -97,7 +102,7 @@ class RAGConsumer(AsyncConsumer):
             "inputs": inputs["input_ids"],
             "streamer": streamer,
             "max_new_tokens": 2048,
-            "temperature": 0.7,  #0.0 –0.3 : deterministic, safe |  0.7: balanced.   temperature > 1.0: creative, possibly chaotic.
+            "temperature": 0.7,  # 0.0 – 0.3 : deterministic, safe | 0.7: balanced | 1.0 - 1.5: creative, possibly chaotic.
             "do_sample": True,  # Enables randomness when picking tokens. Should be True if temperature > 0.
             "top_p": 0.9,    # Nucleus sampling — limits to a dynamic top % of tokens. Usually 0.9.
             "pad_token_id": tokenizer.eos_token_id,

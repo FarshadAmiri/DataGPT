@@ -191,7 +191,7 @@ def add_docs_view(request, thread_id):
                 doc = llama_index_doc(text=chunked_doc.text, id_=f"{doc_obj.id}_{idx}")
                 index.insert(doc)
             vdb.docs.add(doc_obj)
-        return redirect('main:chat', thread_id=thread_id)
+        return redirect('main:chat', thread_id=thrcollection_add_docs_viewead_id)
 
 
 @login_required(login_url='users:login')

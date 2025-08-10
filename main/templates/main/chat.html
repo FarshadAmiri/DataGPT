@@ -86,13 +86,13 @@
     <ul class="nav nav-pills flex-column">
       <li class="nav-item">
         <a href="{% url 'main:create_rag' %}" id="new-rag-btn" class="nav-link active text-center" aria-current="page" data-bs-toggle="modal" data-bs-target="#newRagModal" data-bs-whatever="@getbootstrap">
-          Create a new RAG thread
+          New RAG thread
         </a>
       </li>
       {% if user|has_group:"Admin" or user|has_group:"Advanced_user" or user.is_superuser%}
       <li class="nav-item" style="margin-top: 10px; margin-bottom: 10px">
         <a href="{% url 'main:main_collection' %}" id="new-collection-btn" class="nav-link active text-center">
-          Manage collections
+          Collections
         </a>
       </li>
       {% endif %}
@@ -691,6 +691,7 @@ function scrolltoend() {
   }
 
 window.onload = function() {
+  updateToggleLabel()
   const allMessages = document.querySelectorAll('.msg');
   const userQueries = document.querySelectorAll('.msg.user-query');
   allMessages.forEach((p) => {
@@ -881,7 +882,7 @@ function inferTextareaLanguage(content) {
 function updateToggleLabel() {
     const toggle = document.getElementById("chatModeSwitch");
     const label = document.getElementById("chatModeLabel");
-    label.textContent = toggle.checked ? "RAG Enabled" : "Standard Chat";
+    label.textContent = toggle.checked ? "RAG mode" : "Standard chat (RAG is off)";
 
   // hide cutoff slider when in Standard mode
   const cutoffWrapper = document.getElementById("similarityCutoffWrapper");
