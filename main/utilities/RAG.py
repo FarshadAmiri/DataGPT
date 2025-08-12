@@ -1,4 +1,5 @@
-from transformers import AutoTokenizer, AutoModelForCausalLM, TextStreamer
+from transformers import AutoTokenizer, AutoModelForCausalLM, TextStreamer, AutoModelForSequenceClassification
+from sentence_transformers import CrossEncoder
 from huggingface_hub import login
 from llama_index import VectorStoreIndex, SimpleDirectoryReader, get_response_synthesizer
 from llama_index.vector_stores import ChromaVectorStore
@@ -27,6 +28,7 @@ from pprint import pprint
 from main.models import Collection
 from users.models import User
 from main.utilities.variables import INDEXING_CHUNK_SIZE, INDEXING_CHUNK_OVERLAP
+from typing import List, Tuple, Optional, Union
 
 all_docs_collection_name = "ALL_DOCS_COLLECTION"
 all_docs_collection_path = os.path.join("collections", all_docs_collection_name)
@@ -49,6 +51,19 @@ embedding_model_name = "sentence-transformers/paraphrase-multilingual-MiniLM-L12
 embedding_model_lc = LangchainEmbedding(HuggingFaceEmbeddings(model_name=embedding_model_name))
 embedding_model_st = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
 embedding_model_st2 = embedding_functions.SentenceTransformerEmbeddingFunction(model_name="paraphrase-multilingual-MiniLM-L12-v2")
+
+
+# Load model & tokenizer once (outside the function for efficiency)
+reranker_name = "Alibaba-NLP/gte-multilingual-reranker-base"
+tokenizer = AutoTokenizer.from_pretrained(reranker_name)
+reranker = AutoModelForSequenceClassification.from_pretrained(
+    reranker_name, trust_remote_code=True, torch_dtype=torch.float16
+)
+reranker.eval()
+
+# Load MiniLM CrossEncoder once (fast to reuse)
+minilm_reranker = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
+
 
 def load_model(model_name="TheBloke/Llama-2-7b-Chat-GPTQ", device='gpu'):
     # setting device
@@ -259,3 +274,75 @@ def add_docs2(vdb_path: str, vdb, docs_dict: dict):
         for chunked_doc in document:
             index.insert(chunked_doc)
         vdb.docs.add(document_obj)
+
+
+
+def rerank_alibaba(query: str, texts: List[str], threshold: Optional[float] = None, return_scores: bool = False) -> Union[List[str], Tuple[List[str], List[float]]]:
+    """
+    Reranks a list of texts based on relevance to a query using the multilingual reranker.
+
+    Args:
+        query (str): The search query.
+        texts (List[str]): List of candidate passages.
+        threshold (float, optional): Minimum score to include a passage.
+        return_scores (bool): Whether to return scores alongside ranked texts.
+
+    Returns:
+        Either:
+            - List of ranked texts (if return_scores=False)
+            - Tuple[List[str], List[float]] (if return_scores=True)
+    """
+    pairs = [(query, doc) for doc in texts]
+
+    with torch.no_grad():
+        inputs = tokenizer(
+            pairs, padding=True, truncation=True, return_tensors='pt', max_length=512
+        )
+        scores = reranker(**inputs, return_dict=True).logits.view(-1).float().tolist()
+
+    # Zip texts and scores, sort by score descending
+    ranked = sorted(zip(texts, scores), key=lambda x: x[1], reverse=True)
+
+    # Apply threshold filter if specified
+    if threshold is not None:
+        ranked = [(t, s) for t, s in ranked if s >= threshold]
+
+    ranked_texts = [t for t, _ in ranked]
+    ranked_scores = [s for _, s in ranked]
+
+    return (ranked_texts, ranked_scores) if return_scores else ranked_texts
+
+
+
+def rerank_minilm(query: str, texts: List[str], threshold: Optional[float] = None, return_scores: bool = False) -> Union[List[str], Tuple[List[str], List[float]]]:
+    """
+    Reranks a list of texts based on relevance to a query using MiniLM CrossEncoder.
+
+    Args:
+        query (str): The search query.
+        texts (List[str]): List of candidate passages.
+        threshold (float, optional): Minimum score to include a passage.
+        return_scores (bool): Whether to return scores alongside ranked texts.
+
+    Returns:
+        Either:
+            - List of ranked texts (if return_scores=False)
+            - Tuple[List[str], List[float]] (if return_scores=True)
+    """
+    # Prepare (query, passage) pairs
+    pairs = [(query, doc) for doc in texts]
+
+    # Get relevance scores
+    scores = minilm_reranker.predict(pairs).tolist()
+
+    # Zip texts with scores and sort
+    ranked = sorted(zip(texts, scores), key=lambda x: x[1], reverse=True)
+
+    # Apply threshold filter if specified
+    if threshold is not None:
+        ranked = [(t, s) for t, s in ranked if s >= threshold]
+
+    ranked_texts = [t for t, _ in ranked]
+    ranked_scores = [s for _, s in ranked]
+
+    return (ranked_texts, ranked_scores) if return_scores else ranked_texts

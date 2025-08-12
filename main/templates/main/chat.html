@@ -234,6 +234,12 @@
   <label class="form-check-label fw-bold" for="chatModeSwitch" id="chatModeLabel">Standard Chat</label>
 </div>
 <!-- END TOGGLE -->
+ <!-- RERANK Toggle Switch -->
+<div class="form-check form-switch">
+  <input class="form-check-input" type="checkbox" id="chatModeSwitch" onchange="updateToggleLabel()">
+  <label class="form-check-label fw-bold" for="chatModeSwitch" id="chatModeLabel">Standard Chat</label>
+</div>
+<!-- END TOGGLE -->
 <!-- Similarity Cutoff Slider (Only used in RAG mode) -->
 <div id="similarityCutoffWrapper" class="mb-3">
   <label for="similarityCutoff" class="form-label fw-bold">Similarity Cutoff: <span id="cutoffValue">0.30</span></label>

@@ -9,14 +9,13 @@ from transformers import TextIteratorStreamer
 import torch
 from main.views import model, tokenizer
 from main.models import Thread, ChatMessage, Document
-from main.utilities.RAG import embedding_model_st
+from main.utilities.RAG import embedding_model_st, rerank_minilm, rerank_alibaba
 from main.utilities.translation import translate_en_fa
 from main.utilities.variables import keyword_extractor_prompt
 from main.utilities.encryption import *
 from main.utilities.helper_functions import remove_non_printable
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
-
 
 class RAGConsumer(AsyncConsumer):
     async def websocket_connect(self, event):
@@ -53,15 +52,18 @@ class RAGConsumer(AsyncConsumer):
         username = self.user.username
         encrypted_message = dict_data.get("encrypted_message")
         encrypted_aes_key = dict_data.get("encrypted_aes_key")
+        chat_mode = dict_data.get("chat_mode")
+        similarity_cutoff = dict_data.get("similarity_cutoff")
+        rerank_enabled = dict_data.get("rerank_enabled")
         aes_key = decrypt_aes_key(encrypted_aes_key)
-        msg = decrypt_AES_ECB(encrypted_message, aes_key)
-        msg = remove_non_printable(msg)
-        print(f"msg: {msg}")
+        query = decrypt_AES_ECB(encrypted_message, aes_key)
+        query = remove_non_printable(query)
+        print(f"query: {query}")
 
-        await self.create_chat_message(msg, rag_response=False, source_nodes=None)
+        await self.create_chat_message(query, rag_response=False, source_nodes=None)
 
         # Get embedding and retrieve relevant chunks
-        extracted_query = self.keyword_extractor(msg, model, tokenizer, keyword_extractor_prompt)
+        extracted_query = self.keyword_extractor(query, model, tokenizer, keyword_extractor_prompt)
         print(f"\n\nextracted_query: {extracted_query}\n\n")
         query_emb = embedding_model_st.encode(extracted_query).reshape(1, -1)
         results = self.collection.get(include=["documents", "embeddings"])
@@ -85,15 +87,20 @@ class RAGConsumer(AsyncConsumer):
                 doc_name = "Unknown document"
             source_nodes_dict[doc_name] = chunk_text
             top_chunks.append(chunk_text)
+        
+        if rerank_enabled:
+            print(f"\nlen(top_chunks): {len(top_chunks)}")
+            top_chunks = rerank_minilm(query= query, texts= top_chunks, threshold= -3.0, return_scores= False)
+            print(f"len(top_chunks): {len(top_chunks)}\n")
+
         top_text = "\n\n".join(top_chunks)
         print(f"top_text: {top_text}")
-
 
         # Construct prompt
         system_prompt = (
             "You are a helpful assistant. Base your answer on the following context."
         )
-        prompt = f"{system_prompt}\n\nContext:\n{top_text}\n\nUser: {msg}\nAssistant:"
+        prompt = f"{system_prompt}\n\nContext:\n{top_text}\n\nUser: {query}\nAssistant:"
 
         # Tokenize and create streamer
         inputs = tokenizer(prompt, return_tensors="pt").to("cuda")
