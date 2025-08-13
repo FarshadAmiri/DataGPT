@@ -52,9 +52,11 @@ class RAGConsumer(AsyncConsumer):
         username = self.user.username
         encrypted_message = dict_data.get("encrypted_message")
         encrypted_aes_key = dict_data.get("encrypted_aes_key")
-        chat_mode = dict_data.get("chat_mode")
-        similarity_cutoff = dict_data.get("similarity_cutoff")
-        rerank_enabled = dict_data.get("rerank_enabled")
+        chat_mode = dict_data.get("chat_mode")  # "standard" or "rag"
+        similarity_cutoff = float(dict_data.get("similarity_cutoff", 0.0))  # convert to float
+        rerank_enabled = dict_data.get("rerank")
+
+        # ---- Decrypt ----
         aes_key = decrypt_aes_key(encrypted_aes_key)
         query = decrypt_AES_ECB(encrypted_message, aes_key)
         query = remove_non_printable(query)
@@ -62,22 +64,29 @@ class RAGConsumer(AsyncConsumer):
 
         await self.create_chat_message(query, rag_response=False, source_nodes=None)
 
-        # Get embedding and retrieve relevant chunks
-        extracted_query = self.keyword_extractor(query, model, tokenizer, keyword_extractor_prompt)
-        print(f"\n\nextracted_query: {extracted_query}\n\n")
-        query_emb = embedding_model_st.encode(extracted_query).reshape(1, -1)
-        results = self.collection.get(include=["documents", "embeddings"])
-        chunk_texts = results["documents"]
-        chunk_embs = np.array(results["embeddings"])
-        similarities = cosine_similarity(query_emb, chunk_embs)[0]
-        sorted_indices = np.argsort(similarities)[::-1][:3]
-        # top_chunks = [chunk_texts[i] for i in sorted_indices]
-        # top_text = "\n\n".join(top_chunks)
+        # ---- RAG retrieval ----
+        if chat_mode == "rag":
+            extracted_query = self.keyword_extractor(query, model, tokenizer, keyword_extractor_prompt)
+            print(f"\n\nextracted_query: {extracted_query}\n\n")
+
+            query_emb = embedding_model_st.encode(extracted_query).reshape(1, -1)
+            results = self.collection.get(include=["documents", "embeddings"])
+            chunk_texts = results["documents"]
+            chunk_embs = np.array(results["embeddings"])
+            similarities = cosine_similarity(query_emb, chunk_embs)[0]
+
+            # Apply similarity cutoff BEFORE sorting
+            filtered_indices = [i for i, sim in enumerate(similarities) if sim >= similarity_cutoff]
+            print(f"\nFiltered {len(similarities) - len(filtered_indices)} chunks below cutoff {similarity_cutoff}")
+
+            # Sort remaining ones by similarity
+            sorted_indices = sorted(filtered_indices, key=lambda i: similarities[i], reverse=True)[:3]
+
         source_nodes_dict = {}
         top_chunks = []
         for i in sorted_indices:
             chunk_text = chunk_texts[i]
-            chunk_id = results["ids"][i]  # e.g., "5_0"
+            chunk_id = results["ids"][i]
             print(f"\nchunk_id: {chunk_id}\n")
             doc_id = chunk_id.split("_")[0]
             try:
@@ -87,14 +96,16 @@ class RAGConsumer(AsyncConsumer):
                 doc_name = "Unknown document"
             source_nodes_dict[doc_name] = chunk_text
             top_chunks.append(chunk_text)
-        
-        if rerank_enabled:
-            print(f"\nlen(top_chunks): {len(top_chunks)}")
-            top_chunks = rerank_minilm(query= query, texts= top_chunks, threshold= -3.0, return_scores= False)
-            print(f"len(top_chunks): {len(top_chunks)}\n")
+
+        # ---- Optional Rerank ----
+        if rerank_enabled and top_chunks:
+            print(f"\nlen(top_chunks) before rerank: {len(top_chunks)}")
+            top_chunks = rerank_minilm(query=query, texts=top_chunks, threshold=-3.0, return_scores=False)
+            print(f"len(top_chunks) after rerank: {len(top_chunks)}\n")
 
         top_text = "\n\n".join(top_chunks)
         print(f"top_text: {top_text}")
+
 
         # Construct prompt
         system_prompt = (
