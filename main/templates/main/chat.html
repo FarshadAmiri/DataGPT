@@ -228,24 +228,36 @@
   </ul>
   <hr>
   </div>
-<!-- RAG Toggle Switch -->
-<div class="form-check form-switch">
-  <input class="form-check-input" type="checkbox" id="chatModeSwitch" onchange="updateToggleLabel()">
-  <label class="form-check-label fw-bold" for="chatModeSwitch" id="chatModeLabel">Standard Chat</label>
+<!-- Start toggles -->
+<!-- Mode Selection -->
+<div class="mb-3">
+  <!-- <label class="form-label fw-bold">Mode:</label> -->
+  <div class="btn-group" role="group" aria-label="Chat Mode">
+    <input type="radio" class="btn-check" name="chatMode" id="modeRag" value="rag" checked onchange="updateMode()">
+    <label class="btn btn-outline-primary" for="modeRag">RAG</label>
+
+    <input type="radio" class="btn-check" name="chatMode" id="modeStandard" value="standard" onchange="updateMode()">
+    <label class="btn btn-outline-primary" for="modeStandard">Standard</label>
+  </div>
 </div>
-<!-- END TOGGLE -->
- <!-- RERANK Toggle Switch -->
-<div class="form-check form-switch">
-  <input class="form-check-input" type="checkbox" id="chatModeSwitch" onchange="updateToggleLabel()">
-  <label class="form-check-label fw-bold" for="chatModeSwitch" id="chatModeLabel">Standard Chat</label>
-</div>
-<!-- END TOGGLE -->
-<!-- Similarity Cutoff Slider (Only used in RAG mode) -->
+
+<!-- Similarity Cutoff Slider -->
 <div id="similarityCutoffWrapper" class="mb-3">
-  <label for="similarityCutoff" class="form-label fw-bold">Similarity Cutoff: <span id="cutoffValue">0.30</span></label>
-  <input type="range" class="form-range" min="0.05" max="0.75" step="0.01" value="0.30" id="similarityCutoff" oninput="updateCutoffLabel()">
+  <label for="similarityCutoff" class="form-label fw-bold">
+    Similarity Cutoff: <span id="cutoffValue">0.30</span>
+  </label>
+  <input type="range" class="form-range modern-slider" min="0.05" max="0.75" step="0.01" value="0.30" id="similarityCutoff" oninput="updateCutoffLabel()">
 </div>
-<!-- END TOGGLE -->
+
+<!-- Rerank Toggle -->
+<div class="mb-3 modern-switch">
+  <label class="form-label fw-bold mb-0" for="rerankSwitch" id="rerankLabel">Reranker</label>
+  <div class="form-check form-switch">
+    <input class="form-check-input" type="checkbox" id="rerankSwitch">
+  </div>
+</div>
+
+<!-- END toggles -->
   <ul class="nav nav-pills flex-column">
     <li class="nav-item" style="margin-top: 14px;">
       <a href="{% url 'main:delete_thread' active_thread_id %}" id="delete-thread-btn" class="btn btn-danger nav-link active text-center">
@@ -535,6 +547,8 @@ socket.onopen = function(e) {
       // Determine current chat mode from toggle
       const chatMode = document.getElementById("chatModeSwitch").checked ? "rag" : "standard";
       const similarityCutoff = parseFloat(document.getElementById("similarityCutoff").value);
+      const rerankEnabled = document.getElementById("rerankSwitch").checked; // new line
+
 
       // Encrypt user message
       var aesRawKey = generateRandomKey(16);
@@ -553,6 +567,7 @@ socket.onopen = function(e) {
         encrypted_aes_key: encryptedAesKey,
         chat_mode: chatMode,
         similarity_cutoff: similarityCutoff,
+        rerank: rerankEnabled,
       };
       socket.send(JSON.stringify(data));
 
@@ -697,7 +712,6 @@ function scrolltoend() {
   }
 
 window.onload = function() {
-  updateToggleLabel()
   const allMessages = document.querySelectorAll('.msg');
   const userQueries = document.querySelectorAll('.msg.user-query');
   allMessages.forEach((p) => {
@@ -885,22 +899,27 @@ function inferTextareaLanguage(content) {
   }
 }
 
-function updateToggleLabel() {
-    const toggle = document.getElementById("chatModeSwitch");
-    const label = document.getElementById("chatModeLabel");
-    label.textContent = toggle.checked ? "RAG mode" : "Standard chat (RAG is off)";
 
-  // hide cutoff slider when in Standard mode
-  const cutoffWrapper = document.getElementById("similarityCutoffWrapper");
-  cutoffWrapper.style.display = toggle.checked ? "block" : "none";
-  }
+function updateMode() {
+  const ragMode = document.getElementById("modeRag").checked;
+  document.getElementById("similarityCutoffWrapper").style.display = ragMode ? "block" : "none";
+  document.getElementById("rerankSwitch").style.display = ragMode ? "block" : "none";
+  document.getElementById("rerankLabel").style.display = ragMode ? "block" : "none";
+}
 
+function updateRerankLabel() {
+  const toggle = document.getElementById("rerankSwitch");
+  const label = document.getElementById("rerankLabel");
+  label.textContent = toggle.checked ? "On" : "Off";
+}
 
 function updateCutoffLabel() {
   const slider = document.getElementById("similarityCutoff");
   const label = document.getElementById("cutoffValue");
   label.textContent = parseFloat(slider.value).toFixed(2);
 }
+
+
 </script>
 </body>
 </html>

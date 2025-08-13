@@ -552,3 +552,45 @@ body{
       transform: translateY(0);
   }
 } */
+
+
+/* Sleek Switch */
+.modern-switch .form-check-input {
+  width: 2.5rem;
+  height: 1.4rem;
+  background-color: #ccc;
+  border: none;
+  transition: all 0.3s ease;
+}
+.modern-switch .form-check-input:checked {
+  background-color: #0d6efd;
+}
+.modern-switch .form-check-input:focus {
+  box-shadow: none;
+}
+
+/* Modern Slider */
+.modern-slider {
+  accent-color: #0d6efd;
+}
+
+
+/* Force unselected buttons to have white background and dark text */
+.btn-outline-primary {
+  background-color: rgba(255, 255, 255, 0.191) !important;
+  color: #ffffff !important;
+  border-color: #212529 !important;
+}
+
+/* Selected button styling */
+.btn-check:checked + .btn-outline-primary {
+  background-color: #3291d5 !important;
+  color: rgb(255, 255, 255) !important;
+  border-color: #212529 !important;
+}
+
+.modern-switch {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem; /* space between switch and label */
+}
