@@ -26,41 +26,6 @@ if torch.cuda.is_available():
 torch.cuda.get_device_name(0)
 
 
-# Define model name and hf token
-# model_name = "TheBloke/Llama-2-7b-Chat-GPTQ"
-# model_name = "TheBloke/Mistral-7B-Instruct-v0.1-GPTQ"
-# model_name = "TheBloke/CapybaraHermes-2.5-Mistral-7B-AWQ"
-
-# hugginf face auth token
-#file_path = "huggingface_credentials.txt"
-#with open(file_path, "r") as file:
-#    auth_token = file.read().strip()
-
-
-
-# Create tokenizer
-#tokenizer = AutoTokenizer.from_pretrained(model_name
-#    # ,cache_dir='./model/'
-#    ,use_auth_token=auth_token
-#    ,device_map='cuda'                 
-#    )
-
-
-# Define model
-#model = AutoModelForCausalLM.from_pretrained(model_name
-#    ,cache_dir=r"C:\Users\user2\.cache\huggingface\hub"
-#    # ,cache_dir='./model/'
-#    ,use_auth_token=auth_token
-#    ,device_map='cuda'
-#    # , torch_dtype=torch.float16
-#    # ,low_cpu_mem_usage=True
-#    # ,rope_scaling={"type": "dynamic", "factor": 2}
-#    # ,load_in_8bit=True,
-#    ).to(device)
-
-
-#streamer = TextStreamer(tokenizer, skip_prompt=True, skip_special_tokens=True)
-
 
 
 # Llama2
@@ -114,15 +79,7 @@ Keywords: حافظه کاری, روانشناسی
 Now extract keywords from the following query:
 """
 
-
-query_wrapper_prompt_mistral = SimpleInputPrompt("""{query_str} <|im_end|>
-<|im_start|>assistant
-""")
-
-
-if model_type == 'llama':
-    system_prompt = system_prompt_llama
-    query_wrapper_prompt = query_wrapper_prompt_llama
-elif model_type == 'mistral':
-    system_prompt = system_prompt_mistral
-    query_wrapper_prompt = query_wrapper_prompt_mistral
+system_prompt = """ You are a helpful RAG assistant. Use the retrieved context to answer the user’s question.  
+If the context is enough, answer directly.  
+If you add your own knowledge or analysis, make this clear (e.g., “based on the retrieved texts…” or “my additional analysis is…”).  
+Be concise, clear, and helpful."""

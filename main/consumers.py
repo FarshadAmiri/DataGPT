@@ -11,7 +11,7 @@ from main.views import model, tokenizer
 from main.models import Thread, ChatMessage, Document
 from main.utilities.RAG import embedding_model_st, rerank_minilm, rerank_alibaba
 from main.utilities.translation import translate_en_fa
-from main.utilities.variables import keyword_extractor_prompt
+from main.utilities.variables import keyword_extractor_prompt, system_prompt
 from main.utilities.encryption import *
 from main.utilities.helper_functions import remove_non_printable
 import numpy as np
@@ -55,6 +55,11 @@ class RAGConsumer(AsyncConsumer):
         chat_mode = dict_data.get("chat_mode")  # "standard" or "rag"
         similarity_cutoff = float(dict_data.get("similarity_cutoff", 0.0))  # convert to float
         rerank_enabled = dict_data.get("rerank")
+        temperature = float(dict_data.get("temperature"), 0.5)  # convert to float
+        max_retreivals = 6
+
+        # ---- Input Validation ----
+        temperature = temperature if (0.1 <= temperature <= 1.2) else 0.5
 
         # ---- Decrypt ----
         aes_key = decrypt_aes_key(encrypted_aes_key)
@@ -80,38 +85,51 @@ class RAGConsumer(AsyncConsumer):
             print(f"\nFiltered {len(similarities) - len(filtered_indices)} chunks below cutoff {similarity_cutoff}")
 
             # Sort remaining ones by similarity
-            sorted_indices = sorted(filtered_indices, key=lambda i: similarities[i], reverse=True)[:3]
+            sorted_indices = sorted(filtered_indices, key=lambda i: similarities[i], reverse=True)[:max_retreivals]
 
-        source_nodes_dict = {}
-        top_chunks = []
-        for i in sorted_indices:
-            chunk_text = chunk_texts[i]
-            chunk_id = results["ids"][i]
-            print(f"\nchunk_id: {chunk_id}\n")
-            doc_id = chunk_id.split("_")[0]
-            try:
-                doc_id = int(doc_id)
-                doc_name = await self.get_doc_name(doc_id)
-            except ValueError:
-                doc_name = "Unknown document"
-            source_nodes_dict[doc_name] = chunk_text
-            top_chunks.append(chunk_text)
+            source_nodes_dict = {}
+            top_chunks = []
+            for idx, i in enumerate(sorted_indices):
+                chunk_text = chunk_texts[i]
+                chunk_id = results["ids"][i]
+                print(f"\nchunk_id: {chunk_id}\n")
+                doc_id = chunk_id.split("_")[0]
+                try:
+                    doc_id = int(doc_id)
+                    doc_name = await self.get_doc_name(doc_id)
+                except ValueError:
+                    doc_name = f"#{idx}"
+                source_nodes_dict[doc_name] = chunk_text
+                top_chunks.append(chunk_text)
+            
+            # ---- Rerank ----
+            if rerank_enabled and top_chunks:
+                print(f"\nlen(top_chunks) before rerank: {len(top_chunks)}")
+                
+                # Keep track of original mapping
+                original_mapping = dict(source_nodes_dict)  # copy
 
-        # ---- Optional Rerank ----
-        if rerank_enabled and top_chunks:
-            print(f"\nlen(top_chunks) before rerank: {len(top_chunks)}")
-            top_chunks = rerank_minilm(query=query, texts=top_chunks, threshold=-3.0, return_scores=False)
-            print(f"len(top_chunks) after rerank: {len(top_chunks)}\n")
+                # Rerank top_chunks
+                top_chunks = rerank_minilm(query=query, texts=top_chunks, threshold=-3.0, return_scores=False)
+                print(f"len(top_chunks) after rerank: {len(top_chunks)}\n")
 
-        top_text = "\n\n".join(top_chunks)
-        print(f"top_text: {top_text}")
+                # Update source_nodes_dict to remove chunks filtered out by reranker
+                new_source_nodes = {}
+                for doc_name, chunk_text in original_mapping.items():
+                    if chunk_text in top_chunks:
+                        new_source_nodes[doc_name] = chunk_text
+                source_nodes_dict = new_source_nodes
+        
+        elif chat_mode == "standard":
+            top_chunks = ""
+
+
+        rag_contexts = "\n\n".join(top_chunks)
+        print(f"rag_contexts: {rag_contexts}")
 
 
         # Construct prompt
-        system_prompt = (
-            "You are a helpful assistant. Base your answer on the following context."
-        )
-        prompt = f"{system_prompt}\n\nContext:\n{top_text}\n\nUser: {query}\nAssistant:"
+        prompt = f"{system_prompt}\n\nContexts (Retrieved chunks of texts):\n{rag_contexts}\n\nUser: {query}\nAssistant:"
 
         # Tokenize and create streamer
         inputs = tokenizer(prompt, return_tensors="pt").to("cuda")
@@ -119,11 +137,14 @@ class RAGConsumer(AsyncConsumer):
         gen_kwargs = {
             "inputs": inputs["input_ids"],
             "streamer": streamer,
-            "max_new_tokens": 2048,
-            "temperature": 0.7,  # 0.0 – 0.3 : deterministic, safe | 0.7: balanced | 1.0 - 1.5: creative, possibly chaotic.
-            "do_sample": True,  # Enables randomness when picking tokens. Should be True if temperature > 0.
+            "max_new_tokens": 4096,   
+            "max_length": 16000,       # prompt + output total length    
+            "temperature": temperature,  # 0.0 – 0.3 : deterministic, safe | 0.7: balanced | 1.0 - 1.5: creative, possibly chaotic.
+            "do_sample": False,  # Enables randomness when picking tokens. Should be True if temperature > 0.
             "top_p": 0.9,    # Nucleus sampling — limits to a dynamic top % of tokens. Usually 0.9.
             "pad_token_id": tokenizer.eos_token_id,
+            "eos_token_id": tokenizer.eos_token_id,  # keep EOS!
+            "stopping_criteria": None,  # don’t stop early
         }
 
         generation_thread = threading.Thread(target=model.generate, kwargs=gen_kwargs)
@@ -170,7 +191,8 @@ class RAGConsumer(AsyncConsumer):
             except StopIteration:
                 return None
 
-        while loop.time() < end_time:
+        # while loop.time() < end_time:
+        while True:
             token = await loop.run_in_executor(None, get_next_token)
             if token is None:
                 break

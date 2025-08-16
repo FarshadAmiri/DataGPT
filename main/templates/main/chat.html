@@ -241,21 +241,36 @@
   </div>
 </div>
 
-<!-- Similarity Cutoff Slider -->
-<div id="similarityCutoffWrapper" class="mb-3">
-  <label for="similarityCutoff" class="form-label fw-bold">
-    Similarity Cutoff: <span id="cutoffValue">0.30</span>
+<!-- Temperature Slider -->
+<div id="temperatureWrapper" class="mb-3">
+  <label for="temperature" class="form-label fw-bold">
+    Temperature: <span id="temperatureValue">0.70</span>
   </label>
-  <input type="range" class="form-range modern-slider" min="0.05" max="0.75" step="0.01" value="0.30" id="similarityCutoff" oninput="updateCutoffLabel()">
+  <input type="range" class="form-range modern-slider" min="0.1" max="1.2" step="0.1" value="0.5" id="temperature" oninput="updateTemperatureLabel()">
 </div>
 
-<!-- Rerank Toggle -->
-<div class="mb-3 modern-switch">
-  <label class="form-label fw-bold mb-0" for="rerankSwitch" id="rerankLabel">Reranker</label>
-  <div class="form-check form-switch">
-    <input class="form-check-input" type="checkbox" id="rerankSwitch">
+<!-- RAG Arguments Section -->
+<div id="ragArgumentsContainer" class="rag-section">
+  <span id="rag-arguements-text">RAG arguments:</span>
+
+  <!-- Similarity Cutoff Slider -->
+  <div id="similarityCutoffWrapper" class="mb-3">
+    <label for="similarityCutoff" class="form-label fw-bold">
+      Similarity Cutoff: <span id="cutoffValue">0.50</span>
+    </label>
+    <input type="range" class="form-range modern-slider" min="0.25" max="0.95" step="0.05" value="0.50" id="similarityCutoff" oninput="updateCutoffLabel()">
+  </div>
+
+  <!-- Rerank Toggle -->
+  <div class="mb-3 modern-switch">
+    <label class="form-label fw-bold mb-0" for="rerankSwitch" id="rerankLabel">Reranker</label>
+    <div class="form-check form-switch">
+      <input class="form-check-input" type="checkbox" id="rerankSwitch">
+    </div>
   </div>
 </div>
+
+
 
 <!-- END toggles -->
   <ul class="nav nav-pills flex-column">
@@ -545,8 +560,9 @@ socket.onopen = function(e) {
       var msgVal = msgInput.val();
 
       // Determine current chat mode from toggle
-      const chatMode = document.getElementById("chatModeSwitch").checked ? "rag" : "standard";
+      const chatMode = document.querySelector('input[name="chatMode"]:checked').value;
       const similarityCutoff = parseFloat(document.getElementById("similarityCutoff").value);
+      const temperature = parseFloat(document.getElementById("temperature").value);
       const rerankEnabled = document.getElementById("rerankSwitch").checked; // new line
 
 
@@ -568,6 +584,7 @@ socket.onopen = function(e) {
         chat_mode: chatMode,
         similarity_cutoff: similarityCutoff,
         rerank: rerankEnabled,
+        temperature: temperature,
       };
       socket.send(JSON.stringify(data));
 
@@ -630,7 +647,8 @@ socket.onmessage = function(e) {
         Object.keys(encryptedContexts).forEach(function(encryptedKey, index) {
           var contextId = "context-" + (index + 1);
           var key = decrypt_text(encryptedKey)
-          var contextLabel = "#" + (index + 1) + ": " + key;
+          // var contextLabel = "#" + (index + 1) + ": " + key;
+          var contextLabel = "#" + (index + 1) + ": ";
           var encryptedContextText = encryptedContexts[encryptedKey];
           var contextText = decrypt_text(encryptedContextText)
           
@@ -901,11 +919,26 @@ function inferTextareaLanguage(content) {
 
 
 function updateMode() {
-  const ragMode = document.getElementById("modeRag").checked;
-  document.getElementById("similarityCutoffWrapper").style.display = ragMode ? "block" : "none";
-  document.getElementById("rerankSwitch").style.display = ragMode ? "block" : "none";
-  document.getElementById("rerankLabel").style.display = ragMode ? "block" : "none";
+    const mode = document.querySelector('input[name="chatMode"]:checked').value;
+    const ragSection = document.getElementById("ragArgumentsContainer");
+
+    if (mode === "rag") {
+        // Show
+        ragSection.style.display = "block";
+        // Allow a tiny delay for CSS transition to apply
+        requestAnimationFrame(() => {
+            ragSection.classList.remove("hidden");
+        });
+    } else {
+        // Hide
+        ragSection.classList.add("hidden");
+        // After transition, remove from layout completely
+        setTimeout(() => {
+            ragSection.style.display = "none";
+        }, 300); // match transition duration
+    }
 }
+
 
 function updateRerankLabel() {
   const toggle = document.getElementById("rerankSwitch");
@@ -916,6 +949,12 @@ function updateRerankLabel() {
 function updateCutoffLabel() {
   const slider = document.getElementById("similarityCutoff");
   const label = document.getElementById("cutoffValue");
+  label.textContent = parseFloat(slider.value).toFixed(2);
+}
+
+function updateTemperatureLabel() {
+  const slider = document.getElementById("temperature");
+  const label = document.getElementById("temperatureValue");
   label.textContent = parseFloat(slider.value).toFixed(2);
 }
 
