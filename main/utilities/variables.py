@@ -67,7 +67,7 @@ Return keywords as a comma-separated list, and nothing else.
 
 Examples:
 
-User: What are the effects of climate change on polar bear populations?
+User: What are the effects of climate change on polar bear populations? explain breifly.
 Keywords: climate change, polar bears, effects
 
 User: How does the Transformer architecture work in deep learning?

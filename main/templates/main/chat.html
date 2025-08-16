@@ -244,35 +244,50 @@
 <!-- Temperature Slider -->
 <div id="temperatureWrapper" class="mb-3">
   <label for="temperature" class="form-label fw-bold">
-    Temperature: <span id="temperatureValue">0.70</span>
+    Temperature: <span class="sliderValues" id="temperatureValue">0.70</span>
+    <span class="info-circle">i
+      <span class="tooltip-text">
+        Temperature controls randomness of the LLM's responses. Lower values (0–0.3) make output deterministic and safe, higher values (0.7–1.2) make it more creative but less predictable.
+      </span>
+    </span>
   </label>
   <input type="range" class="form-range modern-slider" min="0.1" max="1.2" step="0.1" value="0.5" id="temperature" oninput="updateTemperatureLabel()">
 </div>
 
 <!-- RAG Arguments Section -->
 <div id="ragArgumentsContainer" class="rag-section">
-  <span id="rag-arguements-text">RAG arguments:</span>
+  <span id="rag-arguements-text">RAG Arguments</span>
 
   <!-- Similarity Cutoff Slider -->
   <div id="similarityCutoffWrapper" class="mb-3">
     <label for="similarityCutoff" class="form-label fw-bold">
-      Similarity Cutoff: <span id="cutoffValue">0.50</span>
+      Similarity Cutoff: <span class="sliderValues" id="cutoffValue">0.50</span>
+      <span class="info-circle">i
+        <span class="tooltip-text">
+          Similarity Cutoff determines which retrieved chunks are considered relevant. Higher values keep only highly similar chunks; lower values keep more chunks but may include less relevant ones.
+        </span>
+      </span>
     </label>
     <input type="range" class="form-range modern-slider" min="0.25" max="0.95" step="0.05" value="0.50" id="similarityCutoff" oninput="updateCutoffLabel()">
   </div>
 
   <!-- Rerank Toggle -->
   <div class="mb-3 modern-switch">
-    <label class="form-label fw-bold mb-0" for="rerankSwitch" id="rerankLabel">Reranker</label>
+    <label class="form-label fw-bold mb-0" for="rerankSwitch" id="rerankLabel">
+      Reranker
+      <span class="info-circle">i
+        <span class="tooltip-text">
+          Enable the reranker to reorder retrieved chunks by relevance to your query. This can improve answer quality but may increase response time.
+        </span>
+      </span>
+    </label>
     <div class="form-check form-switch">
       <input class="form-check-input" type="checkbox" id="rerankSwitch">
     </div>
   </div>
 </div>
-
-
-
 <!-- END toggles -->
+
   <ul class="nav nav-pills flex-column">
     <li class="nav-item" style="margin-top: 14px;">
       <a href="{% url 'main:delete_thread' active_thread_id %}" id="delete-thread-btn" class="btn btn-danger nav-link active text-center">

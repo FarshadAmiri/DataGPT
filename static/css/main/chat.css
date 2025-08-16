@@ -71,7 +71,9 @@
   font-family: Nexa-Heavy;
   font-weight: bolder;
   font-size: 30px;
-  color: rgb(192, 204, 31);
+  background: linear-gradient(10deg, rgb(250, 213, 255) 8%, rgb(213, 198, 255) 20%, rgb(182, 232, 255) 45%, rgb(176, 255, 251) 55%, rgb(180, 255, 224) 65%, rgb(237, 255, 170) 75%, rgb(245, 255, 158) 85%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
   justify-content: center;
   align-items: center;
   padding-left: 30px;
@@ -81,7 +83,7 @@
 #page_title:hover {
   background-color: rgba(0, 0, 0, 0.0);
   border-radius: 30px;
-  color: rgb(231, 179, 66);
+  color: rgb(138, 228, 246);
 }
 
 #version {
@@ -284,7 +286,8 @@ body{
 }
 
 #new-rag-btn {
-  background-image: radial-gradient( circle 759px at -6.7% 50%,  rgb(110, 156, 105) 0%, rgb(148, 197, 142) 26.2%, rgb(168, 212, 161) 50.6%, rgb(144, 199, 137) 74.1%, rgb(108, 134, 105) 100.3% );
+  /* background-image: radial-gradient( circle 759px at -6.7% 50%,  rgb(110, 156, 105) 0%, rgb(148, 197, 142) 26.2%, rgb(168, 212, 161) 50.6%, rgb(144, 199, 137) 74.1%, rgb(108, 134, 105) 100.3% ); */
+  background-image: radial-gradient( circle 759px at -6.7% 50%,  rgb(146, 221, 138) 0%, rgb(198, 226, 161) 26.2%, rgb(180, 212, 161) 50.6%, rgb(165, 199, 137) 74.1%, rgb(118, 134, 105) 100.3% );
   /* background-color: rgb(66, 141, 66); */
   font-weight: 600;
   font-size: 16px;
@@ -294,7 +297,8 @@ body{
 
 #new-collection-btn {
   background-color: #FBAB7E;
-  background-image: linear-gradient(62deg, #FBAB7E 0%, #F7CE68 100%);
+  /* background-image: linear-gradient(62deg, #FBAB7E 0%, #F7CE68 100%); */
+  background-image: linear-gradient(62deg, #909cef 0%, #77f1e9 100%);
   font-weight: 600;
   font-size: 16px;
   color: rgb(6, 46, 6);
@@ -597,11 +601,14 @@ body{
 
 
 #rag-arguements-text {
-font-family: RobotoSlab;
-font-size: 17px;
-color: #76e264;
-margin-bottom: 50px;
+  display: block; /* or inline-block */
+  font-family: RobotoSlab;
+  font-weight: bold;
+  font-size: 19px;
+  color: rgb(211, 211, 211);
+  margin-bottom: 1.5rem; /* adds space below the text */
 }
+
 
 
 /* Smooth slide toggle that fully disappears */
@@ -621,3 +628,80 @@ margin-bottom: 50px;
   pointer-events: none; /* prevent interaction when hidden */
 }
 
+.sliderValues {
+  color: #cbcf00;
+}
+
+
+/* Info circle */
+.info-circle {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background-color: #007bff;
+  color: white;
+  text-align: center;
+  line-height: 18px;
+  font-size: 12px;
+  font-weight: bold;
+  margin-left: 5px;
+  position: relative;
+  cursor: pointer;
+}
+
+/* Tooltip */
+.tooltip-text {
+  font-weight: 400; /* normal weight, less bold */
+  font-family: sans-serif; /* optional: change font if desired */
+  visibility: hidden;
+  max-width: 400px;       /* allow wider tooltips */
+  min-width: 150px;       /* ensure they are not too narrow */
+  background-color: #333;
+  color: #fff;
+  text-align: left;
+  border-radius: 6px;
+  padding: 8px;
+  position: absolute;
+  z-index: 10;
+  bottom: 125%;
+  left: 50%;
+  transform: translateX(-50%);
+  opacity: 0;
+  transition: opacity 0.3s;
+  font-size: 13px;
+  line-height: 1.3;
+  word-wrap: break-word;
+  white-space: normal;
+}
+
+/* Triangle pointer */
+.tooltip-text::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 5px;
+  border-style: solid;
+  border-color: #333 transparent transparent transparent;
+}
+
+.info-circle:hover .tooltip-text {
+  visibility: visible;
+  opacity: 1;
+}
+
+/* Ensure tooltips stay within viewport */
+.tooltip-text {
+  right: auto;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* Mobile responsiveness */
+@media (max-width: 500px) {
+  .tooltip-text {
+    max-width: 90vw; /* mobile-friendly */
+  }
+}
