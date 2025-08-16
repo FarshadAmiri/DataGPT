@@ -55,7 +55,7 @@ class RAGConsumer(AsyncConsumer):
         chat_mode = dict_data.get("chat_mode")  # "standard" or "rag"
         similarity_cutoff = float(dict_data.get("similarity_cutoff", 0.0))  # convert to float
         rerank_enabled = dict_data.get("rerank")
-        temperature = float(dict_data.get("temperature"), 0.5)  # convert to float
+        temperature = float(dict_data.get("temperature", 0.5))  # convert to float
         max_retreivals = 6
 
         # ---- Input Validation ----
