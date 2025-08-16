@@ -172,3 +172,5 @@ collections/
 *.pptx
 *.pem
 /tests
+*.bin
+*.bin
