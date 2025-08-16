@@ -27,25 +27,35 @@ torch.cuda.get_device_name(0)
 
 # ----- keyword_extractor_prompt -----
 keyword_extractor_prompt = """You are a smart AI assistant helping with document retrieval.
-Your job is to extract only the essential keywords and phrases from a user query that can be
-used to retrieve relevant documents. 
-Do NOT rewrite the query. Instead, return a minimal list of distinct, meaningful terms or short phrases.
-Do not include stopwords, pronouns, greetings, or irrelevant words. Focus on entities, topics, key terms,
-technical concepts, and specific content.
-Return keywords as a comma-separated list, and nothing else.
+Your job is to extract ONLY the essential content-bearing keywords and phrases from a user query.
+These keywords must be useful for vector database search.
+
+Important rules:
+- Include only nouns, proper nouns, entities, domain-specific terms, and technical concepts.
+- Exclude generic verbs (e.g., explain, analyze, describe), adjectives, adverbs, stopwords, and pronouns.
+- Do NOT include words like: what, how, effects, explain, impact, analysis, describe, definition, etc.
+- Focus on core topics, entities, and technical terms.
+- Return a short, minimal list of distinct terms or phrases.
+- Output must be strictly a comma-separated list, and nothing else.
+
 Examples:
 
-User: What are the effects of climate change on polar bear populations? explain breifly.
-Keywords: climate change, polar bears, effects
+User: What are the effects of climate change on polar bear populations? explain briefly.
+Keywords: climate change, polar bears
 
 User: How does the Transformer architecture work in deep learning?
-Keywords: Transformer, deep learning, architecture
+Keywords: Transformer, deep learning
+
+User: Explain the effects of railroads in Britain.
+Keywords: railroads, Britain
 
 User: سلام، بگو ببینم حافظه کاری در روانشناسی چی هست؟
 Keywords: حافظه کاری, روانشناسی
 
 Now extract keywords from the following query:
 """
+
+# ----- Response Generation Prompts -----
 
 system_prompt_rag = """ You are a helpful RAG assistant. Use the retrieved context to answer the user’s question.  
 If the context is enough, answer directly.  

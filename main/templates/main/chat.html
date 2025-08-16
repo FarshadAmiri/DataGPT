@@ -244,14 +244,14 @@
 <!-- Temperature Slider -->
 <div id="temperatureWrapper" class="mb-3">
   <label for="temperature" class="form-label fw-bold">
-    Temperature: <span class="sliderValues" id="temperatureValue">0.5</span>
+    Temperature: <span class="sliderValues" id="temperatureValue">0.7</span>
     <span class="info-circle">i
       <span class="tooltip-text">
         Temperature controls randomness of the LLM's responses. Lower values (0–0.3) make output deterministic and safe, higher values (0.7–1.2) make it more creative but less predictable.
       </span>
     </span>
   </label>
-  <input type="range" class="form-range modern-slider" min="0.1" max="1.2" step="0.1" value="0.5" id="temperature" oninput="updateTemperatureLabel()">
+  <input type="range" class="form-range modern-slider" min="0.1" max="1.2" step="0.1" value="0.7" id="temperature" oninput="updateTemperatureLabel()">
 </div>
 
 <!-- RAG Arguments Section -->
