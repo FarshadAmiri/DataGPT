@@ -11,7 +11,7 @@ from main.views import model, tokenizer
 from main.models import Thread, ChatMessage, Document
 from main.utilities.RAG import embedding_model_st, rerank_minilm, rerank_alibaba
 from main.utilities.translation import translate_en_fa
-from main.utilities.variables import keyword_extractor_prompt, system_prompt
+from main.utilities.variables import keyword_extractor_prompt, system_prompt_rag, system_prompt_standard, max_n_retreivals, max_new_tokens, max_length
 from main.utilities.encryption import *
 from main.utilities.helper_functions import remove_non_printable
 import numpy as np
@@ -56,7 +56,7 @@ class RAGConsumer(AsyncConsumer):
         similarity_cutoff = float(dict_data.get("similarity_cutoff", 0.0))  # convert to float
         rerank_enabled = dict_data.get("rerank")
         temperature = float(dict_data.get("temperature", 0.5))  # convert to float
-        max_retreivals = 6
+        print(f"\ntemperature: {temperature}\n")
 
         # ---- Input Validation ----
         temperature = temperature if (0.1 <= temperature <= 1.2) else 0.5
@@ -85,51 +85,60 @@ class RAGConsumer(AsyncConsumer):
             print(f"\nFiltered {len(similarities) - len(filtered_indices)} chunks below cutoff {similarity_cutoff}")
 
             # Sort remaining ones by similarity
-            sorted_indices = sorted(filtered_indices, key=lambda i: similarities[i], reverse=True)[:max_retreivals]
+            sorted_indices = sorted(filtered_indices, key=lambda i: similarities[i], reverse=True)[:max_n_retreivals]
 
+            # After computing similarities and filtering/sorting:
             source_nodes_dict = {}
             top_chunks = []
+            top_chunks_with_scores = []  # new list to store chunk + similarity
+
             for idx, i in enumerate(sorted_indices):
                 chunk_text = chunk_texts[i]
+                sim_score = similarities[i]  # get similarity
                 chunk_id = results["ids"][i]
-                print(f"\nchunk_id: {chunk_id}\n")
+                # print(f"\nchunk_id: {chunk_id}\n")
                 doc_id = chunk_id.split("_")[0]
                 try:
                     doc_id = int(doc_id)
                     doc_name = await self.get_doc_name(doc_id)
                 except ValueError:
-                    doc_name = f"#{idx}"
+                    doc_name = f"#{idx+1} [Similarity: {sim_score:.3f}]"
                 source_nodes_dict[doc_name] = chunk_text
                 top_chunks.append(chunk_text)
-            
-            # ---- Rerank ----
+                top_chunks_with_scores.append(f"[Similarity: {sim_score:.3f}]\n{chunk_text}")
+
+            # If reranking is enabled
             if rerank_enabled and top_chunks:
                 print(f"\nlen(top_chunks) before rerank: {len(top_chunks)}")
                 
-                # Keep track of original mapping
-                original_mapping = dict(source_nodes_dict)  # copy
-
-                # Rerank top_chunks
+                original_mapping = dict(source_nodes_dict)
+                
+                # Rerank
                 top_chunks = rerank_minilm(query=query, texts=top_chunks, threshold=-3.0, return_scores=False)
                 print(f"len(top_chunks) after rerank: {len(top_chunks)}\n")
-
-                # Update source_nodes_dict to remove chunks filtered out by reranker
+                
+                # Update source_nodes_dict
                 new_source_nodes = {}
+                new_top_chunks_with_scores = []
                 for doc_name, chunk_text in original_mapping.items():
                     if chunk_text in top_chunks:
                         new_source_nodes[doc_name] = chunk_text
+                        # find corresponding chunk with score
+                        for s_chunk in top_chunks_with_scores:
+                            if chunk_text in s_chunk:
+                                new_top_chunks_with_scores.append(s_chunk)
                 source_nodes_dict = new_source_nodes
-        
+                top_chunks_with_scores = new_top_chunks_with_scores
+
+            # Build rag_contexts string including similarity scores
+            rag_contexts = "\n\n".join(top_chunks_with_scores)
+            print(f"\nRAG Contexts with similarity scores:\n{rag_contexts}\n\n")
+            
+            # Construct prompt
+            prompt = f"{system_prompt_rag}\n\nContexts (Retrieved chunks of texts):\n{rag_contexts}\n\nUser: {query}\nAssistant:"
+
         elif chat_mode == "standard":
-            top_chunks = ""
-
-
-        rag_contexts = "\n\n".join(top_chunks)
-        print(f"rag_contexts: {rag_contexts}")
-
-
-        # Construct prompt
-        prompt = f"{system_prompt}\n\nContexts (Retrieved chunks of texts):\n{rag_contexts}\n\nUser: {query}\nAssistant:"
+            prompt = f"{system_prompt_standard}\n\nUser: {query}\nAssistant:"
 
         # Tokenize and create streamer
         inputs = tokenizer(prompt, return_tensors="pt").to("cuda")
@@ -137,10 +146,10 @@ class RAGConsumer(AsyncConsumer):
         gen_kwargs = {
             "inputs": inputs["input_ids"],
             "streamer": streamer,
-            "max_new_tokens": 4096,   
-            "max_length": 16000,       # prompt + output total length    
+            "max_new_tokens": max_new_tokens,   
+            "max_length": max_length,       # prompt + output total length    
             "temperature": temperature,  # 0.0 – 0.3 : deterministic, safe | 0.7: balanced | 1.0 - 1.5: creative, possibly chaotic.
-            "do_sample": False,  # Enables randomness when picking tokens. Should be True if temperature > 0.
+            "do_sample": True,  # Enables randomness when picking tokens. Should be True if temperature > 0.
             "top_p": 0.9,    # Nucleus sampling — limits to a dynamic top % of tokens. Usually 0.9.
             "pad_token_id": tokenizer.eos_token_id,
             "eos_token_id": tokenizer.eos_token_id,  # keep EOS!
@@ -171,8 +180,10 @@ class RAGConsumer(AsyncConsumer):
 
         print("\n\nRESPONSE GENERATION COMPLETED\n\n")
         try:
-            # message_id = await self.create_chat_message(full_response, rag_response=True, source_nodes=json.dumps({}))
-            message_id = await self.create_chat_message(full_response, rag_response=True, source_nodes=json.dumps(source_nodes_dict))
+            if chat_mode=="rag":
+                message_id = await self.create_chat_message(full_response, rag_response=True, source_nodes=json.dumps(source_nodes_dict))
+            elif chat_mode=="standard":
+                message_id = await self.create_chat_message(full_response, rag_response=True)
 
             await self.send({
                 "type": "websocket.send",
@@ -206,7 +217,9 @@ class RAGConsumer(AsyncConsumer):
         return Thread.objects.get(id=chat_id)
 
     @database_sync_to_async
-    def create_chat_message(self, message, rag_response, source_nodes):
+    def create_chat_message(self, message, rag_response, source_nodes=None):
+        if source_nodes==None:
+            return ChatMessage.objects.create(thread=self.thread, user=self.scope["user"], message=message, rag_response=rag_response).id
         return ChatMessage.objects.create(thread=self.thread, user=self.scope["user"], message=message, rag_response=rag_response, source_nodes=source_nodes).id
 
     async def _handle_translation(self, dict_data):
@@ -234,7 +247,10 @@ class RAGConsumer(AsyncConsumer):
         contexts = await self.get_context(message_id)
         encrypted_aes_key = dict_data.get("encrypted_aes_key")
         aes_key = decrypt_aes_key(encrypted_aes_key)
-        contexts = json.loads(contexts)
+        try:
+            contexts = json.loads(contexts)
+        except:
+            contexts = {}
         encrypted_contexts = {
             encrypt_AES_ECB(k, aes_key).decode('utf-8'): encrypt_AES_ECB(v, aes_key).decode('utf-8')
             for k, v in contexts.items()

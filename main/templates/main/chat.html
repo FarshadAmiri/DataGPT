@@ -244,7 +244,7 @@
 <!-- Temperature Slider -->
 <div id="temperatureWrapper" class="mb-3">
   <label for="temperature" class="form-label fw-bold">
-    Temperature: <span class="sliderValues" id="temperatureValue">0.70</span>
+    Temperature: <span class="sliderValues" id="temperatureValue">0.5</span>
     <span class="info-circle">i
       <span class="tooltip-text">
         Temperature controls randomness of the LLM's responses. Lower values (0–0.3) make output deterministic and safe, higher values (0.7–1.2) make it more creative but less predictable.
@@ -663,7 +663,7 @@ socket.onmessage = function(e) {
           var contextId = "context-" + (index + 1);
           var key = decrypt_text(encryptedKey)
           // var contextLabel = "#" + (index + 1) + ": " + key;
-          var contextLabel = "#" + (index + 1) + ": ";
+          var contextLabel = key + ": ";
           var encryptedContextText = encryptedContexts[encryptedKey];
           var contextText = decrypt_text(encryptedContextText)
           
