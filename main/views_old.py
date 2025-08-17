@@ -10,11 +10,11 @@ from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from django.db.models import Max, Count
 from main.utilities.helper_functions import create_folder, get_first_words, copy_folder_contents, hash_file
-from main.utilities.RAG import create_rag, index_builder, create_all_docs_collection
+from main.utilities.RAG import create_rag, add_docs, index_builder, create_all_docs_collection
 from pathlib import Path
 import os, shutil, random, string
-from llama_index.core import SimpleDirectoryReader
-from llama_index.core import SummaryIndex, Document as llama_index_doc
+from llama_index import SimpleDirectoryReader
+from llama_index import Document as llama_index_doc
 from main.utilities.encryption import *
 
 
@@ -160,12 +160,6 @@ def create_rag_view(request,):  # Erros front should handle: 1-similar rag_name,
         return redirect('main:chat', thread_id=vdb.id)
 
 
-from django.shortcuts import redirect
-from django.core.files.base import ContentFile
-from django.core.files.storage import default_storage
-from llama_index.core import Document as llama_index_doc
-import os
-
 @login_required(login_url='users:login')
 def add_docs_view(request, thread_id):
     user = request.user
@@ -177,11 +171,8 @@ def add_docs_view(request, thread_id):
         rag_name = thread.name
         vdb_path = os.path.join(vector_db_path, user.username, f'vdb_{rag_name}')
         docs_path = os.path.join(vdb_path, "docs")
-
-        # build index
         index = index_builder(vdb_path)
-        vdb = Thread.objects.get(user=user, name=rag_name)
-
+        vdb = Thread.objects.get(user=user, name=rag_name,)
         for file in uploaded_files:
             file_name = file.name
             print(f"\nfile_name: {file_name} is in progress...\n")
@@ -189,29 +180,18 @@ def add_docs_view(request, thread_id):
             doc_path = default_storage.get_available_name(doc_path)
             default_storage.save(doc_path, ContentFile(file.read()))
 
-            # Load document
-            documents = SimpleDirectoryReader(input_files=[doc_path]).load_data()
+            # document = loader.load(file_path=Path(doc_path), metadata=False)
+            document = SimpleDirectoryReader(input_files=[doc_path]).load_data()
             doc_sha256 = hash_file(doc_path)["sha256"]
 
-            # Save document info
-            doc_obj = Document.objects.create(
-                user=user,
-                name=file_name,
-                public=False,
-                description=None,
-                loc=doc_path,
-                sha256=doc_sha256
-            )
-
-            # Insert chunks into index
-            for idx, chunked_doc in enumerate(documents):
+            doc_obj = Document.objects.create(user=user, name=file_name, public=False,
+                                              description=None, loc=doc_path, sha256=doc_sha256)
+            # Create indexes
+            for idx, chunked_doc in enumerate(document):
                 doc = llama_index_doc(text=chunked_doc.text, id_=f"{doc_obj.id}_{idx}")
                 index.insert(doc)
-
             vdb.docs.add(doc_obj)
-
-        return redirect('main:chat', thread_id=thread_id)
-
+        return redirect('main:chat', thread_id=collection_add_docs_view)
 
 
 @login_required(login_url='users:login')

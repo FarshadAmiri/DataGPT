@@ -1,5 +1,4 @@
 from transformers import AutoTokenizer, AutoModelForCausalLM, TextStreamer
-from llama_index.prompts.prompts import SimpleInputPrompt
 import accelerate
 import torch
 import time

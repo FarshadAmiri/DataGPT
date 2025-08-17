@@ -1,18 +1,17 @@
 from transformers import AutoTokenizer, AutoModelForCausalLM, TextStreamer, AutoModelForSequenceClassification
 from sentence_transformers import CrossEncoder
 from huggingface_hub import login
-# from llama_index import VectorStoreIndex, SimpleDirectoryReader, get_response_synthesizer
-# from llama_index.vector_stores import ChromaVectorStore
-# from llama_index.storage.storage_context import StorageContext
+from llama_index import VectorStoreIndex, SimpleDirectoryReader, get_response_synthesizer
+from llama_index.vector_stores import ChromaVectorStore
+from llama_index.storage.storage_context import StorageContext
 # from llama_index.prompts.prompts import SimpleInputPrompt
-# from llama_index.llms import HuggingFaceLLM
-from llama_index.embeddings.langchain import LangchainEmbedding
+from llama_index.llms import HuggingFaceLLM
+from llama_index.embeddings import LangchainEmbedding
 # from langchain.embeddings.huggingface import HuggingFaceEmbeddings
 from langchain_huggingface import HuggingFaceEmbeddings
-# from llama_index import set_global_service_context
-# from llama_index import ServiceContext
-# from llama_index import VectorStoreIndex
-# from llama_index import download_loader
+from llama_index import set_global_service_context
+from llama_index import ServiceContext
+from llama_index import VectorStoreIndex, download_loader
 # from llama_index import SimpleDirectoryReader
 # from llama_index.retrievers import VectorIndexRetriever
 # from llama_index.query_engine import RetrieverQueryEngine
@@ -143,79 +142,98 @@ def create_all_docs_collection():
     return
 
 
-# def add_docs(vdb_path: str, docs_paths: list):
-#     # from main.utilities.variables import system_prompt, query_wrapper_prompt
-#     from main.views import model, tokenizer
-#     db = chromadb.PersistentClient(path = vdb_path)
-#     chroma_collection = db.get_or_create_collection("default", embedding_function=embedding_model_st2)
-#     vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
-#     storage_context = StorageContext.from_defaults(vector_store=vector_store)
-#     # llm = HuggingFaceLLM(context_window=4096,
-#     #                  max_new_tokens=512,
-#     #                  system_prompt=system_prompt,
-#     #                  query_wrapper_prompt=query_wrapper_prompt,
-#     #                  model=model,
-#     #                  tokenizer=tokenizer)
+def add_docs(vdb_path: str, docs_paths: list):
+    # from main.utilities.variables import system_prompt, query_wrapper_prompt
+    from main.views import model, tokenizer
+    db = chromadb.PersistentClient(path = vdb_path)
+    chroma_collection = db.get_or_create_collection("default", embedding_function=embedding_model_st2)
+    vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
+    storage_context = StorageContext.from_defaults(vector_store=vector_store)
+    # llm = HuggingFaceLLM(context_window=4096,
+    #                  max_new_tokens=512,
+    #                  system_prompt=system_prompt,
+    #                  query_wrapper_prompt=query_wrapper_prompt,
+    #                  model=model,
+    #                  tokenizer=tokenizer)
 
-#     # # Create new service context instance
-#     # service_context = ServiceContext.from_defaults(
-#     #     chunk_size=INDEXING_CHUNK_SIZE,
-#     #     chunk_overlap=INDEXING_CHUNK_OVERLAP,
-#     #     llm=llm,
-#     #     embed_model=embedding_model_lc
-#     # )
+    # # Create new service context instance
+    # service_context = ServiceContext.from_defaults(
+    #     chunk_size=INDEXING_CHUNK_SIZE,
+    #     chunk_overlap=INDEXING_CHUNK_OVERLAP,
+    #     llm=llm,
+    #     embed_model=embedding_model_lc
+    # )
 
-#     # # And set the service context
-#     # set_global_service_context(service_context)
-#     index = VectorStoreIndex.from_vector_store(vector_store, storage_context=storage_context)
-#     PyMuPDFReader = download_loader("PyMuPDFReader")
-#     loader = PyMuPDFReader()
-#     # Load documents
-#     print(f"\ndocs_paths: {docs_paths}\n")
-#     for doc_path in docs_paths:
-#         document = loader.load(file_path=Path(doc_path), metadata=False)
-#         # Create indexes
-#         for doc in document:
-#             index.insert(doc)
+    # # And set the service context
+    # set_global_service_context(service_context)
+    index = VectorStoreIndex.from_vector_store(vector_store, storage_context=storage_context)
+    PyMuPDFReader = download_loader("PyMuPDFReader")
+    loader = PyMuPDFReader()
+    # Load documents
+    print(f"\ndocs_paths: {docs_paths}\n")
+    for doc_path in docs_paths:
+        document = loader.load(file_path=Path(doc_path), metadata=False)
+        # Create indexes
+        for doc in document:
+            index.insert(doc)
 
 
 def index_builder(vdb_path: str):
-    from llama_index.core import Settings
-    from llama_index.core import StorageContext, VectorStoreIndex
-    from llama_index.llms.huggingface import HuggingFaceLLM
-    from llama_index.vector_stores.chroma import ChromaVectorStore
-    import chromadb
-    from main.views import model, tokenizer
-    
-    # Define your LLM
-    llm = HuggingFaceLLM(
-        model=model,
-        tokenizer=tokenizer,
-        context_window=4096,
-    )
+    try:
+        from main.views import model, tokenizer
+        llm = HuggingFaceLLM(
+                    # context_window=4096,
+                    # max_new_tokens=512,
+                    # system_prompt=system_prompt,
+                    # query_wrapper_prompt=query_wrapper_prompt,
+                    model=model,
+                    tokenizer=tokenizer)
 
-    # Configure global settings (instead of ServiceContext)
-    Settings.llm = llm
-    Settings.chunk_size = INDEXING_CHUNK_SIZE
-    Settings.chunk_overlap = INDEXING_CHUNK_OVERLAP
-    Settings.embed_model = embedding_model_lc
+        # Create new service context instance
+        service_context = ServiceContext.from_defaults(
+            chunk_size=INDEXING_CHUNK_SIZE,
+            chunk_overlap=INDEXING_CHUNK_OVERLAP,
+            llm=llm,
+            embed_model=embedding_model_lc
+        )
 
-    # Setup Chroma
-    db = chromadb.PersistentClient(path=vdb_path)
-    chroma_collection = db.get_or_create_collection(
-        "default", embedding_function=embedding_model_st2
-    )
-    vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
-    storage_context = StorageContext.from_defaults(vector_store=vector_store)
+        # And set the service context
+        set_global_service_context(service_context)
+        
+        db = chromadb.PersistentClient(path = vdb_path)
+        chroma_collection = db.get_or_create_collection("default", embedding_function=embedding_model_st2)
+        vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
+        storage_context = StorageContext.from_defaults(vector_store=vector_store)
+        index = VectorStoreIndex.from_vector_store(vector_store, storage_context=storage_context)
+    except:
+        # from main.utilities.variables import system_prompt, query_wrapper_prompt
+        from main.views import model, tokenizer
+        llm = HuggingFaceLLM(
+                    # context_window=4096,
+                    # max_new_tokens=512,
+                    # system_prompt=system_prompt,
+                    # query_wrapper_prompt=query_wrapper_prompt,
+                    model=model,
+                    tokenizer=tokenizer)
 
-    # Build index (no more service_context param)
-    index = VectorStoreIndex.from_vector_store(
-        vector_store,
-        storage_context=storage_context,
-    )
+        # Create new service context instance
+        service_context = ServiceContext.from_defaults(
+            chunk_size=INDEXING_CHUNK_SIZE,
+            chunk_overlap=INDEXING_CHUNK_OVERLAP,
+            llm=llm,
+            embed_model=embedding_model_lc
+        )
+
+        # And set the service context
+        set_global_service_context(service_context)
+
+        db = chromadb.PersistentClient(path = vdb_path)
+        chroma_collection = db.get_or_create_collection("default", embedding_function=embedding_model_st2)
+        vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
+        storage_context = StorageContext.from_defaults(vector_store=vector_store)
+        index = VectorStoreIndex.from_vector_store(vector_store, storage_context=storage_context)
 
     return index
-
 
 
 # def add_docs2(vdb_path: str, vdb, docs_dict: dict):
