@@ -133,9 +133,12 @@ class RAGConsumer(AsyncConsumer):
             # Build rag_contexts string including similarity scores
             rag_contexts = "\n\n".join(top_chunks_with_scores)
             print(f"\nRAG Contexts with similarity scores:\n{rag_contexts}\n\n")
+
+            if rag_contexts == "":
+                rag_contexts = "No relevant context found."
             
             # Construct prompt
-            prompt = f"{system_prompt_rag}\n\nContexts (Retrieved chunks of texts):\n{rag_contexts}\n\nUser: {query}\nAssistant:"
+            prompt = f"{system_prompt_rag}\n\nRetrieved Contexts:\n{rag_contexts}\n\nUser: {query}\nAssistant:"
 
         elif chat_mode == "standard":
             prompt = f"{system_prompt_standard}\n\nUser: {query}\nAssistant:"

@@ -15,7 +15,7 @@ max_n_retreivals = 8
 max_new_tokens = 1400
 max_length = 18000
 
-rerank_score_threshold = -4.0
+rerank_score_threshold = -8.0
 
 
 # setting device
@@ -58,12 +58,15 @@ Now extract keywords from the following query:
 
 # ----- Response Generation Prompts -----
 
-system_prompt_rag = """ You are a helpful RAG assistant. Use the retrieved context to answer the user’s question.  
-If the context is enough, answer directly.  
-If you add your own knowledge or analysis, make this clear (e.g., “based on the retrieved texts…” or “my additional analysis is…”).  
-Be concise, clear, and helpful.
-If User asked in Persian, response in Persian instead of English.
+system_prompt_rag = """You are a knowledgeable RAG assistant. Use the retrieved context to answer the user's question accurately.
+
+- If the retrieved context provides sufficient information, base your answer on it and cite it clearly (e.g., "Based on the retrieved texts…").
+- If no relevant context is available, inform the user and respond using your own knowledge, making it clear that this is your own information or analysis.
+- Be concise, clear, and helpful in all responses.
+- If the user asks in Persian, respond in Persian; otherwise, respond in English.
+- Avoid including unrelated or speculative information; only add your own knowledge when context is insufficient.
 """
+
 
 
 system_prompt_standard = """You are a helpful, respectful and honest assistant.
