@@ -11,7 +11,7 @@ from main.views import model, tokenizer
 from main.models import Thread, ChatMessage, Document
 from main.utilities.RAG import embedding_model_st, rerank_minilm, rerank_alibaba
 from main.utilities.translation import translate_en_fa
-from main.utilities.variables import keyword_extractor_prompt, system_prompt_rag, system_prompt_standard, max_n_retreivals, max_new_tokens, max_length
+from main.utilities.variables import *
 from main.utilities.encryption import *
 from main.utilities.helper_functions import remove_non_printable
 import numpy as np
@@ -114,7 +114,7 @@ class RAGConsumer(AsyncConsumer):
                 original_mapping = dict(source_nodes_dict)
                 
                 # Rerank
-                top_chunks = rerank_minilm(query=query, texts=top_chunks, threshold=-3.0, return_scores=False)
+                top_chunks = rerank_minilm(query=query, texts=top_chunks, threshold=rerank_score_threshold, return_scores=False)
                 print(f"len(top_chunks) after rerank: {len(top_chunks)}\n")
                 
                 # Update source_nodes_dict
@@ -267,12 +267,6 @@ class RAGConsumer(AsyncConsumer):
     @database_sync_to_async
     def get_context(self, message_id):
         return ChatMessage.objects.get(id=message_id).source_nodes
-
-    # @database_sync_to_async
-    # def get_doc_name(self, node_id):
-    #     doc_id = node_id.split("_")[0]
-    #     doc_name = Document.objects.get(id=doc_id).name
-    #     return doc_name
 
     @database_sync_to_async
     def get_doc_name(self, doc_id):

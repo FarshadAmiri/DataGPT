@@ -16,6 +16,8 @@ max_n_retreivals = 8
 max_new_tokens = 1400
 max_length = 18000
 
+rerank_score_threshold = -4.0
+
 
 # setting device
 gpu=0
