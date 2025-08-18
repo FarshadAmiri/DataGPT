@@ -79,9 +79,10 @@
         <div class="d-flex flex-column flex-shrink-0 p-3 text-white bg-dark sidebar" style="margin-left: 0;">
     <a href="{% url 'main:main_chat' %}" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-white text-decoration-none justify-content-center" id="page_title_a">
       <span id="page_title">RAG Chat &nbsp<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" fill="currentColor" class="bi bi-chat-left-dots-fill" viewBox="0 0 16 16">
+  <path d="M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4.414a1 1 0 0 0-.707.293L.854 15.146A.5.5 0 0 1 0 14.793zm5 4a1 1 0 1 0-2 0 1 1 0 0 0 2 0m4 0a1 1 0 1 0-2 0 1 1 0 0 0 2 0m3 1a1 1 0 1 0 0-2 1 1 0 0 0 0 2"/>
 </svg></span>
     </a>
-    <br>
+    <hr>
     <ul class="nav nav-pills flex-column">
       <li class="nav-item">
         <a href="{% url 'main:create_rag' %}" id="new-rag-btn" class="nav-link active text-center" aria-current="page" data-bs-toggle="modal" data-bs-target="#newRagModal" data-bs-whatever="@getbootstrap">
@@ -191,132 +192,113 @@
       </div>
     </div>
     {% endif %}
-    <div class="col-lg-2 col-md-12" style="padding: 0;" id="right-sidebar">
-      {% if no_threads != True %}
-      <div class="d-flex flex-column flex-shrink-0 p-3 text-white bg-dark sidebar-right" style="margin-right: 0;">
-        <h3 id="thread-name-right-sidebar">{{ active_thread_name }}</h3>
-        <hr>
-    
-        {% if base_collection_name == None %}
-          <!-- Included documents first -->
-          <h4>Included documents:</h4>
-          <div style="max-height: 800px; overflow-y: auto;">
-            {% if rag_docs %}
-              <ul class="nav nav-pills flex-column doc-name-sidebar" style="margin: 0; padding: 0;">
-                {% for doc in rag_docs %}
-                  <li data-toggle="tooltip" data-placement="top"
-                      title='"{{ doc.loc|path_end_part }}" in RAG database'
-                      style="margin-bottom: 15px; list-style: none;">
-                    * {{ doc.name }}
-                  </li>
-                {% endfor %}
-              </ul>
-            {% else %}
-              <p style="margin: 0; color: gray; font-style: italic;">No document added yet.</p>
-            {% endif %}
-          </div>
-          <hr>
+<div class="col-lg-2 col-md-12" style="padding: 0;" id="right-sidebar">
+  {% if no_threads != True %}
+  <div class="d-flex flex-column flex-shrink-0 p-3 text-white bg-dark sidebar-right" style="margin-right: 0;">
+  <h3 id="thread-name-right-sidebar">{{ active_thread_name }}</h3>
+  <hr>
+  {% if base_collection_name == None %}
+  <ul class="nav nav-pills flex-column">
+    <li class="nav-item">
+      <a href="{% url 'main:add_docs' active_thread_id %}" id="add-docs-btn" class="nav-link active text-center" aria-current="page" data-bs-toggle="modal" data-bs-target="#addDocsModal" data-bs-whatever="@getbootstrap">
+        Add new documents
+      </a>
+    </li>
+    <li class="nav-item" style="margin-top: 14px;">
+      <a href="{% url 'main:delete_thread' active_thread_id %}" id="delete-thread-btn" class="btn btn-danger nav-link active text-center">
+        Delete this thread
+      </a>
+    </li>
+  </ul>
+  <hr>
+  <h4>Included documents:</h4>
+  <div style="max-height: 800px; overflow-y: auto;">
+  <ul class="nav nav-pills flex-column doc-name-sidebar">
+  {% for doc in rag_docs %}
+      <li data-toggle="tooltip" data-placement="top" title='"{{ doc.loc|path_end_part }}" in RAG database' style="margin-bottom: 15px;">* {{ doc.name }}</li>  
+  {% endfor %}
+  </ul>
+  <hr>
+  </div>
+  {% else %}
+  <h4>Base collection:</h4>
+  <div style="max-height: 800px; overflow-y: auto;">
+  <ul class="nav nav-pills flex-column doc-name-sidebar">
+      <li data-toggle="tooltip" data-placement="top" title='"{{ doc.loc|path_end_part }}" in RAG database' style="margin-bottom: 15px;">{{  base_collection_name }}</li>  
+  </ul>
+  <hr>
+  </div>
+<!-- Start toggles -->
+<!-- Mode Selection -->
+<div class="mb-3">
+  <!-- <label class="form-label fw-bold">Mode:</label> -->
+  <div class="btn-group" role="group" aria-label="Chat Mode">
+    <input type="radio" class="btn-check" name="chatMode" id="modeStandard" value="standard" onchange="updateMode()">
+    <label class="btn btn-outline-primary" for="modeStandard">Standard</label>
 
-    
-          <!-- Add/Delete buttons below -->
-          <ul class="nav nav-pills flex-column">
-            <li class="nav-item">
-              <a href="{% url 'main:add_docs' active_thread_id %}" id="add-docs-btn" class="nav-link active text-center" aria-current="page" data-bs-toggle="modal" data-bs-target="#addDocsModal" data-bs-whatever="@getbootstrap">
-                Add new documents
-              </a>
-            </li>
-            <li class="nav-item" style="margin-top: 14px;">
-              <a href="{% url 'main:delete_thread' active_thread_id %}" id="delete-thread-btn" class="btn btn-danger nav-link active text-center">
-                Delete this thread
-              </a>
-            </li>
-          </ul>
-    
-        {% else %}
-          <!-- Base collection first -->
-          <h5>Base collection:</h5>
-          <div style="max-height: 800px; overflow-y: auto;">
-            <ul class="nav nav-pills flex-column doc-name-sidebar">
-              <li data-toggle="tooltip" data-placement="top" title='"{{ doc.loc|path_end_part }}" in RAG database' style="margin-bottom: 15px;">
-                {{ base_collection_name }}
-              </li>
-            </ul>
-            <hr>
-          </div>
-    
-          <!-- Start toggles -->
-          <!-- Mode Selection -->
-          <div class="mb-3">
-            <div class="btn-group" role="group" aria-label="Chat Mode">
-              <input type="radio" class="btn-check" name="chatMode" id="modeStandard" value="standard" onchange="updateMode()">
-              <label class="btn btn-outline-primary" for="modeStandard">Standard</label>
-    
-              <input type="radio" class="btn-check" name="chatMode" id="modeRag" value="rag" checked onchange="updateMode()">
-              <label class="btn btn-outline-primary" for="modeRag">RAG</label>
-            </div>
-          </div>
-    
-          <!-- Temperature Slider -->
-          <div id="temperatureWrapper" class="mb-3">
-            <label for="temperature" class="form-label fw-bold">
-              Temperature: <span class="sliderValues" id="temperatureValue">0.7</span>
-              <span class="info-circle">i
-                <span class="tooltip-text">
-                  Temperature controls randomness of the LLM's responses. Lower values (0–0.3) make output deterministic and safe, higher values (0.7–1.2) make it more creative but less predictable.
-                </span>
-              </span>
-            </label>
-            <input type="range" class="form-range modern-slider" min="0.1" max="1.2" step="0.1" value="0.7" id="temperature" oninput="updateTemperatureLabel()">
-          </div>
-    
-          <!-- RAG Arguments Section -->
-          <div id="ragArgumentsContainer" class="rag-section">
-            <span id="rag-arguements-text">RAG Arguments</span>
-    
-            <!-- Similarity Cutoff Slider -->
-            <div id="similarityCutoffWrapper" class="mb-3">
-              <label for="similarityCutoff" class="form-label fw-bold">
-                Similarity Cutoff: <span class="sliderValues" id="cutoffValue">0.50</span>
-                <span class="info-circle">i
-                  <span class="tooltip-text">
-                    Similarity Cutoff determines which retrieved chunks are considered relevant. Higher values keep only highly similar chunks; lower values keep more chunks but may include less relevant ones.
-                  </span>
-                </span>
-              </label>
-              <input type="range" class="form-range modern-slider" min="0.25" max="0.95" step="0.05" value="0.50" id="similarityCutoff" oninput="updateCutoffLabel()">
-            </div>
-    
-            <!-- Rerank Toggle -->
-            <div class="mb-3 modern-switch">
-              <label class="form-label fw-bold mb-0" for="rerankSwitch" id="rerankLabel">
-                Reranker
-                <span class="info-circle">i
-                  <span class="tooltip-text">
-                    Enable the reranker to reorder retrieved chunks by relevance to your query. This can improve answer quality but may increase response time.
-                  </span>
-                </span>
-              </label>
-              <div class="form-check form-switch">
-                <input class="form-check-input" type="checkbox" id="rerankSwitch">
-              </div>
-            </div>
-          </div>
-          <hr>
-          <!-- END toggles -->
-    
-          <!-- Delete button -->
-          <ul class="nav nav-pills flex-column">
-            <li class="nav-item" style="margin-top: 14px;">
-              <a href="{% url 'main:delete_thread' active_thread_id %}" id="delete-thread-btn" class="btn btn-danger nav-link active text-center">
-                Delete this thread
-              </a>
-            </li>
-          </ul>
-        {% endif %}
-      </div>
-      {% endif %}
+    <input type="radio" class="btn-check" name="chatMode" id="modeRag" value="rag" checked onchange="updateMode()">
+    <label class="btn btn-outline-primary" for="modeRag">RAG</label>
+  </div>
+</div>
+
+<!-- Temperature Slider -->
+<div id="temperatureWrapper" class="mb-3">
+  <label for="temperature" class="form-label fw-bold">
+    Temperature: <span class="sliderValues" id="temperatureValue">0.7</span>
+    <span class="info-circle">i
+      <span class="tooltip-text">
+        Temperature controls randomness of the LLM's responses. Lower values (0–0.3) make output deterministic and safe, higher values (0.7–1.2) make it more creative but less predictable.
+      </span>
+    </span>
+  </label>
+  <input type="range" class="form-range modern-slider" min="0.1" max="1.2" step="0.1" value="0.7" id="temperature" oninput="updateTemperatureLabel()">
+</div>
+
+<!-- RAG Arguments Section -->
+<div id="ragArgumentsContainer" class="rag-section">
+  <span id="rag-arguements-text">RAG Arguments</span>
+
+  <!-- Similarity Cutoff Slider -->
+  <div id="similarityCutoffWrapper" class="mb-3">
+    <label for="similarityCutoff" class="form-label fw-bold">
+      Similarity Cutoff: <span class="sliderValues" id="cutoffValue">0.50</span>
+      <span class="info-circle">i
+        <span class="tooltip-text">
+          Similarity Cutoff determines which retrieved chunks are considered relevant. Higher values keep only highly similar chunks; lower values keep more chunks but may include less relevant ones.
+        </span>
+      </span>
+    </label>
+    <input type="range" class="form-range modern-slider" min="0.25" max="0.95" step="0.05" value="0.50" id="similarityCutoff" oninput="updateCutoffLabel()">
+  </div>
+
+  <!-- Rerank Toggle -->
+  <div class="mb-3 modern-switch">
+    <label class="form-label fw-bold mb-0" for="rerankSwitch" id="rerankLabel">
+      Reranker
+      <span class="info-circle">i
+        <span class="tooltip-text">
+          Enable the reranker to reorder retrieved chunks by relevance to your query. This can improve answer quality but may increase response time.
+        </span>
+      </span>
+    </label>
+    <div class="form-check form-switch">
+      <input class="form-check-input" type="checkbox" id="rerankSwitch">
     </div>
-    
+  </div>
+</div>
+<!-- END toggles -->
+
+  <ul class="nav nav-pills flex-column">
+    <li class="nav-item" style="margin-top: 14px;">
+      <a href="{% url 'main:delete_thread' active_thread_id %}" id="delete-thread-btn" class="btn btn-danger nav-link active text-center">
+        Delete this thread
+      </a>
+    </li>
+  </ul>
+  {% endif %}
+</div>
+{% endif %}
+</div>
 </div>
 <div class="modal fade" id="newRagModal" tabindex="0" aria-labelledby="newRag" aria-hidden="true">
   <div class="modal-dialog">
@@ -642,7 +624,7 @@ socket.onopen = function(e) {
         lastUserQuery.style.lineHeight = 1.65;
       }
 
-      scrollToEnd();
+      scrolltoend();
       msgInput.val('');
       formData[0].reset();
       spinner.style.display = 'block';
@@ -667,7 +649,7 @@ socket.onmessage = function(e) {
       persianTextBox.style.display = "block";
       englishTextBox.style.display = "none";
       persianTextBox.style.fontFamily = "IranSans";
-      persianTextBox.style.fontSize = '13px';
+      persianTextBox.style.fontSize = '15px';
       persianTextBox.style.fontWeight = 'bold';
       persianTextBox.style.textAlign = 'right';
       persianTextBox.dir = 'rtl';
@@ -697,7 +679,7 @@ socket.onmessage = function(e) {
       var field = rag_response.replace('{rag_response}', chatMsgData.message);
       field = field.replace('{time}', "Today  " + time);
       $('#board').append(field);
-      scrollToEnd();
+      scrolltoend();
       copyButtons = document.getElementsByClassName('copy-btn');
       // Add event listener to each copy button
       Array.from(copyButtons).forEach(function(button) {
@@ -723,7 +705,7 @@ socket.onmessage = function(e) {
       //var updatedRagResponse = lastRagResponse.textContent + chatMsgData.message;
       //updatedRagResponse = updatedRagResponse.replace(/\n/g, '<br>');
       //lastRagResponse.innerHTML = updatedRagResponse;
-      //scrollToEnd();
+      //scrolltoend();
       const ragResponses = document.getElementsByClassName('rag-response');
       const lastRagResponse = ragResponses[ragResponses.length - 1];
       var updatedRagResponse = lastRagResponse.innerHTML + msgText;
@@ -733,7 +715,7 @@ socket.onmessage = function(e) {
       //var last_response_text = $('.rag-response:last')[0].textContent;
       //last_response_text = last_response_text.replace(/\n/g, '<br>');
       //$('.rag-response:last')[0].textContent = last_response_text + chatMsgData.message;
-      scrollToEndIfNearBottom();
+      scrolltoend();
     }
 }
 
@@ -756,46 +738,11 @@ window.onunload = function () {
     socket.close();
 }
 
-
-/*   Scroller function */
-
-function scrollToEnd() {
+function scrolltoend() {
     $('#board').stop().animate({
         scrollTop: $('#board')[0].scrollHeight
     }, 300);
   }
-
-let userScrolling = false;
-const scrollThreshold = 50; // distance from bottom to still auto-scroll
-
-const $board = $('#board');
-
-// Detect user scroll
-$board.on('scroll', function() {
-    userScrolling = true;
-
-    // Reset after a short delay to allow auto-scroll again
-    clearTimeout($board.data('scrollTimeout'));
-    $board.data('scrollTimeout', setTimeout(() => {
-        userScrolling = false;
-    }, 500)); // 0.5s after user stops, auto-scroll allowed again
-});
-
-function scrollToEndIfNearBottom() {
-    const scrollTop = $board.scrollTop();
-    const scrollHeight = $board[0].scrollHeight;
-    const clientHeight = $board.innerHeight();
-
-    // Only auto-scroll if user is not actively scrolling and near bottom
-    if (!userScrolling && scrollTop + clientHeight >= scrollHeight - scrollThreshold) {
-        $board.stop().animate({
-            scrollTop: scrollHeight
-        }, 300);
-    }
-}
-
-/* END of scroller function */
-
 
 window.onload = function() {
   const allMessages = document.querySelectorAll('.msg');

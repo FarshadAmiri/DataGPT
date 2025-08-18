@@ -19,6 +19,21 @@
 }
 
 
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden; /* no scrollbars */
+}
+
+.container-fluid {
+  height: 100vh;   /* exactly full screen */
+  width: 100vw;
+  box-sizing: border-box;
+  display: flex;   /* so children can adapt */
+  flex-direction: column; /* optional, helps stacking */
+}
+
 
 .sidebar {
   align-items: left;
@@ -107,10 +122,6 @@
   overflow: auto; /* for chat like view */
 }
 
-.thread_name {
-  font-size: 14px;
-}
-
 .text-small {
   font-size: 12px;
 }
@@ -118,14 +129,14 @@
 
 .msg.rag-response, .msg.user-query {
   font-family: Tahoma;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: normal;
   padding-left: 10px;
 }
 
 .msg.rag-response-Fa  .msg.user-query-Fa{
   font-family: IranSans;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: normal;
   text-align: right;
   direction: rtl;
@@ -273,17 +284,68 @@ body{
   height: 32px; /* Adjust the size of the SVG icon as needed */
 }
 
-.list-group-item.current {
-  border: 2px solid rgba(145,192,241,1);
+/* ------------- Thread items ------------ */
+.rag-thread {
+  cursor: pointer;
+  border-radius: 8px;
+  background: linear-gradient(to top, #f7f9fc 0%, #ffffff 100%);
+  padding: 6px 10px;              /* smaller height */
+  margin-bottom: 6px;             /* less spacing between items */
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  transition: all 0.2s ease-in-out;
+}
 
-  /* background-image: radial-gradient( circle 759px at -6.7% 50%,  rgb(99, 138, 94) 0%, rgba(140,209,131,1) 26.2%, rgba(178,231,170,1) 50.6%, rgba(144,213,135,1) 74.1%, rgb(88, 116, 85) 100.3% ); */
-  background-image: linear-gradient(to bottom right, rgb(158, 230, 241), rgb(122, 177, 236));
-  /* background-image: radial-gradient( circle farthest-corner at 10% 20%,  rgba(186,190,245,1) 0%, rgba(192,192,245,1) 33.1%, rgba(218,203,246,1) 90% ); */
+.rag-thread:hover {
+  background: linear-gradient(to top, #eef6fd 0%, #ffffff 100%);
+  box-shadow: 0 3px 6px rgba(0,0,0,0.08);
+  transform: translateY(-1px);
+}
+
+.rag-thread:last-child {
+  border-radius: 8px;  /* ensures bottom corners are rounded */
+}
+
+.list-group-item.current {
+  border: none;
+  background: linear-gradient(to right, #7dbff5, #5caaf2);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+  color: #ffffff;
+  padding: 6px 10px;  /* keep same compact size */
+}
+
+.list-group-item.current strong {
+  color: #fff;
+}
+
+.thread_name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #333;
+  line-height: 1.2;
+}
+
+.col-10.text-small {
+  font-size: 0.75rem;
+  color: #666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .list-group-item:hover strong {
-  color: rgb(0, 90, 163);
+  color: #005aa3;
 }
+
+/* ------------- End of Thread items ------------- */
+
+/* -------------- Scroller ----------------------- */
+#chats {
+  max-height: 80vh;
+  overflow-y: auto;
+  padding-right: 6px;  /* space for scrollbar */
+  box-sizing: content-box; /* make sure padding doesn’t shrink content width */
+}
+/* ------------- End of Scroller ---------------- */
 
 #new-rag-btn {
   /* background-image: radial-gradient( circle 759px at -6.7% 50%,  rgb(110, 156, 105) 0%, rgb(148, 197, 142) 26.2%, rgb(168, 212, 161) 50.6%, rgb(144, 199, 137) 74.1%, rgb(108, 134, 105) 100.3% ); */
@@ -305,17 +367,6 @@ body{
   border-radius: 10px;
 }
 
-.rag-thread {
-  cursor: pointer;
-  border-radius: 7px;
-  background-image: linear-gradient(to top, #dbdbdb 0%, white 100%);
-  /* background-color: #e0fffd; */
-}
-
-.rag-thread:hover {
-  background-color: rgba(169, 223, 245, 0.5);
-  background-blend-mode: multiply;
-}
 
 #profile-img{
   content: url("..\\..\\icons\\user.jpg");
@@ -505,9 +556,6 @@ body{
   display: none;
 } */
 
-/* .rag-thread:hover .options-btn {
-  display: block;
-} */
 
 /* .options-img {
   content: url("..\\..\\icons\\options_1_h.png");
@@ -604,7 +652,7 @@ body{
   display: block; /* or inline-block */
   font-family: RobotoSlab;
   font-weight: bold;
-  font-size: 19px;
+  font-size: 17px;
   color: rgb(227, 227, 227);
   margin-bottom: 1.5rem; /* adds space below the text */
 }
@@ -704,4 +752,12 @@ body{
   .tooltip-text {
     max-width: 90vw; /* mobile-friendly */
   }
+}
+
+
+.form-label {
+  font-size: 0.875rem; /* smaller text, 14px */
+}
+.form-label.fw-bold {
+  font-weight: 600; /* keep it bold if you want */
 }

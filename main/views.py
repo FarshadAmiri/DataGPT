@@ -160,12 +160,6 @@ def create_rag_view(request,):  # Erros front should handle: 1-similar rag_name,
         return redirect('main:chat', thread_id=vdb.id)
 
 
-from django.shortcuts import redirect
-from django.core.files.base import ContentFile
-from django.core.files.storage import default_storage
-from llama_index.core import Document as llama_index_doc
-import os
-
 @login_required(login_url='users:login')
 def add_docs_view(request, thread_id):
     user = request.user
