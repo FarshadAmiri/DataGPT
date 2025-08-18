@@ -1,23 +1,8 @@
 from transformers import AutoTokenizer, AutoModelForCausalLM, TextStreamer, AutoModelForSequenceClassification
 from sentence_transformers import CrossEncoder
 from huggingface_hub import login
-# from llama_index import VectorStoreIndex, SimpleDirectoryReader, get_response_synthesizer
-# from llama_index.vector_stores import ChromaVectorStore
-# from llama_index.storage.storage_context import StorageContext
-# from llama_index.prompts.prompts import SimpleInputPrompt
-# from llama_index.llms import HuggingFaceLLM
 from llama_index.embeddings.langchain import LangchainEmbedding
-# from langchain.embeddings.huggingface import HuggingFaceEmbeddings
 from langchain_huggingface import HuggingFaceEmbeddings
-# from llama_index import set_global_service_context
-# from llama_index import ServiceContext
-# from llama_index import VectorStoreIndex
-# from llama_index import download_loader
-# from llama_index import SimpleDirectoryReader
-# from llama_index.retrievers import VectorIndexRetriever
-# from llama_index.query_engine import RetrieverQueryEngine
-# from llama_index.postprocessor import SimilarityPostprocessor
-# from llama_index.vector_stores import MilvusVectorStore
 from chromadb.utils import embedding_functions
 from sentence_transformers import SentenceTransformer
 from main.models import Thread, Document
@@ -25,28 +10,17 @@ import chromadb
 from pathlib import Path
 import accelerate
 import torch
-import time, os
+import os
 from pprint import pprint
 from main.models import Collection
 from users.models import User
 from main.utilities.variables import INDEXING_CHUNK_SIZE, INDEXING_CHUNK_OVERLAP
 from typing import List, Tuple, Optional, Union
 
+
+# ------- NameSpaces -------
 all_docs_collection_name = "ALL_DOCS_COLLECTION"
 all_docs_collection_path = os.path.join("collections", all_docs_collection_name)
-
-# embedding_model_name = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
-
-
-# embedding_model = LangchainEmbedding(
-#     # HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
-#     HuggingFaceEmbeddings(model_name=embedding_model_name)
-# )
-
-# embedding_model_name = "paraphrase-multilingual-MiniLM-L12-v2"
-# embedding_model_st = SentenceTransformer(embedding_model_name)
-
-# sentence_transformer_ef = embedding_functions.SentenceTransformerEmbeddingFunction(model_name="paraphrase-multilingual-MiniLM-L12-v2")
 
 
 embedding_model_name = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
@@ -66,6 +40,7 @@ reranker.eval()
 # Load MiniLM CrossEncoder once (fast to reuse)
 minilm_reranker = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
 
+# ------- END of NameSpaces -------
 
 def load_model(model_name="TheBloke/Llama-2-7b-Chat-GPTQ", device='gpu'):
     # setting device
@@ -92,12 +67,8 @@ def load_model(model_name="TheBloke/Llama-2-7b-Chat-GPTQ", device='gpu'):
     # Define model
     model = AutoModelForCausalLM.from_pretrained(model_name
         # ,cache_dir=r"C:\Users\henry\.cache\huggingface\hub"
-        # ,cache_dir=r"C:\Users\user2\.cache\huggingface\hub"
         ,device_map='cuda'  
         # , torch_dtype=torch.float16
-        # ,low_cpu_mem_usage=True
-        # ,rope_scaling={"type": "dynamic", "factor": 2}
-        # ,load_in_8bit=True,
         ).to(device)
 
     streamer = TextStreamer(tokenizer, skip_prompt=True, skip_special_tokens=True)
@@ -143,41 +114,6 @@ def create_all_docs_collection():
     return
 
 
-# def add_docs(vdb_path: str, docs_paths: list):
-#     # from main.utilities.variables import system_prompt, query_wrapper_prompt
-#     from main.views import model, tokenizer
-#     db = chromadb.PersistentClient(path = vdb_path)
-#     chroma_collection = db.get_or_create_collection("default", embedding_function=embedding_model_st2)
-#     vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
-#     storage_context = StorageContext.from_defaults(vector_store=vector_store)
-#     # llm = HuggingFaceLLM(context_window=4096,
-#     #                  max_new_tokens=512,
-#     #                  system_prompt=system_prompt,
-#     #                  query_wrapper_prompt=query_wrapper_prompt,
-#     #                  model=model,
-#     #                  tokenizer=tokenizer)
-
-#     # # Create new service context instance
-#     # service_context = ServiceContext.from_defaults(
-#     #     chunk_size=INDEXING_CHUNK_SIZE,
-#     #     chunk_overlap=INDEXING_CHUNK_OVERLAP,
-#     #     llm=llm,
-#     #     embed_model=embedding_model_lc
-#     # )
-
-#     # # And set the service context
-#     # set_global_service_context(service_context)
-#     index = VectorStoreIndex.from_vector_store(vector_store, storage_context=storage_context)
-#     PyMuPDFReader = download_loader("PyMuPDFReader")
-#     loader = PyMuPDFReader()
-#     # Load documents
-#     print(f"\ndocs_paths: {docs_paths}\n")
-#     for doc_path in docs_paths:
-#         document = loader.load(file_path=Path(doc_path), metadata=False)
-#         # Create indexes
-#         for doc in document:
-#             index.insert(doc)
-
 
 def index_builder(vdb_path: str):
     from llama_index.core import Settings
@@ -203,7 +139,8 @@ def index_builder(vdb_path: str):
     # Setup Chroma
     db = chromadb.PersistentClient(path=vdb_path)
     chroma_collection = db.get_or_create_collection(
-        "default", embedding_function=embedding_model_st2
+        "default",
+        # embedding_function=embedding_model_st2
     )
     vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
     storage_context = StorageContext.from_defaults(vector_store=vector_store)
@@ -215,51 +152,6 @@ def index_builder(vdb_path: str):
     )
 
     return index
-
-
-
-# def add_docs2(vdb_path: str, vdb, docs_dict: dict):
-#     # from main.utilities.variables import system_prompt, query_wrapper_prompt
-#     from main.views import model, tokenizer
-#     db = chromadb.PersistentClient(path = vdb_path)
-#     chroma_collection = db.get_or_create_collection("default", embedding_function=embedding_model_st2)
-#     vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
-#     storage_context = StorageContext.from_defaults(vector_store=vector_store)
-#     # llm = HuggingFaceLLM(context_window=4096,
-#     #                  max_new_tokens=512,
-#     #                  system_prompt=system_prompt,
-#     #                  query_wrapper_prompt=query_wrapper_prompt,
-#     #                  model=model,
-#     #                  tokenizer=tokenizer)
-
-#     # # Create new service context instance
-#     # service_context = ServiceContext.from_defaults(
-#     #     chunk_size=INDEXING_CHUNK_SIZE,
-#     #     chunk_overlap=INDEXING_CHUNK_OVERLAP,
-#     #     llm=llm,
-#     #     embed_model=embedding_model_lc
-#     # )
-
-#     # # And set the service context
-#     # set_global_service_context(service_context)
-#     index = VectorStoreIndex.from_vector_store(vector_store, storage_context=storage_context)
-#     PyMuPDFReader = download_loader("PyMuPDFReader")
-#     loader = PyMuPDFReader()
-#     # Adding documents to vector database
-#     for doc in docs_dict:
-#         user = doc["user"]
-#         public = doc["public"]
-#         description = doc["description"]
-#         loc = doc["loc"]
-#         document_obj = doc["doc_obj"]
-
-#         document = loader.load(file_path=Path(loc), metadata=False)
-
-#         # Create indexes
-#         for chunked_doc in document:
-#             index.insert(chunked_doc)
-#         vdb.docs.add(document_obj)
-
 
 
 def rerank_alibaba(query: str, texts: List[str], threshold: Optional[float] = None, return_scores: bool = False) -> Union[List[str], Tuple[List[str], List[float]]]:
