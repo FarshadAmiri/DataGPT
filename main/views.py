@@ -42,7 +42,7 @@ streamer = model_obj["streamer"]
 
 @login_required(login_url='users:login') 
 def chat_view(request, thread_id=None):
-    print(f"\nchat_id: {thread_id}\n")
+    # print(f"\nchat_id: {thread_id}\n")
     user = request.user
     if request.method in ["POST" , "GET"]:
         if request.method == "POST":
@@ -65,12 +65,12 @@ def chat_view(request, thread_id=None):
             else:
                 threads_preview[thread.id] = "Empty chat"
 
-        print(f"\nthreads_preview: {threads_preview}\n")
-        print(f"\nthread_id: {thread_id}\n")
-        print(f"\nactive_thread_id: {type(thread_id)} {thread_id}\n")
+        # print(f"\nthreads_preview: {threads_preview}\n")
+        # print(f"\nthread_id: {thread_id}\n")
+        # print(f"\nactive_thread_id: {type(thread_id)} {thread_id}\n")
         threads_ids = [type(th.id) for th in threads]
-        print(f"\nthreads: {threads}\n")
-        print(f"\nthreads_ids: {threads_ids}\n")
+        # print(f"\nthreads: {threads}\n")
+        # print(f"\nthreads_ids: {threads_ids}\n")
 
         # Check whether All docs collection exists in Collection table and filesystem
         create_all_docs_collection()

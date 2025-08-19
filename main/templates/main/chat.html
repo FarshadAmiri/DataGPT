@@ -172,7 +172,7 @@
         <form method="post" class="form-group" id="msg-form">
             {% csrf_token %}
             <div class="input-group mb-3" style="margin-bottom: 0px; padding-bottom: 0px;">
-                <div class="input-group-prepend" style="display: flex; align-items: center; margin-bottom: 0px; padding-bottom: 0px;">
+                <div class="input-group-prepend" style="display: flex; align-items: center; padding-bottom: 0px;">
                     <input type="text" placeholder="Ask RAG..." name="message" id="msgInput" style="margin-bottom: 1px; padding-bottom: 1px;">
                     <button type="submit" name="send" class="btn btn-success" id="send_btn" style="margin-bottom: 0px; padding-bottom: 5px;">
                     <svg width="32" height="32" fill="currentColor" class="bi bi-send-fill" viewBox="0 0 16 16"><path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0M4.5 7.5a.5.5 0 0 0 0 1h5.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3a.5.5 0 0 0 0-.708l-3-3a.5.5 0 1 0-.708.708L10.293 7.5z"/></svg>
@@ -191,60 +191,49 @@
       </div>
     </div>
     {% endif %}
-    <div class="col-lg-2 col-md-12" style="padding: 0;" id="right-sidebar">
+    <div class="col-lg-2 col-md-12" style="padding: 0; padding-top: 5px;" id="right-sidebar">
       {% if no_threads != True %}
-      <div class="d-flex flex-column flex-shrink-0 p-3 text-white bg-dark sidebar-right" style="margin-right: 0;">
+      <div class="d-flex flex-column flex-shrink-0 p-3 text-white bg-dark sidebar-right" style="margin-right: 0px; height: 100%;">
+        
+        <!-- Active thread name -->
         <h3 id="thread-name-right-sidebar">{{ active_thread_name }}</h3>
         <hr>
     
+        <!-- Documents Section -->
         {% if base_collection_name == None %}
-          <!-- Included documents first -->
-          <h4>Included documents:</h4>
-          <div style="max-height: 800px; overflow-y: auto;">
+          <h5>Included documents:</h5>
+          <div class="doc-list flex-grow-1" style="max-height: 90px; overflow-y: auto;">
             {% if rag_docs %}
               <ul class="nav nav-pills flex-column doc-name-sidebar" style="margin: 0; padding: 0;">
                 {% for doc in rag_docs %}
                   <li data-toggle="tooltip" data-placement="top"
                       title='"{{ doc.loc|path_end_part }}" in RAG database'
-                      style="margin-bottom: 15px; list-style: none;">
+                      style="margin-bottom: 4px; list-style: none;">
                     * {{ doc.name }}
                   </li>
                 {% endfor %}
               </ul>
             {% else %}
-              <p style="margin: 0; color: gray; font-style: italic;">No document added yet.</p>
+              <p class="no-docs" style="margin: 0; color: gray; font-style: italic;">No document added yet.</p>
             {% endif %}
           </div>
-          <hr>
-
-    
-          <!-- Add/Delete buttons below -->
-          <ul class="nav nav-pills flex-column">
-            <li class="nav-item">
-              <a href="{% url 'main:add_docs' active_thread_id %}" id="add-docs-btn" class="nav-link active text-center" aria-current="page" data-bs-toggle="modal" data-bs-target="#addDocsModal" data-bs-whatever="@getbootstrap">
-                Add new documents
-              </a>
-            </li>
-            <li class="nav-item" style="margin-top: 14px;">
-              <a href="{% url 'main:delete_thread' active_thread_id %}" id="delete-thread-btn" class="btn btn-danger nav-link active text-center">
-                Delete this thread
-              </a>
-            </li>
-          </ul>
-    
         {% else %}
-          <!-- Base collection first -->
           <h5>Base collection:</h5>
-          <div style="max-height: 800px; overflow-y: auto;">
+          <div style="max-height: 300px; overflow-y: auto;">
             <ul class="nav nav-pills flex-column doc-name-sidebar">
-              <li data-toggle="tooltip" data-placement="top" title='"{{ doc.loc|path_end_part }}" in RAG database' style="margin-bottom: 15px;">
+              <li data-toggle="tooltip" data-placement="top"
+                  title='"{{ base_collection_name }}" in RAG database'
+                  style="margin-bottom: 15px;">
                 {{ base_collection_name }}
               </li>
             </ul>
-            <hr>
           </div>
+        {% endif %}
     
-          <!-- Start toggles -->
+        <hr class="my-3">
+    
+        <!-- Chat mode & RAG arguments (always present) -->
+        <div>
           <!-- Mode Selection -->
           <div class="mb-3">
             <div class="btn-group" role="group" aria-label="Chat Mode">
@@ -262,24 +251,24 @@
               Temperature: <span class="sliderValues" id="temperatureValue">0.7</span>
               <span class="info-circle">i
                 <span class="tooltip-text">
-                  Temperature controls randomness of the LLM's responses. Lower values (0–0.3) make output deterministic and safe, higher values (0.7–1.2) make it more creative but less predictable.
+                  Temperature controls randomness of the LLM's responses.
                 </span>
               </span>
             </label>
             <input type="range" class="form-range modern-slider" min="0.1" max="1.2" step="0.1" value="0.7" id="temperature" oninput="updateTemperatureLabel()">
           </div>
     
-          <!-- RAG Arguments Section -->
-          <div id="ragArgumentsContainer" class="rag-section">
+          <!-- RAG Arguments -->
+          <div id="ragArgumentsContainer" class="rag-section mb-3">
             <span id="rag-arguements-text">RAG Arguments</span>
     
-            <!-- Similarity Cutoff Slider -->
+            <!-- Similarity Cutoff -->
             <div id="similarityCutoffWrapper" class="mb-3">
               <label for="similarityCutoff" class="form-label fw-bold">
-                Similarity Cutoff: <span class="sliderValues" id="cutoffValue">0.50</span>
+                Similarity Cutoff:&nbsp<span class="sliderValues" id="cutoffValue">0.50</span>
                 <span class="info-circle">i
                   <span class="tooltip-text">
-                    Similarity Cutoff determines which retrieved chunks are considered relevant. Higher values keep only highly similar chunks; lower values keep more chunks but may include less relevant ones.
+                    Similarity Cutoff determines which retrieved chunks are considered relevant.
                   </span>
                 </span>
               </label>
@@ -292,7 +281,7 @@
                 Reranker
                 <span class="info-circle">i
                   <span class="tooltip-text">
-                    Enable the reranker to reorder retrieved chunks by relevance to your query. This can improve answer quality but may increase response time.
+                    Enable the reranker to reorder retrieved chunks by relevance to your query.
                   </span>
                 </span>
               </label>
@@ -301,21 +290,32 @@
               </div>
             </div>
           </div>
-          <hr>
-          <!-- END toggles -->
+        </div>
     
-          <!-- Delete button -->
+        <!-- Always at bottom: Add/Delete buttons -->
+        <div class="mt-auto" style="margin-bottom: 1rem;">
           <ul class="nav nav-pills flex-column">
-            <li class="nav-item" style="margin-top: 14px;">
+            {% if base_collection_name == None %}
+            <li class="nav-item mb-2">
+              <a href="{% url 'main:add_docs' active_thread_id %}" id="add-docs-btn" class="nav-link active text-center"
+                 data-bs-toggle="modal" data-bs-target="#addDocsModal" data-bs-whatever="@getbootstrap">
+                Add new documents
+              </a>
+            </li>
+            {% endif %}
+            <li class="nav-item">
               <a href="{% url 'main:delete_thread' active_thread_id %}" id="delete-thread-btn" class="btn btn-danger nav-link active text-center">
                 Delete this thread
               </a>
             </li>
           </ul>
-        {% endif %}
+        </div>
+    
       </div>
       {% endif %}
     </div>
+    
+    
     
 </div>
 <div class="modal fade" id="newRagModal" tabindex="0" aria-labelledby="newRag" aria-hidden="true">

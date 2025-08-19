@@ -24,7 +24,7 @@ class RAGConsumer(AsyncConsumer):
         try:
             await self._setup_vector_db()
         except Exception as e:
-            print(f"No chat thread with Vector DB detected yet: {e}")
+            print(f"redirect to landing page - No chat thread with Vector DB detected yet: {e}")
             return
         await self.send({"type": "websocket.accept"})
 
