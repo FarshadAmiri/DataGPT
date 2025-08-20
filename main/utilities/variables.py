@@ -17,7 +17,7 @@ max_length = 18000
 
 rerank_score_threshold = -8.0
 
-history_size = 3
+history_size = 2
 
 stop_sequence = "User:"
 

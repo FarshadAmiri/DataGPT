@@ -190,7 +190,7 @@ class RAGConsumer(AsyncConsumer):
 
                 full_response += chunk
                 counter += 1
-                
+
                 # Check if the stop sequence appeared
                 if stop_sequence in full_response:
                     # Cut off anything after stop_sequence
@@ -207,6 +207,7 @@ class RAGConsumer(AsyncConsumer):
 
         print("\n\nRESPONSE GENERATION COMPLETED\n\n")
         try:
+            full_response = full_response.strip()
             if chat_mode=="rag":
                 message_id = await self.create_chat_message(full_response, rag_response=True, source_nodes=json.dumps(source_nodes_dict))
             elif chat_mode=="standard":
