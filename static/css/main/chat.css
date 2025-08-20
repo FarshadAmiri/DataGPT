@@ -309,7 +309,7 @@ body{
 .list-group-item.current {
   border: none;
   /* background: linear-gradient(to right, #7dbff5, #5caaf2); */
-  background: linear-gradient(to right, #a8f1ff, #9bdcff, #d0b5ff);
+  background: linear-gradient(to right, #93edff, #8dd7ff, #ccafff);
   box-shadow: 0 2px 6px rgba(0,0,0,0.12);
   color: #ffffff;
   padding: 6px 10px;  /* keep same compact size */

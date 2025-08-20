@@ -154,16 +154,30 @@ class RAGConsumer(AsyncConsumer):
                 rag_contexts = "No relevant context found."
             
             # Construct prompt
-            prompt = f"{system_prompt_rag}\n\nRetrieved Contexts:\n{rag_contexts}\n\nConversation History(just for your information):\n{history_text}\n\nUser: {query}\nAssistant:"
+            # prompt = f"{system_prompt_rag}\n\nRetrieved Contexts:\n{rag_contexts}\n\nConversation History:{history_text}\n\nUser: {query}\nAssistant:"
+            messages = [
+                {"role": "system", "content": system_prompt_rag},
+                {"role": "system", "content": f"Retrieved Contexts:\n{rag_contexts}"},
+                *self.history,  # [{role: "user"/"assistant", content: "..."} ...]
+                {"role": "user", "content": query},
+            ]
+
+            print(f"\n\nMessages:\n{messages}\n\n")
 
         elif chat_mode == "standard":
             prompt = f"{system_prompt_standard}\n\nConversation History:{history_text}\n\nUser: {query}\nAssistant:"
 
         # Tokenize and create streamer
-        inputs = tokenizer(prompt, return_tensors="pt").to("cuda")
+        tokenizer.chat_template = """{% for message in messages -%}
+        {{ message['role'] | capitalize }}: {{ message['content'] }}
+        {% endfor %}"""
+        encodeds = tokenizer.apply_chat_template(messages, return_tensors="pt").to(device)
+
+        # inputs = tokenizer(prompt, return_tensors="pt").to("cuda")
         streamer = TextIteratorStreamer(tokenizer, skip_prompt=True, skip_special_tokens=True)
         gen_kwargs = {
-            "inputs": inputs["input_ids"],
+            # "inputs": inputs["input_ids"],
+            "inputs": encodeds,
             "streamer": streamer,
             "max_new_tokens": max_new_tokens,   
             "max_length": max_length,       # prompt + output total length    
@@ -181,27 +195,19 @@ class RAGConsumer(AsyncConsumer):
         full_response = ""
         counter = 0
         try:
-            async for chunk in self._stream_response(streamer, timeout=20):  # Set timeout to avoid hanging
+            async for chunk in self._stream_response(streamer, timeout=20):  # ⏱ Set timeout to avoid hanging
                 if counter == 0:
                     await self.send({
                         "type": "websocket.send",
                         "text": json.dumps({"message": "", "username": username, "mode": "new"})
                     })
-
-                full_response += chunk
-                counter += 1
-                
-                # Check if the stop sequence appeared
-                if stop_sequence in full_response:
-                    # Cut off anything after stop_sequence
-                    full_response = full_response.split(stop_sequence)[0]
-                    break
-
                 encrypted_chunk = encrypt_AES_ECB(chunk, aes_key).decode('utf-8')
                 await self.send({
                     "type": "websocket.send",
                     "text": json.dumps({"message": encrypted_chunk, "username": username, "mode": "continue"})
                 })
+                full_response += chunk
+                counter += 1
         except Exception as e:
             print("Streaming error:", e)
 

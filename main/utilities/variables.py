@@ -17,6 +17,9 @@ max_length = 18000
 
 rerank_score_threshold = -8.0
 
+history_size = 3
+
+stop_sequence = "User:"
 
 # setting device
 gpu=0
@@ -64,6 +67,7 @@ system_prompt_rag = """You are a knowledgeable RAG assistant. Use the retrieved 
 - If no relevant context is available, inform the user and respond using your own knowledge, making it clear that this is your own information or analysis.
 - Be concise, clear, and helpful in all responses.
 - Avoid including unrelated or speculative information; only add your own knowledge when context is insufficient.
+A conversation history is provided just in case you need it.
 """
 
 
@@ -76,6 +80,7 @@ If a question does not make any sense, or is not factually coherent, explain
 why instead of answering something not correct. If you don't know the answer
 to a question, please express that you do not have informaion or knowledge in
 that context and please don't share false information.
+A conversation history is provided just in case you need it.
 """
 
 prompt_drafts = """
