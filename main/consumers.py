@@ -69,6 +69,15 @@ class RAGConsumer(AsyncConsumer):
 
         await self.create_chat_message(query, rag_response=False, source_nodes=None)
 
+        # ---- Exceptional cases handling ----
+        # Greetings:
+        greetings = ["hi", "hello", "hey", "heey", "heeey", "سلام"]
+        query = query.replace("!", "")
+        query = query.replace("?", "")
+        if query.lower() in greetings:
+            max_new_tokens = 25
+            chat_mode = "standard"
+
         # ---- RAG retrieval ----
         if chat_mode == "rag":
             extracted_query = self.keyword_extractor(query, model, tokenizer, keyword_extractor_prompt)

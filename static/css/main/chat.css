@@ -86,7 +86,8 @@ html, body {
   font-family: Nexa-Heavy;
   font-weight: bolder;
   font-size: 30px;
-  background: linear-gradient(10deg, rgb(250, 213, 255) 8%, rgb(213, 198, 255) 20%, rgb(182, 232, 255) 45%, rgb(176, 255, 251) 55%, rgb(180, 255, 224) 65%, rgb(237, 255, 170) 75%, rgb(245, 255, 158) 85%);
+  /* background: linear-gradient(135deg, rgb(250, 213, 255) 8%, rgb(204, 185, 255) 20%, rgb(162, 212, 235) 45%, rgb(158, 220, 218) 55%, rgb(166, 229, 203) 65%, rgb(176, 211, 170) 75%, rgb(159, 192, 157) 85%); */
+  background: linear-gradient(90deg, #ffffff, #b1b1b1);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   justify-content: center;
@@ -308,14 +309,32 @@ body{
 .list-group-item.current {
   border: none;
   /* background: linear-gradient(to right, #7dbff5, #5caaf2); */
-  background: linear-gradient(to right, #93ddff, #bfc1ff);
+  background: linear-gradient(to right, #a8f1ff, #9bdcff, #d0b5ff);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+  color: #ffffff;
+  padding: 6px 10px;  /* keep same compact size */
+}
+
+.list-group-item.current:hover {
+  border: none;
+  /* background: linear-gradient(to right, #7dbff5, #5caaf2); */
+  background: linear-gradient(to right, #60e2ff, hsl(201, 100%, 69%), #b78aff);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+  color: #ffffff;
+  padding: 6px 10px;  /* keep same compact size */
+}
+
+.list-group-item:hover {
+  border: none;
+  /* background: linear-gradient(to right, #7dbff5, #5caaf2); */
+  background: linear-gradient(to right, #c1e4eb);
   box-shadow: 0 2px 6px rgba(0,0,0,0.12);
   color: #ffffff;
   padding: 6px 10px;  /* keep same compact size */
 }
 
 .list-group-item.current strong {
-  color: #27406b;
+  color: #000000;
 }
 
 .thread_name {
@@ -334,7 +353,7 @@ body{
 }
 
 .list-group-item:hover strong {
-  color: #737373;
+  color: #000000;
 }
 
 /* ------------- End of Thread items ------------- */
@@ -502,14 +521,14 @@ body{
 }
 
 #thread-name-right-sidebar {
-  color: #6ce0da;
+  color: #b9b9b9;
   font-family: RobotoSlab;
   font-weight: bold;
   font-size: 24px;
 }
 
 .doc-name-sidebar {
-  color: #6ce089;
+  color: #72ea90;
   font-family: RobotoSlab;
   font-weight: normal;
   font-size: 14px;
@@ -520,12 +539,14 @@ body{
   width: 0.7rem;
   margin: 0px;
   padding: 0px;
+  background-color: #ffffff;
+  /* background-image: linear-gradient(135deg, #f0e7af 0%, #d7f6a2 100%); */
 }
 
 #spinner {
   position: absolute;
   margin-left: 30%;
-  margin-top: -10px;
+  margin-top: -20px;
   display: none;
 }
 
@@ -720,7 +741,7 @@ body{
   transform: translateX(-50%);
   opacity: 0;
   transition: opacity 0.3s;
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1.3;
   word-wrap: break-word;
   white-space: normal;

@@ -24,11 +24,17 @@
   #page_title {
     font-family: Nexa-Heavy;
     font-weight: bolder;
-    color: rgb(192, 204, 31);
+    font-size: 30px;
+    /* background: linear-gradient(135deg, rgb(250, 213, 255) 8%, rgb(204, 185, 255) 20%, rgb(162, 212, 235) 45%, rgb(158, 220, 218) 55%, rgb(166, 229, 203) 65%, rgb(176, 211, 170) 75%, rgb(159, 192, 157) 85%); */
+    background: linear-gradient(90deg, #ffffff, #b1b1b1);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
     justify-content: center;
     align-items: center;
     padding-left: 30px;
+    padding-top: 10px;
   }
+  
   
   #page_title:hover {
     background-color: rgba(0, 0, 0, 0.0);

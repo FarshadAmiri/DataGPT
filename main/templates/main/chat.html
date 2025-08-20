@@ -167,6 +167,7 @@
       <span class="sr-only"></span>
     </div>
     </div>
+
     <div class="row" style="margin-bottom: 0px; padding-bottom: 0px;">
     <div class="col-12">
         <form method="post" class="form-group" id="msg-form">
@@ -182,6 +183,7 @@
             </div>
         </form>
         </div>
+
     </div>
 </div>
     {% else %}
@@ -248,14 +250,17 @@
           <!-- Temperature Slider -->
           <div id="temperatureWrapper" class="mb-3">
             <label for="temperature" class="form-label fw-bold">
-              Temperature: <span class="sliderValues" id="temperatureValue">0.7</span>
+              Temperature: <span class="sliderValues" id="temperatureValue">0.5</span>
               <span class="info-circle">i
                 <span class="tooltip-text">
-                  Temperature controls randomness of the LLM's responses.
+                  Controls response randomness.<br>
+                  <br><b>Low (0–0.3):</b><br>Factual, precise.<br>
+                  <br><b>Medium (0.4–0.7):</b><br>Balanced.<br>
+                  <br><b>High (0.8–1.0+):</b><br>Creative, less accurate. use for brainstorming.<br>
                 </span>
               </span>
             </label>
-            <input type="range" class="form-range modern-slider" min="0.1" max="1.2" step="0.1" value="0.7" id="temperature" oninput="updateTemperatureLabel()">
+            <input type="range" class="form-range modern-slider" min="0.1" max="1.2" step="0.1" value="0.5" id="temperature" oninput="updateTemperatureLabel()">
           </div>
     
           <!-- RAG Arguments -->
@@ -268,7 +273,12 @@
                 Similarity Cutoff:&nbsp<span class="sliderValues" id="cutoffValue">0.50</span>
                 <span class="info-circle">i
                   <span class="tooltip-text">
-                    Similarity Cutoff determines which retrieved chunks are considered relevant.
+                    Filters retrieved context by relevance.<br>
+
+                    <br><b>High cutoff:</b><br>Only top-matches → precise, may miss info.<br>
+
+                    <br><b>Low cutoff:</b><br>More matches → broader, may add noise.<br>
+                    <br>Raise if answers feel noisy; lower if context feels missing.
                   </span>
                 </span>
               </label>
@@ -281,7 +291,11 @@
                 Reranker
                 <span class="info-circle">i
                   <span class="tooltip-text">
-                    Enable the reranker to reorder retrieved chunks by relevance to your query.
+                    Reorders retrieved chunks by relevance.<br>
+
+                    <br><b>ON:</b><br>probably Better quality but slower.<br>
+
+                    <br><b>OFF:</b><br>Faster, but less reliable.
                   </span>
                 </span>
               </label>
