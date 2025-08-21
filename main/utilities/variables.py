@@ -1,7 +1,4 @@
-from transformers import AutoTokenizer, AutoModelForCausalLM, TextStreamer
-import accelerate
 import torch
-import time
 from pprint import pprint
 
 
