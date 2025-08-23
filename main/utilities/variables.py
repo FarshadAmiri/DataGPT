@@ -14,9 +14,10 @@ max_length = 18000
 
 rerank_score_threshold = -8.0
 
-history_size = 2
+history_size = 3
 
-stop_sequence = "User:"
+# stop_sequence = "User:"
+stop_sequence = "Human:"
 
 # setting device
 gpu=0

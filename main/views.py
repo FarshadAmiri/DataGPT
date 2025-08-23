@@ -25,6 +25,7 @@ all_docs_collection_path = os.path.join(collections_path, all_docs_collection_na
 
 # model_name = "TheBloke/Mistral-7B-Instruct-v0.2-AWQ"
 model_name = "TheBloke/Mistral-7B-Instruct-v0.2-GPTQ"
+model_name = "Qwen/Qwen2.5-7B-Instruct-GPTQ-Int4"
 # model_name = "TechxGenus/Meta-Llama-3-8B-Instruct-AWQ" 
 # model_name = "TheBloke/CapybaraHermes-2.5-Mistral-7B-AWQ"
 # model_name = "TheBloke/Llama-2-7b-Chat-GPTQ"

@@ -246,6 +246,8 @@ class RAGConsumer(AsyncConsumer):
     
     @database_sync_to_async
     def get_history(self, history_size=3):
+        if history_size==0:
+            self.history = []
         chat_id = self.scope["url_route"]["kwargs"]["chat_id"]
         messages = (ChatMessage.objects.filter(thread_id=chat_id).order_by("-timestamp")[:history_size * 2].select_related("user"))
 
