@@ -29,7 +29,11 @@ DEBUG = True
 
 # اینجا را تغییر بدهید
 ALLOWED_HOSTS = ['192.168.1.105',
-                 '127.0.0.1',]
+                 '127.0.0.1',
+                 'localhost:8000',
+                 'localhost',
+                 'localhost:8002',
+                 ]
 
 
 # Application definition

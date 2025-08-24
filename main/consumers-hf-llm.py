@@ -7,7 +7,7 @@ from channels.db import database_sync_to_async
 import chromadb
 from transformers import TextIteratorStreamer
 import torch
-# from main.views import model, tokenizer
+from main.views import model, tokenizer
 from main.models import Thread, ChatMessage, Document
 from main.utilities.RAG import embedding_model_st, rerank_minilm, rerank_alibaba
 from main.utilities.translation import translate_en_fa
@@ -17,8 +17,6 @@ from main.utilities.encryption import *
 from main.utilities.helper_functions import remove_non_printable
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
-import aiohttp
-from openai import OpenAI
 
 
 class RAGConsumer(AsyncConsumer):
@@ -70,7 +68,7 @@ class RAGConsumer(AsyncConsumer):
         aes_key = decrypt_aes_key(encrypted_aes_key)
         query = decrypt_AES_ECB(encrypted_message, aes_key)
         query = remove_non_printable(query)
-        print(f"\n\nquery: {query}\n\n")
+        print(f"query: {query}")
 
         await self.create_chat_message(query, rag_response=False, source_nodes=None)
 
@@ -90,7 +88,7 @@ class RAGConsumer(AsyncConsumer):
 
         # ---- RAG retrieval ----
         if chat_mode == "rag":
-            extracted_query = self.keyword_extractor(query, keyword_extractor_prompt)
+            extracted_query = self.keyword_extractor(query, model, tokenizer, keyword_extractor_prompt)
             print(f"\n\nextracted_query: {extracted_query}\n\n")
 
             query_emb = embedding_model_st.encode(extracted_query).reshape(1, -1)
@@ -163,11 +161,50 @@ class RAGConsumer(AsyncConsumer):
             prompt = f"{system_prompt_standard}\n\nConversation History:{history_text}\n\nUser: {query}\nAssistant:"
 
         # Tokenize and create streamer
+        inputs = tokenizer(prompt, return_tensors="pt").to("cuda")
+        streamer = TextIteratorStreamer(tokenizer, skip_prompt=True, skip_special_tokens=True)
+        gen_kwargs = {
+            "inputs": inputs["input_ids"],
+            "streamer": streamer,
+            "max_new_tokens": max_new_tokens,   
+            "max_length": max_length,       # prompt + output total length    
+            "temperature": temperature,  # 0.0 – 0.3 : deterministic, safe | 0.7: balanced | 1.0 - 1.5: creative, possibly chaotic.
+            "do_sample": True,  # Enables randomness when picking tokens. Should be True if temperature > 0.
+            "top_p": 0.9,    # Nucleus sampling — limits to a dynamic top % of tokens. Usually 0.9.
+            "pad_token_id": tokenizer.eos_token_id,
+            "eos_token_id": tokenizer.eos_token_id,  # keep EOS!
+            "stopping_criteria": None,  # don’t stop early
+        }
+
+        generation_thread = threading.Thread(target=model.generate, kwargs=gen_kwargs)
+        generation_thread.start()
+
+        full_response = ""
+        counter = 0
         try:
-            full_response = await self.stream_llm_response(prompt, aes_key, username)
+            async for chunk in self._stream_response(streamer, timeout=20):  # Set timeout to avoid hanging
+                if counter == 0:
+                    await self.send({
+                        "type": "websocket.send",
+                        "text": json.dumps({"message": "", "username": username, "mode": "new"})
+                    })
+
+                full_response += chunk
+                counter += 1
+
+                # Check if the stop sequence appeared
+                if stop_sequence in full_response:
+                    # Cut off anything after stop_sequence
+                    full_response = full_response.split(stop_sequence)[0]
+                    break
+
+                encrypted_chunk = encrypt_AES_ECB(chunk, aes_key).decode('utf-8')
+                await self.send({
+                    "type": "websocket.send",
+                    "text": json.dumps({"message": encrypted_chunk, "username": username, "mode": "continue"})
+                })
         except Exception as e:
             print("Streaming error:", e)
-            full_response = ""
 
         print("\n\nRESPONSE GENERATION COMPLETED\n\n")
         try:
@@ -202,72 +239,6 @@ class RAGConsumer(AsyncConsumer):
             yield token
 
 
-    async def stream_llm_response(self, prompt, aes_key, username):
-        """
-        Stream response from LLM API and send over WebSocket in chunks
-        """
-        url = "http://localhost:8002/v1/chat/completions"
-        payload = {
-            "model": "Qwen/Qwen3-4B-AWQ",
-            "messages": [{"role": "user", "content": prompt}],
-            "stream": True
-        }
-        headers = {"Content-Type": "application/json"}
-
-        full_response = ""
-        counter = 0
-
-        async with aiohttp.ClientSession() as session:
-            async with session.post(url, json=payload, headers=headers) as resp:
-                async for line_bytes in resp.content:
-                    line = line_bytes.decode("utf-8").strip()
-                    if not line:
-                        continue
-                    # LLM API stream sends "data: {...}" per chunk
-                    if line.startswith("data: "):
-                        data_str = line[len("data: "):].strip()
-                        if data_str == "[DONE]":
-                            break
-                        try:
-                            data_json = json.loads(data_str)
-                            chunk = data_json["choices"][0]["delta"].get("content", "")
-                            if not chunk:
-                                continue
-
-                            full_response += chunk
-                            counter += 1
-
-                            # Send first websocket message for new generation
-                            if counter == 1:
-                                await self.send({
-                                    "type": "websocket.send",
-                                    "text": json.dumps({
-                                        "message": "",
-                                        "username": username,
-                                        "mode": "new"
-                                    })
-                                })
-
-                            # Stop sequence check
-                            if stop_sequence in full_response:
-                                full_response = full_response.split(stop_sequence)[0]
-                                break
-
-                            encrypted_chunk = encrypt_AES_ECB(chunk, aes_key).decode("utf-8")
-                            await self.send({
-                                "type": "websocket.send",
-                                "text": json.dumps({
-                                    "message": encrypted_chunk,
-                                    "username": username,
-                                    "mode": "continue"
-                                })
-                            })
-                        except Exception as e:
-                            print("Error decoding stream chunk:", e)
-                            continue
-        return full_response
-
-
     async def websocket_disconnect(self, event):
         print("disconnected", event)
 
@@ -275,42 +246,27 @@ class RAGConsumer(AsyncConsumer):
     def get_thread(self, chat_id):
         return Thread.objects.get(id=chat_id)
     
-
     @database_sync_to_async
     def get_history(self, history_size=3):
-        if history_size <= 0:
+        if history_size==0:
             self.history = []
-            return self.history
-
         chat_id = self.scope["url_route"]["kwargs"]["chat_id"]
+        messages = (ChatMessage.objects.filter(thread_id=chat_id).order_by("-timestamp")[:history_size * 2].select_related("user"))
 
-        # Fetch up to history_size*2 messages (in case assistant/user pairs)
-        messages_qs = (
-            ChatMessage.objects
-            .filter(thread_id=chat_id)
-            .order_by("-timestamp")[: history_size * 2]
-            .select_related("user")
-        )
-
-        if not messages_qs.exists():
-            # No messages found
-            self.history = []
-            return self.history
-
-        # Reverse to get oldest → newest
-        messages = list(reversed(messages_qs))
+        # oldest first
+        messages = reversed(messages)
 
         history = []
         for msg in messages:
-            role = "assistant" if msg.rag_response else "user"
+            if msg.rag_response:
+                role = "assistant"
+            else:
+                role = "user" 
             history.append({
                 "role": role,
-                "content": msg.message or ""   # prevent NoneType errors
+                "content": msg.message
             })
-
-        # Ensure at most `history_size` exchanges are stored
-        self.history = history[-history_size * 2 :]
-        return self.history
+            self.history = list(history)
 
 
     @database_sync_to_async
@@ -369,27 +325,18 @@ class RAGConsumer(AsyncConsumer):
     def get_doc_name(self, doc_id):
         return Document.objects.get(id=doc_id).name
 
-
-    def keyword_extractor(self, text, keyword_extractor_prompt):
-        client = OpenAI(base_url="http://localhost:8002/v1", api_key="not-needed")
+    def keyword_extractor(self, text, model, tokenizer, keyword_extractor_prompt):
         prompt = f"{keyword_extractor_prompt}User: {text}\nKeywords:"
-
-        resp = client.chat.completions.create(
-            model="Qwen/Qwen3-4B-AWQ",
-            messages=[
-                {"role": "system", "content": "You are a keyword extraction assistant."},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.7,
-            max_tokens=30
-        )
-
-        generated_text = resp.choices[0].message.content.strip()
-
-        if "Keywords:" in generated_text:
-            extracted_keywords = generated_text.split("Keywords:")[-1].strip()
-        else:
-            extracted_keywords = generated_text
-
+        inputs = tokenizer(prompt, return_tensors="pt").to("cuda")
+        with torch.no_grad():
+            output = model.generate(
+                **inputs,
+                max_new_tokens=30,
+                temperature=0.7,
+                do_sample=False,
+                pad_token_id=tokenizer.eos_token_id
+            )
+        generated_text = tokenizer.decode(output[0], skip_special_tokens=True)
+        extracted_keywords = generated_text.split("Keywords:")[-1].strip()
         print("Extracted Keywords:", extracted_keywords)
         return extracted_keywords

@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect
-from main.utilities.RAG import load_model, llm_inference
+# from main.utilities.RAG import load_model, llm_inference
 from main.models import Thread, Document, ChatMessage, Collection
 from users.models import User
 from django.contrib.auth.decorators import login_required, permission_required
@@ -24,8 +24,8 @@ all_docs_collection_name = "ALL_DOCS_COLLECTION"
 all_docs_collection_path = os.path.join(collections_path, all_docs_collection_name)
 
 # model_name = "TheBloke/Mistral-7B-Instruct-v0.2-AWQ"
-model_name = "TheBloke/Mistral-7B-Instruct-v0.2-GPTQ"
-model_name = "Qwen/Qwen2.5-7B-Instruct-GPTQ-Int4"
+# model_name = "TheBloke/Mistral-7B-Instruct-v0.2-GPTQ"
+# model_name = "Qwen/Qwen2.5-7B-Instruct-GPTQ-Int4"
 # model_name = "TechxGenus/Meta-Llama-3-8B-Instruct-AWQ" 
 # model_name = "TheBloke/CapybaraHermes-2.5-Mistral-7B-AWQ"
 # model_name = "TheBloke/Llama-2-7b-Chat-GPTQ"
@@ -34,11 +34,11 @@ model_name = "Qwen/Qwen2.5-7B-Instruct-GPTQ-Int4"
 # model_name = "Farshad-Llama-3-8B-Instruct-AWQ"
 
 
-model_obj = load_model(model_name)
-model = model_obj["model"]
-tokenizer = model_obj["tokenizer"]
-device = model_obj["device"]
-streamer = model_obj["streamer"]
+# model_obj = load_model(model_name)
+# model = model_obj["model"]
+# tokenizer = model_obj["tokenizer"]
+# device = model_obj["device"]
+# streamer = model_obj["streamer"]
 
 
 @login_required(login_url='users:login') 
@@ -118,7 +118,7 @@ def chat_view(request, thread_id=None):
 def create_rag_view(request,):  # Erros front should handle: 1-similar rag_name, 2-avoid creating off limit rag, 3- error when rag_name is not given
     user = request.user
     if request.method == "POST":
-        global model, tokenizer, vector_db_path
+        # global vector_db_path
         uploaded_files = request.FILES.getlist('files')
         rag_name = request.POST.get("new-rag-name", None)
         description = None
@@ -165,7 +165,7 @@ def create_rag_view(request,):  # Erros front should handle: 1-similar rag_name,
 def add_docs_view(request, thread_id):
     user = request.user
     if request.method == "POST":
-        global vector_db_path, model, tokenizer
+        global vector_db_path
         uploaded_files = request.FILES.getlist('files')
         thread_id = int(thread_id)
         thread = Thread.objects.get(user=user, id=thread_id)

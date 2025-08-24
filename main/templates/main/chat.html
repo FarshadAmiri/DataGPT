@@ -18,20 +18,30 @@
     <script src="{% static 'crypto-js.js' %}"></script>
     <script src="{% static 'jsencrypt.js' %}"></script>
     <script>
-    var publicKey = "-----BEGIN PUBLIC KEY-----\n" +
-          "MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAvRW2QcbKbzDobMdkLqvY\n" +
-          "Fb66Ih41T1+X3spW1WP6UduM1kS+bVh7HwG23pt8e/XJAf9G4IhWTZfkgVBdMsFP\n" +
-          "UfCJDiP/9cbQBgNDtT85jlFHjB1dBlJ51Hh8kDkx/1/dgy2b/ZjJ0YwAFLpk2k8W\n" +
-          "ZO8wtIOEHMSdLryVh8Jkpk1qSYZPZZuW+QEE/G+TJcF286mLEpTfZ/RQN4mg/nCS\n" +
-          "FhW4Rv9wnF8dhgU43kTiLwV8wVgOTKxAseDxMyvbjKiiH+u5YByZNN1hPVFSYQNx\n" +
-          "06IK0Ea7wk0UTRhCwLFu2AOPGL3AylFnjlHCd+/vbDrW3WDj3KRTbZFxtysYqn3B\n" +
-          "SnNZy6D1xPn79nsgWfKrgQo9KTgP9gpSoebBZwFIRmBD5Q2BpwZvbZj5lJgEYJpe\n" +
-          "xH5LW6Rfv2GZjU+S5SEPNXMlSf6kmfbJAEhsyqKj+tWZtri3AfEBhG7hkmmz51zA\n" +
-          "32JwSGV/IFqblOHsONsZizOl4OxzSytgfhCyOkAg6zcb5Hcd3Zod0SHscgkYPAeO\n" +
-          "9ZZvD6pneRrcB1tgBPz3CSp6UOe9ktK0Lo5ZlapNUmpIR1Av/immdBnfRfB6m+ax\n" +
-          "efNjY6Myl8/aepuND/E1MJviOMCm3cyrmOsNj5rwg2AIGO4vw4hdjXqOLez87t/X\n" +
-          "OYNP74TrWvLmcNmlKfQNfMsCAwEAAQ==\n" +
-          "-----END PUBLIC KEY-----";
+    // var publicKey = "-----BEGIN PUBLIC KEY-----\n" +
+    //       "MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAvRW2QcbKbzDobMdkLqvY\n" +
+    //       "Fb66Ih41T1+X3spW1WP6UduM1kS+bVh7HwG23pt8e/XJAf9G4IhWTZfkgVBdMsFP\n" +
+    //       "UfCJDiP/9cbQBgNDtT85jlFHjB1dBlJ51Hh8kDkx/1/dgy2b/ZjJ0YwAFLpk2k8W\n" +
+    //       "ZO8wtIOEHMSdLryVh8Jkpk1qSYZPZZuW+QEE/G+TJcF286mLEpTfZ/RQN4mg/nCS\n" +
+    //       "FhW4Rv9wnF8dhgU43kTiLwV8wVgOTKxAseDxMyvbjKiiH+u5YByZNN1hPVFSYQNx\n" +
+    //       "06IK0Ea7wk0UTRhCwLFu2AOPGL3AylFnjlHCd+/vbDrW3WDj3KRTbZFxtysYqn3B\n" +
+    //       "SnNZy6D1xPn79nsgWfKrgQo9KTgP9gpSoebBZwFIRmBD5Q2BpwZvbZj5lJgEYJpe\n" +
+    //       "xH5LW6Rfv2GZjU+S5SEPNXMlSf6kmfbJAEhsyqKj+tWZtri3AfEBhG7hkmmz51zA\n" +
+    //       "32JwSGV/IFqblOHsONsZizOl4OxzSytgfhCyOkAg6zcb5Hcd3Zod0SHscgkYPAeO\n" +
+    //       "9ZZvD6pneRrcB1tgBPz3CSp6UOe9ktK0Lo5ZlapNUmpIR1Av/immdBnfRfB6m+ax\n" +
+    //       "efNjY6Myl8/aepuND/E1MJviOMCm3cyrmOsNj5rwg2AIGO4vw4hdjXqOLez87t/X\n" +
+    //       "OYNP74TrWvLmcNmlKfQNfMsCAwEAAQ==\n" +
+    //       "-----END PUBLIC KEY-----";
+
+  var publicKey = "-----BEGIN PUBLIC KEY-----\n"+
+            "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAoN3aK4n9qXEsukp4AQBs\n" +
+            "syLS54SZt43bbDRyYhPSDkg/ojLx/5nzdiTgMAdxA79b5XYC81hfA/Wjo0lj6bNw\n" +
+            "FTDe/pfPoDNByffheshv3CEmoajOMXYjJD9uBM/FbURvaMxb1vwRLEoNusVwVn2z\n" +
+            "N5wNtBumo5mOouM8gKQyVNSSjLIRuBjkUOXOkh/d1/fP/x8WkvyYN1x1AUBHQIMK\n" +
+            "0n/thzYKlyPA0LCFCZwyOU04BrFJk/bTYlTvAQdGg6Wr9RcGC8lNxlAhmLKZ4hP4\n" +
+            "lvmMfOJuf8FwcuyWzxw7qWXlnR96FTo3OE/jIDvr4u52Ak3MY2scmIdPJzXlFVnG\n" +
+            "nwIDAQAB\n" +
+            "-----END PUBLIC KEY-----\n";
 
     function generateRandomKey(length) {
       var charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";

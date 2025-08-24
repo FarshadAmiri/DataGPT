@@ -1,4 +1,5 @@
-from transformers import AutoTokenizer, AutoModelForCausalLM, TextStreamer, AutoModelForSequenceClassification
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
+# from transformers import AutoModelForCausalLM, TextStreamer, 
 from sentence_transformers import CrossEncoder
 from huggingface_hub import login
 from llama_index.embeddings.langchain import LangchainEmbedding
@@ -121,17 +122,17 @@ def index_builder(vdb_path: str):
     from llama_index.llms.huggingface import HuggingFaceLLM
     from llama_index.vector_stores.chroma import ChromaVectorStore
     import chromadb
-    from main.views import model, tokenizer
+    # from main.views import model, tokenizer
     
     # Define your LLM
-    llm = HuggingFaceLLM(
-        model=model,
-        tokenizer=tokenizer,
-        context_window=4096,
-    )
+    # llm = HuggingFaceLLM(
+    #     model=model,
+    #     tokenizer=tokenizer,
+    #     context_window=4096,
+    # )
 
     # Configure global settings (instead of ServiceContext)
-    Settings.llm = llm
+    # Settings.llm = llm
     Settings.chunk_size = INDEXING_CHUNK_SIZE
     Settings.chunk_overlap = INDEXING_CHUNK_OVERLAP
     Settings.embed_model = embedding_model_lc
