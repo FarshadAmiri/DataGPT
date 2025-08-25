@@ -157,11 +157,12 @@ class RAGConsumer(AsyncConsumer):
                 rag_contexts = "No relevant context found."
             
             # Construct prompt
-            prompt = f"{system_prompt_rag}\n\nRetrieved Contexts:\n{rag_contexts}\n\nConversation History(just for your information):\n{history_text}\n\nUser: {query}\nAssistant:"
+            # prompt = f"{system_prompt_rag}\n\nRetrieved Contexts:\n{rag_contexts}\n\nConversation History(just for your information):\n{history_text}\n\nUser: {query}\nAssistant:"
 
         elif chat_mode == "standard":
             prompt = f"{system_prompt_standard}\n\nConversation History:{history_text}\n\nUser: {query}\nAssistant:"
 
+        prompt = query
         # Tokenize and create streamer
         try:
             full_response = await self.stream_llm_response(prompt, aes_key, username)
@@ -209,8 +210,17 @@ class RAGConsumer(AsyncConsumer):
         url = "http://localhost:8002/v1/chat/completions"
         payload = {
             "model": "Qwen/Qwen3-4B-AWQ",
-            "messages": [{"role": "user", "content": prompt}],
-            "stream": True
+            "messages": [
+                {"role": "system", "content": "You are an AI assistant that answers questions directly. Do not add greetings or extra commentary."},
+                {"role": "user", "content": prompt}
+            ],
+            "stream": True,
+            "temperature": 0.0,   # deterministic
+            "top_p": 1.0,         # keep full distribution
+            "top_k": 1,           # greedy decoding
+            "max_tokens": 1024,
+            "presence_penalty": 1.5,
+            "chat_template_kwargs": {"enable_thinking": False}  # disable long “thinking” outputs
         }
         headers = {"Content-Type": "application/json"}
 

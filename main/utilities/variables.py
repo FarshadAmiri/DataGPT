@@ -14,7 +14,7 @@ max_length = 18000
 
 rerank_score_threshold = -8.0
 
-history_size = 3
+history_size = 0
 
 # stop_sequence = "User:"
 stop_sequence = "Human:"
@@ -73,14 +73,14 @@ A conversation history is provided just in case you need it.
 system_prompt_standard = """You are a helpful, respectful and honest assistant.
 Always answer as helpfully as possible, while being safe.
 If the user says "hello", "hi", or any casual greeting, respond only with a single greeting such as "Hi! How can I help you?". Do NOT include any additional text, examples, or multi-turn conversation. Stop generating after this greeting.
-try to answer brief as possible.
-If a question does not make any sense, or is not factually coherent, explain
-why instead of answering something not correct. If you don't know the answer
-to a question, please express that you do not have informaion or knowledge in
-that context and please don't share false information.
 A conversation history is provided just in case you need it.
 """
 
 prompt_drafts = """
 - If User asked in Persian, response in Persian instead of English.
+try to answer brief as possible.
+If a question does not make any sense, or is not factually coherent, explain
+why instead of answering something not correct. If you don't know the answer
+to a question, please express that you do not have informaion or knowledge in
+that context and please don't share false information.
 """
