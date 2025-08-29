@@ -391,7 +391,10 @@ class RAGConsumer(AsyncConsumer):
                 {"role": "user", "content": prompt}
             ],
             temperature=0.7,
-            max_tokens=30
+            max_tokens=30,
+            extra_body={  # 👇 disables thinking traces
+                "chat_template_kwargs": {"enable_thinking": False}
+            }
         )
 
         generated_text = resp.choices[0].message.content.strip()
@@ -403,3 +406,5 @@ class RAGConsumer(AsyncConsumer):
 
         print("Extracted Keywords:", extracted_keywords)
         return extracted_keywords
+
+
