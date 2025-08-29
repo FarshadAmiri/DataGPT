@@ -742,21 +742,29 @@ socket.onmessage = function(e) {
     } else {
       spinner.style.display = 'none'
       var msgText = decrypt_text(chatMsgData.message)
-      //const ragResponses = document.getElementsByClassName('rag-response');
-      //const lastRagResponse = ragResponses[ragResponses.length - 1];
-      //var updatedRagResponse = lastRagResponse.textContent + chatMsgData.message;
-      //updatedRagResponse = updatedRagResponse.replace(/\n/g, '<br>');
-      //lastRagResponse.innerHTML = updatedRagResponse;
-      //scrollToEnd();
       const ragResponses = document.getElementsByClassName('rag-response');
       const lastRagResponse = ragResponses[ragResponses.length - 1];
       var updatedRagResponse = lastRagResponse.innerHTML + msgText;
       updatedRagResponse = updatedRagResponse.replace(/\n/g, '<br>');
       lastRagResponse.innerHTML = updatedRagResponse;
 
-      //var last_response_text = $('.rag-response:last')[0].textContent;
-      //last_response_text = last_response_text.replace(/\n/g, '<br>');
-      //$('.rag-response:last')[0].textContent = last_response_text + chatMsgData.message;
+      // 🔹 Detect if majority of characters are Persian/Arabic
+      const persianChars = (updatedRagResponse.match(/[\u0600-\u06FF\u0750-\u077F]/g) || []).length;
+      const totalChars = updatedRagResponse.replace(/<br>/g, "").length;
+      
+      if (persianChars / totalChars > 0.3) { // threshold ~30%
+        lastRagResponse.style.direction = "rtl";
+        lastRagResponse.style.textAlign = "right";
+        lastRagResponse.style.fontSize = "15px";
+        lastRagResponse.style.fontFamily = "IranSans";
+        lastRagResponse.style.fontWeight = 'bold';
+        lastRagResponse.style.lineHeight = 1.65;
+        lastRagResponse.style.paddingRight = '10px';
+      } else {
+        lastRagResponse.style.direction = "ltr";
+        lastRagResponse.style.textAlign = "left";
+      }
+
       scrollToEndIfNearBottom();
     }
 }
@@ -821,18 +829,23 @@ function scrollToEndIfNearBottom() {
 /* END of scroller function */
 
 
+function isPersianText(text) {
+  // Count Persian/Arabic characters
+  const persianChars = (text.match(/[\u0600-\u06FF\u0750-\u077F]/g) || []).length;
+  return persianChars / text.length > 0.3; // at least 30% Persian
+}
+
 window.onload = function() {
   const allMessages = document.querySelectorAll('.msg');
-  const userQueries = document.querySelectorAll('.msg.user-query');
+  
   allMessages.forEach((p) => {
-    var decryptedTextTemp = decrypt_text(p.innerHTML)
+    // 🔹 decrypt first
+    var decryptedTextTemp = decrypt_text(p.innerHTML);
     decryptedTextTemp = decryptedTextTemp.replace(/\n/g, '<br>');
     p.innerHTML = decryptedTextTemp;
-  });
-  userQueries.forEach((p) => {
-    if (inferTextareaLanguage(p.textContent) === 'Persian') {
-      p.classList.remove('user-query');
-      p.classList.add('user-query-Fa');
+
+    // 🔹 detect language
+    if (isPersianText(p.textContent)) {
       p.style.fontFamily = "IranSans";
       p.style.fontSize = '15px';
       p.style.fontWeight = 'bold';
@@ -840,21 +853,22 @@ window.onload = function() {
       p.dir = 'rtl';
       p.style.paddingRight = '10px';
       p.style.lineHeight = 1.65;
+    } else {
+      p.style.textAlign = 'left';
+      p.dir = 'ltr';
     }
   });
-  // Place scroller at the active thread area
+
+  // Scroll the scrollbar to the active thread area
   var activeThreadId = document.getElementById('active-thread').value;
   var activeThreadElement = document.getElementById(activeThreadId);
 
-  // Scroll the scrollbar to the area where the active thread exists
   if (activeThreadElement !== null) {
     var isVisible = isElementVisible(activeThreadElement);
     if (activeThreadElement && !isVisible) {
-    activeThreadElement.scrollIntoView();
+      activeThreadElement.scrollIntoView();
+    }
   }
-  }
-
-
   // Place scroller at the last message area
   var containers = document.querySelectorAll(".container");
   if (containers.length > 0) {
@@ -862,6 +876,9 @@ window.onload = function() {
   lastContainer.scrollIntoView();
   }
 };
+
+
+
 
 // Function to check if an element is visible in the viewport
 function isElementVisible(element) {
