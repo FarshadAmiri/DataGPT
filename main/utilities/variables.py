@@ -2,19 +2,15 @@ import torch
 from pprint import pprint
 
 
-model_name = "TheBloke/Mistral-7B-Instruct-v0.2-GPTQ"
+# LLM
+llm_url = "http://localhost:8002/v1"
 
-
+# Vector DB & Retreival 
 INDEXING_CHUNK_SIZE = 384
 INDEXING_CHUNK_OVERLAP = 64
-
-max_n_retreivals = 8 
-max_new_tokens = 1400
-max_length = 18000
-
+max_n_retreivals = 5
 rerank_score_threshold = -8.0
-
-history_size = 0
+history_size = 3
 
 # stop_sequence = "User:"
 stop_sequence = "Human:"

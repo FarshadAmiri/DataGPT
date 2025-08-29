@@ -5,7 +5,7 @@ python -m vllm.entrypoints.openai.api_server \
 --model Qwen/Qwen3-4B-AWQ \
 --dtype auto \
 --quantization awq \
---max-model-len 2048 \
+--max-model-len 16384 \
 --gpu-memory-utilization 0.80 \
 --enforce-eager \
 --swap-space 2

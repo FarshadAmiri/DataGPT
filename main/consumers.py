@@ -61,7 +61,7 @@ class RAGConsumer(AsyncConsumer):
         chat_mode = dict_data.get("chat_mode")  # "standard" or "rag"
         similarity_cutoff = float(dict_data.get("similarity_cutoff", 0.0))  # convert to float
         rerank_enabled = dict_data.get("rerank")
-        temperature = float(dict_data.get("temperature", 0.5))  # convert to float
+        temperature = float(dict_data.get("temperature", 0.7))  # convert to float
         
         # ---- Input validation ----
         temperature = temperature if (0.1 <= temperature <= 1.2) else 0.5
@@ -90,7 +90,7 @@ class RAGConsumer(AsyncConsumer):
 
         # ---- RAG retrieval ----
         if chat_mode == "rag":
-            extracted_query = self.keyword_extractor(query, keyword_extractor_prompt)
+            extracted_query = self.keyword_extractor(query, llm_url, keyword_extractor_prompt)
             print(f"\n\nextracted_query: {extracted_query}\n\n")
 
             query_emb = embedding_model_st.encode(extracted_query).reshape(1, -1)
@@ -151,21 +151,20 @@ class RAGConsumer(AsyncConsumer):
 
             # Build rag_contexts string including similarity scores
             rag_contexts = "\n\n".join(top_chunks_with_scores)
-            print(f"\nRAG Contexts with similarity scores:\n{rag_contexts}\n\n")
+            # print(f"\nRAG Contexts with similarity scores:\n{rag_contexts}\n\n")
 
             if rag_contexts == "":
                 rag_contexts = "No relevant context found."
             
-            # Construct prompt
-            # prompt = f"{system_prompt_rag}\n\nRetrieved Contexts:\n{rag_contexts}\n\nConversation History(just for your information):\n{history_text}\n\nUser: {query}\nAssistant:"
 
         elif chat_mode == "standard":
-            prompt = f"{system_prompt_standard}\n\nConversation History:{history_text}\n\nUser: {query}\nAssistant:"
+            rag_contexts = None
 
-        prompt = query
-        # Tokenize and create streamer
+        # print("self.history:\n", self.history)
+        
         try:
-            full_response = await self.stream_llm_response(prompt, aes_key, username)
+            full_response = await self.stream_llm_response(llm_url, query, username, aes_key, temperature=temperature, 
+                                                            chat_history=self.history, rag_contexts=rag_contexts, context_as_system=True)
         except Exception as e:
             print("Streaming error:", e)
             full_response = ""
@@ -203,37 +202,80 @@ class RAGConsumer(AsyncConsumer):
             yield token
 
 
-    async def stream_llm_response(self, prompt, aes_key, username):
+    def build_payload(self, prompt, *, chat_history=None, rag_contexts=None, context_as_system=False, temperature=0.7):
+        """
+        Build payload for LLM request including chat history and RAG contexts
+        """
+        # Ensure defaults
+        chat_history = chat_history or []
+        rag_contexts = rag_contexts or []
+
+        # Prepare context message from RAG results
+        rag_text = "\n\n".join(rag_contexts) if rag_contexts else ""
+        if rag_text:
+            rag_message = {
+                "role": "system" if context_as_system else "user",
+                "content": f"Context information:\n{rag_text}"
+            }
+        else:
+            rag_message = None
+
+        messages = [
+            {
+                "role": "system",
+                "content": (
+                    "You are an AI assistant that answers questions directly. "
+                    "Do not add greetings or extra commentary."
+                )
+            },
+            *chat_history
+        ]
+        if rag_message:
+            messages.append(rag_message)
+
+        messages.append({
+            "role": "user",
+            "content": prompt
+        })
+
+        payload = {
+            "model": "Qwen/Qwen3-4B-AWQ",
+            "messages": messages,
+            "stream": True,
+            "temperature": temperature,
+            "top_p": 1.0,
+            "top_k": 1,
+            "max_tokens": 1024,
+            "presence_penalty": 1.5,
+            "chat_template_kwargs": {"enable_thinking": False}
+        }
+        return payload
+
+
+    async def stream_llm_response(self, llm_url, prompt, username, aes_key,
+                                temperature=0.7, chat_history=None, rag_contexts=None, context_as_system=False):
         """
         Stream response from LLM API and send over WebSocket in chunks
         """
-        url = "http://localhost:8002/v1/chat/completions"
-        payload = {
-            "model": "Qwen/Qwen3-4B-AWQ",
-            "messages": [
-                {"role": "system", "content": "You are an AI assistant that answers questions directly. Do not add greetings or extra commentary."},
-                {"role": "user", "content": prompt}
-            ],
-            "stream": True,
-            "temperature": 0.0,   # deterministic
-            "top_p": 1.0,         # keep full distribution
-            "top_k": 1,           # greedy decoding
-            "max_tokens": 1024,
-            "presence_penalty": 1.5,
-            "chat_template_kwargs": {"enable_thinking": False}  # disable long “thinking” outputs
-        }
-        headers = {"Content-Type": "application/json"}
+        llm_url += "/chat/completions"
+        payload = self.build_payload(
+            prompt,
+            chat_history=chat_history,
+            rag_contexts=rag_contexts,
+            context_as_system=context_as_system,
+            temperature=temperature
+        )
 
+        headers = {"Content-Type": "application/json"}
         full_response = ""
         counter = 0
 
         async with aiohttp.ClientSession() as session:
-            async with session.post(url, json=payload, headers=headers) as resp:
+            async with session.post(llm_url, json=payload, headers=headers) as resp:
                 async for line_bytes in resp.content:
                     line = line_bytes.decode("utf-8").strip()
                     if not line:
                         continue
-                    # LLM API stream sends "data: {...}" per chunk
                     if line.startswith("data: "):
                         data_str = line[len("data: "):].strip()
                         if data_str == "[DONE]":
@@ -247,7 +289,6 @@ class RAGConsumer(AsyncConsumer):
                             full_response += chunk
                             counter += 1
 
-                            # Send first websocket message for new generation
                             if counter == 1:
                                 await self.send({
                                     "type": "websocket.send",
@@ -258,7 +299,6 @@ class RAGConsumer(AsyncConsumer):
                                     })
                                 })
 
-                            # Stop sequence check
                             if stop_sequence in full_response:
                                 full_response = full_response.split(stop_sequence)[0]
                                 break
@@ -380,8 +420,8 @@ class RAGConsumer(AsyncConsumer):
         return Document.objects.get(id=doc_id).name
 
 
-    def keyword_extractor(self, text, keyword_extractor_prompt):
-        client = OpenAI(base_url="http://localhost:8002/v1", api_key="not-needed")
+    def keyword_extractor(self, text, llm_url, keyword_extractor_prompt):
+        client = OpenAI(base_url=llm_url, api_key="not-needed")
         prompt = f"{keyword_extractor_prompt}User: {text}\nKeywords:"
 
         resp = client.chat.completions.create(
