@@ -24,6 +24,7 @@ html, body {
   margin: 0;
   padding: 0;
   overflow: hidden; /* no scrollbars */
+  color: white;
 }
 
 .container-fluid {
@@ -110,8 +111,7 @@ html, body {
 }
 
 .container {
-  border: 2px solid #000000;
-  background-color: #f1f1f1;
+  border: 2px solid #212121;
   border-radius: 25px;
   padding-right: 10px;
   padding-left: 10px;
@@ -121,6 +121,7 @@ html, body {
   width: 75%;
   clear: both;
   overflow: auto; /* for chat like view */
+  background-color: #212121;
 }
 
 .text-small {
@@ -128,11 +129,22 @@ html, body {
 }
 
 
-.msg.rag-response, .msg.user-query {
+.msg.rag-response {
   font-family: Tahoma;
   font-size: 16px;
   font-weight: normal;
   padding-left: 10px;
+  background-color: #212121;
+  color: white;
+}
+
+.msg.user-query {
+  font-family: Tahoma;
+  font-size: 16px;
+  font-weight: normal;
+  padding-left: 10px;
+  background-color: #303030;
+  color: rgb(255, 255, 255);
 }
 
 .msg.rag-response-Fa  .msg.user-query-Fa{
@@ -141,15 +153,21 @@ html, body {
   font-weight: normal;
   text-align: right;
   direction: rtl;
+  background-color: #303030;
+  color: white;
 }
 
 
 .darker {
-  border-color: #2e2e2e;
-  background-color: #96d3fc;
+  border-color: #303030;
+  background-color: #303030;
   float: right;   /* for chat like view */ 
   padding: 10px;
   margin: 10px;
+}
+
+.bg-dark {
+  background-color: #212121 !important;
 }
 
 .container::after {
@@ -188,15 +206,17 @@ html, body {
 
 .time-right {
   float: right;
-  font-size: 14px;
-  color: #416581;
+  font-size: 13px;
+  font-weight: bold;
+  color: #d7d7d7;
   padding-right: 10px;
 }
 
 .time-left {
   float: right;
-  font-size: 14px;
-  color: #546f81;
+  font-size: 13px;
+  color: #d7d7d7;
+  font-weight: bold;
 }
 
 #send_btn {
@@ -206,7 +226,7 @@ html, body {
 
 .chat-box {
   /* background-color: rgb(230, 230, 230); */
-  background-color: #212529;
+  background-color: #212121;
   border-radius: 14px;
   padding-bottom: 0px;
   margin-bottom: 0px;
@@ -245,7 +265,7 @@ html, body {
 }
 
 .landing {
-  background-color: #212529;
+  background-color: #212121;
   border-radius: 14px;
   padding-bottom: 0px;
   margin-bottom: 0px;
@@ -262,7 +282,7 @@ html, body {
 }
 
 body{
-  background-color: #212529;
+  background-color: #212121;
   /* background-color: #141414ec; */
 }
 
@@ -289,17 +309,19 @@ body{
 .rag-thread {
   cursor: pointer;
   border-radius: 8px;
-  background: linear-gradient(to top, #f7f9fc 0%, #ffffff 100%);
+  /* background: linear-gradient(to top, #2b2b2b 0%, #424242 100%); */
+  background-color: #3b3b3b;
   padding: 6px 10px;              /* smaller height */
   margin-bottom: 6px;             /* less spacing between items */
   box-shadow: 0 1px 2px rgba(0,0,0,0.04);
-  transition: all 0.2s ease-in-out;
+  /* transition: all 0.2s ease-in-out; */
 }
 
 .rag-thread:hover {
-  background: linear-gradient(to top, #eef6fd 0%, #ffffff 100%);
+  /* background: linear-gradient(to top, #707070 0%, #757575 100%); */
+  background-color: #565656;
   box-shadow: 0 3px 6px rgba(0,0,0,0.08);
-  transform: translateY(-1px);
+  /* transform: translateY(-1px); */
 }
 
 .rag-thread:last-child {
@@ -309,7 +331,9 @@ body{
 .list-group-item.current {
   border: none;
   /* background: linear-gradient(to right, #7dbff5, #5caaf2); */
-  background: linear-gradient(to right, #93edff, #8dd7ff, #ccafff);
+  /* background: linear-gradient(to right, #93edff, #8dd7ff, #ccafff); */
+  /* background: linear-gradient(to right, #71787a, #616c71); */
+  background-color: #666666;
   box-shadow: 0 2px 6px rgba(0,0,0,0.12);
   color: #ffffff;
   padding: 6px 10px;  /* keep same compact size */
@@ -318,42 +342,42 @@ body{
 .list-group-item.current:hover {
   border: none;
   /* background: linear-gradient(to right, #7dbff5, #5caaf2); */
-  background: linear-gradient(to right, #60e2ff, hsl(201, 100%, 69%), #b78aff);
+  /* background: linear-gradient(to right, #60e2ff, hsl(201, 100%, 69%), #b78aff); */
+  background: linear-gradient(to right, rgb(79, 85, 87), #474e4f);
   box-shadow: 0 2px 6px rgba(0,0,0,0.12);
-  color: #ffffff;
   padding: 6px 10px;  /* keep same compact size */
 }
 
 .list-group-item:hover {
   border: none;
   /* background: linear-gradient(to right, #7dbff5, #5caaf2); */
-  background: linear-gradient(to right, #c1e4eb);
+  background: linear-gradient(to right, #616161);
   box-shadow: 0 2px 6px rgba(0,0,0,0.12);
   color: #ffffff;
   padding: 6px 10px;  /* keep same compact size */
 }
 
 .list-group-item.current strong {
-  color: #000000;
+  color: #ffffff;
 }
 
 .thread_name {
   font-size: 0.85rem;
   font-weight: 600;
-  color: #262626;
+  color: #d3d3d3;
   line-height: 1.2;
 }
 
 .col-10.text-small {
   font-size: 0.75rem;
-  color: #666;
+  color: #ffffff;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .list-group-item:hover strong {
-  color: #000000;
+  color: #96d94a;
 }
 
 /* ------------- End of Thread items ------------- */
@@ -393,9 +417,9 @@ body{
 }
 
 #copy-icon {
-  content: url("..\\..\\icons\\copy-4.png");
-  width: 24px;
-  height: 24px;
+  content: url("..\\..\\icons\\copy-1.png");
+  width: 26px;
+  height: 26px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -403,7 +427,7 @@ body{
 }
 
 #copy-icon:hover {
-  background-color: #e0e0e0; /* Set the desired background color on hover */
+  background-color: #363636; /* Set the desired background color on hover */
 }
 
 
@@ -417,12 +441,14 @@ body{
   /* display: flex; */
   align-items: center;
   justify-content: center;
+  background-color: #212121 !important;
+  border: none;  
 }
 
 #translate-icon {
-  content: url("..\\..\\icons\\translate_3.svg");
-  width: 27px;
-  height: 27px;
+  content: url("..\\..\\icons\\translate_8.svg");
+  width: 31px;
+  height: 31px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -438,10 +464,12 @@ body{
   /* display: flex; */
   align-items: center;
   justify-content: center;
+  background-color: #212121 !important;
+  border: none;  
 }
 
 #translate-icon:hover {
-  background-color: #d1d1d1; /* Set the desired background color on hover */
+  background-color: #3d3d3d; /* Set the desired background color on hover */
 }
 
 .context-btn {
@@ -454,13 +482,15 @@ body{
   /* display: flex; */
   align-items: center;
   justify-content: center;
+  background-color: #212121 !important;
+  border: none;  
 }
 
 
 #context-icon {
-  content: url("..\\..\\icons\\context_1.png");
-  width: 27px;
-  height: 27px;
+  content: url("..\\..\\icons\\context_2.png");
+  width: 33px;
+  height: 33px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -595,7 +625,7 @@ body{
 }
 
 ::-webkit-scrollbar-track {
-  background-color: #212529;
+  background-color: #212121;
 }
 
 ::-webkit-scrollbar-thumb {
@@ -653,7 +683,7 @@ body{
 .btn-outline-primary {
   background-color: rgba(255, 255, 255, 0.191) !important;
   color: #ffffff !important;
-  border-color: #212529 !important;
+  border-color: #212121 !important;
   font-size: 14px;
 }
 
@@ -661,7 +691,7 @@ body{
 .btn-check:checked + .btn-outline-primary {
   background-color: #3291d5 !important;
   color: rgb(255, 255, 255) !important;
-  border-color: #212529 !important;
+  border-color: #212121 !important;
   font-size: 14px;
 }
 
@@ -819,5 +849,14 @@ body{
   padding: 6px 10px;
 }
 .markdown-table th {
-  background: #f5f5f5;
+  background: #212121;
+}
+
+pre code {
+  background-color: #1e1e1e;
+  color: #dcdcdc;
+  display: block;
+  padding: 10px;
+  border-radius: 6px;
+  overflow-x: auto;
 }

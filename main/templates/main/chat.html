@@ -694,6 +694,7 @@ socket.onmessage = function(e) {
       persianTextBox.style.fontSize = '13px';
       persianTextBox.style.fontWeight = 'bold';
       persianTextBox.style.textAlign = 'right';
+      persianTextBox.style.color = 'white';
       persianTextBox.dir = 'rtl';
       persianTextBox.style.lineHeight = 1.65;
       persianTextBox.style.paddingRight = '10px';
@@ -747,9 +748,10 @@ socket.onmessage = function(e) {
         return;
       }
 
+      let msgText;
       try {
         // ✅ Decrypt the newly streamed chunk
-        var msgText = decrypt_text(chatMsgData.message);
+        msgText = decrypt_text(chatMsgData.message);
       } catch (err) {
         console.error("Decryption failed:", err, chatMsgData.message);
         return; // skip this chunk if bad ciphertext
@@ -766,6 +768,7 @@ socket.onmessage = function(e) {
       lastRagResponse.dataset.raw = nextRaw;
 
       // ✅ Re-render the entire message from raw each time
+      // This handles headings, bold, hr, tables, and now code blocks
       const rendered = renderLightMarkdown(nextRaw);
       lastRagResponse.innerHTML = rendered;
 
@@ -916,8 +919,34 @@ function renderLightMarkdown(raw) {
   const out = [];
 
   let i = 0;
+  let inCodeBlock = false;
+  let codeLang = "";
+
   while (i < lines.length) {
     let line = lines[i];
+
+    // 🔹 detect start/end of code block
+    const codeBlockStart = line.match(/^```(\w*)/);
+    if (codeBlockStart) {
+      if (!inCodeBlock) {
+        inCodeBlock = true;
+        codeLang = codeBlockStart[1] || "";
+        out.push(`<pre><code class="language-${codeLang}">`);
+      } else {
+        inCodeBlock = false;
+        codeLang = "";
+        out.push("</code></pre>");
+      }
+      i++;
+      continue;
+    }
+
+    if (inCodeBlock) {
+      // inside code block, preserve spaces and escape HTML
+      out.push(escapeHtml(line) + "\n");
+      i++;
+      continue;
+    }
 
     // hr
     if (/^\s{0,3}(?:-{3,}|\*{3,}|_{3,})\s*$/.test(line)) {
@@ -926,7 +955,7 @@ function renderLightMarkdown(raw) {
       continue;
     }
 
-    // heading
+    // headings
     const h = line.match(/^\s{0,3}(#{1,6})\s+(.*)$/);
     if (h) {
       const level = h[1].length;
@@ -936,7 +965,7 @@ function renderLightMarkdown(raw) {
       continue;
     }
 
-    // table detection (needs header, separator, at least 1 row)
+    // table detection (header + separator + rows)
     if (
       line.trim().startsWith("|") &&
       i + 1 < lines.length &&
@@ -970,7 +999,7 @@ function renderLightMarkdown(raw) {
         j++;
       }
 
-      // Build table
+      // Build table HTML
       let html = "<table class='markdown-table'><thead><tr>";
       headers.forEach((h, idx) => {
         html += `<th style="text-align:${aligns[idx]}">${h}</th>`;
@@ -1001,12 +1030,12 @@ function renderLightMarkdown(raw) {
 
 window.onload = function() {
   const allMessages = document.querySelectorAll('.msg');
-  
+
   allMessages.forEach((p) => {
     // 🔹 decrypt full message text
     var decryptedTextTemp = decrypt_text(p.innerHTML);
 
-    // 🔹 render markdown (headings, bold, hr, tables, line breaks)
+    // 🔹 render markdown (headings, bold, hr, tables, code blocks, line breaks)
     var renderedText = renderLightMarkdown(decryptedTextTemp);
 
     // 🔹 insert HTML into DOM
