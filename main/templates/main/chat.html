@@ -740,26 +740,48 @@ socket.onmessage = function(e) {
       id_input.value = messageId;
       status = "free";
     } else {
-      spinner.style.display = 'none'
-      var msgText = decrypt_text(chatMsgData.message)
-      const ragResponses = document.getElementsByClassName('rag-response');
-      const lastRagResponse = ragResponses[ragResponses.length - 1];
-      var updatedRagResponse = lastRagResponse.innerHTML + msgText;
-      updatedRagResponse = updatedRagResponse.replace(/\n/g, '<br>');
-      lastRagResponse.innerHTML = updatedRagResponse;
+      spinner.style.display = 'none';
 
-      // 🔹 Detect if majority of characters are Persian/Arabic
-      const persianChars = (updatedRagResponse.match(/[\u0600-\u06FF\u0750-\u077F]/g) || []).length;
-      const totalChars = updatedRagResponse.replace(/<br>/g, "").length;
-      
-      if (persianChars / totalChars > 0.3) { // threshold ~30%
+      // ✅ ignore if no actual message payload
+      if (!chatMsgData.message || chatMsgData.message.trim() === "") {
+        return;
+      }
+
+      try {
+        // ✅ Decrypt the newly streamed chunk
+        var msgText = decrypt_text(chatMsgData.message);
+      } catch (err) {
+        console.error("Decryption failed:", err, chatMsgData.message);
+        return; // skip this chunk if bad ciphertext
+      }
+
+      const ragResponses = document.getElementsByClassName('rag-response');
+      if (ragResponses.length === 0) return; // safety
+
+      const lastRagResponse = ragResponses[ragResponses.length - 1];
+
+      // ✅ Keep a raw plaintext buffer on the element (survives re-renders)
+      const prevRaw = lastRagResponse.dataset.raw || "";
+      const nextRaw = prevRaw + msgText;
+      lastRagResponse.dataset.raw = nextRaw;
+
+      // ✅ Re-render the entire message from raw each time
+      const rendered = renderLightMarkdown(nextRaw);
+      lastRagResponse.innerHTML = rendered;
+
+      // ✅ Language direction detection using visible text only (no tags)
+      const visibleText = lastRagResponse.textContent || "";
+      const persianChars = (visibleText.match(/[\u0600-\u06FF\u0750-\u077F]/g) || []).length;
+      const totalChars = visibleText.length || 1;
+
+      if (persianChars / totalChars > 0.3) {
         lastRagResponse.style.direction = "rtl";
         lastRagResponse.style.textAlign = "right";
         lastRagResponse.style.fontSize = "15px";
         lastRagResponse.style.fontFamily = "IranSans";
-        lastRagResponse.style.fontWeight = 'bold';
+        lastRagResponse.style.fontWeight = "bold";
         lastRagResponse.style.lineHeight = 1.65;
-        lastRagResponse.style.paddingRight = '10px';
+        lastRagResponse.style.paddingRight = "10px";
       } else {
         lastRagResponse.style.direction = "ltr";
         lastRagResponse.style.textAlign = "left";
@@ -798,7 +820,7 @@ function scrollToEnd() {
   }
 
 let userScrolling = false;
-const scrollThreshold = 50; // distance from bottom to still auto-scroll
+const scrollThreshold = 200; // distance from bottom to still auto-scroll
 
 const $board = $('#board');
 
@@ -830,21 +852,167 @@ function scrollToEndIfNearBottom() {
 
 
 function isPersianText(text) {
-  // Count Persian/Arabic characters
   const persianChars = (text.match(/[\u0600-\u06FF\u0750-\u077F]/g) || []).length;
-  return persianChars / text.length > 0.3; // at least 30% Persian
+  return persianChars / text.length > 0.3;
 }
+
+// 🔹 simple bold formatter
+function formatBold(text) {
+  // Replace **something** with <b>something</b>
+  return text.replace(/\*\*(.*?)\*\*/g, "<b>$1</b>");
+}
+
+// Escape HTML to avoid accidental tag injection
+function escapeHtml(str) {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+// Inline markdown (bold) for a line
+function applyInlineFormatting(text) {
+  // **bold**
+  return text.replace(/\*\*([^*\n]+?)\*\*/g, "<b>$1</b>");
+}
+
+// Lightweight Markdown renderer for streaming:
+// - Headings: # .. ######
+// - Horizontal rule: --- / *** / ___ (optional)
+// - Bold: **text**
+function renderLightMarkdown(raw) {
+  const safe = escapeHtml(raw).replace(/\r\n?/g, "\n");
+  const lines = safe.split("\n");
+  const out = [];
+
+  for (let line of lines) {
+    // hr
+    if (/^\s{0,3}(?:-{3,}|\*{3,}|_{3,})\s*$/.test(line)) {
+      out.push("<hr>");
+      continue;
+    }
+    // headings
+    const h = line.match(/^\s{0,3}(#{1,6})\s+(.*)$/);
+    if (h) {
+      const level = h[1].length;
+      const content = applyInlineFormatting(h[2].trim());
+      out.push(`<h${level}>${content}</h${level}>`);
+      continue;
+    }
+    // normal line with inline formatting
+    out.push(applyInlineFormatting(line));
+  }
+
+  // Join with <br> so line breaks are preserved
+  return out.join("<br>");
+}
+
+
+function renderLightMarkdown(raw) {
+  const safe = escapeHtml(raw).replace(/\r\n?/g, "\n");
+  const lines = safe.split("\n");
+  const out = [];
+
+  let i = 0;
+  while (i < lines.length) {
+    let line = lines[i];
+
+    // hr
+    if (/^\s{0,3}(?:-{3,}|\*{3,}|_{3,})\s*$/.test(line)) {
+      out.push("<hr>");
+      i++;
+      continue;
+    }
+
+    // heading
+    const h = line.match(/^\s{0,3}(#{1,6})\s+(.*)$/);
+    if (h) {
+      const level = h[1].length;
+      const content = applyInlineFormatting(h[2].trim());
+      out.push(`<h${level}>${content}</h${level}>`);
+      i++;
+      continue;
+    }
+
+    // table detection (needs header, separator, at least 1 row)
+    if (
+      line.trim().startsWith("|") &&
+      i + 1 < lines.length &&
+      /^\s*\|?(\s*[:-]-+[:-]?\s*\|)+\s*$/.test(lines[i + 1])
+    ) {
+      const headers = line
+        .trim()
+        .split("|")
+        .slice(1, -1)
+        .map((h) => applyInlineFormatting(h.trim()));
+      const aligns = lines[i + 1]
+        .trim()
+        .split("|")
+        .slice(1, -1)
+        .map((a) => {
+          if (/^:\s*-+\s*:$/.test(a)) return "center";
+          if (/^:\s*-+/.test(a)) return "left";
+          if (/-+\s*:$/.test(a)) return "right";
+          return "left";
+        });
+
+      const rows = [];
+      let j = i + 2;
+      while (j < lines.length && lines[j].trim().startsWith("|")) {
+        const cols = lines[j]
+          .trim()
+          .split("|")
+          .slice(1, -1)
+          .map((c) => applyInlineFormatting(c.trim()));
+        rows.push(cols);
+        j++;
+      }
+
+      // Build table
+      let html = "<table class='markdown-table'><thead><tr>";
+      headers.forEach((h, idx) => {
+        html += `<th style="text-align:${aligns[idx]}">${h}</th>`;
+      });
+      html += "</tr></thead><tbody>";
+      rows.forEach((row) => {
+        html += "<tr>";
+        row.forEach((c, idx) => {
+          html += `<td style="text-align:${aligns[idx]}">${c}</td>`;
+        });
+        html += "</tr>";
+      });
+      html += "</tbody></table>";
+      out.push(html);
+
+      i = j;
+      continue;
+    }
+
+    // normal line with inline formatting
+    out.push(applyInlineFormatting(line));
+    i++;
+  }
+
+  return out.join("<br>");
+}
+
 
 window.onload = function() {
   const allMessages = document.querySelectorAll('.msg');
   
   allMessages.forEach((p) => {
-    // 🔹 decrypt first
+    // 🔹 decrypt full message text
     var decryptedTextTemp = decrypt_text(p.innerHTML);
-    decryptedTextTemp = decryptedTextTemp.replace(/\n/g, '<br>');
-    p.innerHTML = decryptedTextTemp;
 
-    // 🔹 detect language
+    // 🔹 render markdown (headings, bold, hr, tables, line breaks)
+    var renderedText = renderLightMarkdown(decryptedTextTemp);
+
+    // 🔹 insert HTML into DOM
+    p.innerHTML = renderedText;
+
+    // 🔹 detect Persian
     if (isPersianText(p.textContent)) {
       p.style.fontFamily = "IranSans";
       p.style.fontSize = '15px';
@@ -859,7 +1027,7 @@ window.onload = function() {
     }
   });
 
-  // Scroll the scrollbar to the active thread area
+  // scroll handling
   var activeThreadId = document.getElementById('active-thread').value;
   var activeThreadElement = document.getElementById(activeThreadId);
 
@@ -869,15 +1037,13 @@ window.onload = function() {
       activeThreadElement.scrollIntoView();
     }
   }
-  // Place scroller at the last message area
+
   var containers = document.querySelectorAll(".container");
   if (containers.length > 0) {
-  var lastContainer = containers[containers.length - 1];
-  lastContainer.scrollIntoView();
+    var lastContainer = containers[containers.length - 1];
+    lastContainer.scrollIntoView();
   }
 };
-
-
 
 
 // Function to check if an element is visible in the viewport
