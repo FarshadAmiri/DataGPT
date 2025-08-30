@@ -496,6 +496,9 @@ body{
   justify-content: center;
 }
 
+#context {
+  color: #000000;
+}
 
 #delete-thread-btn {
   background-color: rgb(223, 94, 94);

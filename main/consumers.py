@@ -101,36 +101,41 @@ class RAGConsumer(AsyncConsumer):
 
             query_emb = embedding_model_st.encode(extracted_query).reshape(1, -1)
             results = self.collection.get(include=["documents", "embeddings"])
-            chunk_texts = results["documents"]
-            chunk_embs = np.array(results["embeddings"])
-            similarities = cosine_similarity(query_emb, chunk_embs)[0]
+            chunk_texts = results.get("documents", [])
+            chunk_embs = np.array(results.get("embeddings", []))
 
-            # Apply similarity cutoff BEFORE sorting
-            filtered_indices = [i for i, sim in enumerate(similarities) if sim >= similarity_cutoff]
-            print(f"\nFiltered {len(similarities) - len(filtered_indices)} chunks below cutoff {similarity_cutoff}")
-
-            # Sort remaining ones by similarity
-            sorted_indices = sorted(filtered_indices, key=lambda i: similarities[i], reverse=True)[:max_n_retreivals]
-
-            # After computing similarities and filtering/sorting:
             source_nodes_dict = {}
             top_chunks = []
-            top_chunks_with_scores = []  # new list to store chunk + similarity
+            top_chunks_with_scores = []
 
-            for idx, i in enumerate(sorted_indices):
-                chunk_text = chunk_texts[i]
-                sim_score = similarities[i]  # get similarity
-                chunk_id = results["ids"][i]
-                # print(f"\nchunk_id: {chunk_id}\n")
-                doc_id = chunk_id.split("_")[0]
-                try:
-                    doc_id = int(doc_id)
-                    doc_name = await self.get_doc_name(doc_id)
-                except ValueError:
-                    doc_name = f"#{idx+1} [Similarity: {sim_score:.3f}]"
-                source_nodes_dict[doc_name] = chunk_text
-                top_chunks.append(chunk_text)
-                top_chunks_with_scores.append(f"[Similarity: {sim_score:.3f}]\n{chunk_text}")
+            # ✅ Only compute similarities if there are embeddings
+            if len(chunk_embs) > 0:
+                similarities = cosine_similarity(query_emb, chunk_embs)[0]
+
+                # Apply similarity cutoff BEFORE sorting
+                filtered_indices = [i for i, sim in enumerate(similarities) if sim >= similarity_cutoff]
+                print(f"\nFiltered {len(similarities) - len(filtered_indices)} chunks below cutoff {similarity_cutoff}")
+
+                # Sort remaining ones by similarity
+                sorted_indices = sorted(filtered_indices, key=lambda i: similarities[i], reverse=True)[:max_n_retreivals]
+
+                # Collect top chunks with similarity
+                for idx, i in enumerate(sorted_indices):
+                    chunk_text = chunk_texts[i]
+                    sim_score = similarities[i]
+                    chunk_id = results["ids"][i]
+                    doc_id = chunk_id.split("_")[0]
+                    try:
+                        doc_id = int(doc_id)
+                        doc_name = await self.get_doc_name(doc_id)
+                    except ValueError:
+                        doc_name = f"#{idx+1} [Similarity: {sim_score:.3f}]"
+                    source_nodes_dict[doc_name] = chunk_text
+                    top_chunks.append(chunk_text)
+                    top_chunks_with_scores.append(f"[Similarity: {sim_score:.3f}]\n{chunk_text}")
+            else:
+                # No embeddings found — continue with empty context
+                print("No documents indexed — continuing without context.")
 
             # If reranking is enabled
             if rerank_enabled and top_chunks:
