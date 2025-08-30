@@ -24,7 +24,7 @@ html, body {
   margin: 0;
   padding: 0;
   overflow: hidden; /* no scrollbars */
-  color: white;
+  color: rgb(0, 0, 0);
 }
 
 .container-fluid {
