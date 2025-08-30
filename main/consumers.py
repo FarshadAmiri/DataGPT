@@ -62,6 +62,12 @@ class RAGConsumer(AsyncConsumer):
         similarity_cutoff = float(dict_data.get("similarity_cutoff", 0.0))  # convert to float
         rerank_enabled = dict_data.get("rerank")
         temperature = float(dict_data.get("temperature", 0.7))  # convert to float
+
+        try:
+            await self.get_history(history_size=history_size)
+        except Exception as e:
+            print(f"Problem loading chat history: {e}")
+            return
         
         # ---- Input validation ----
         temperature = temperature if (0.1 <= temperature <= 1.2) else 0.5

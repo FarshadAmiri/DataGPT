@@ -25,7 +25,7 @@ all_docs_collection_path = os.path.join("collections", all_docs_collection_name)
 
 
 embedding_model_name = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
-embedding_model_lc = LangchainEmbedding(HuggingFaceEmbeddings(model_name=embedding_model_name))
+# embedding_model_lc = LangchainEmbedding(HuggingFaceEmbeddings(model_name=embedding_model_name))
 embedding_model_st = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
 embedding_model_st2 = embedding_functions.SentenceTransformerEmbeddingFunction(model_name="paraphrase-multilingual-MiniLM-L12-v2")
 
@@ -135,7 +135,8 @@ def index_builder(vdb_path: str):
     # Settings.llm = llm
     Settings.chunk_size = INDEXING_CHUNK_SIZE
     Settings.chunk_overlap = INDEXING_CHUNK_OVERLAP
-    Settings.embed_model = embedding_model_lc
+    # Settings.embed_model = embedding_model_lc
+    Settings.embed_model = embedding_model_st2
 
     # Setup Chroma
     db = chromadb.PersistentClient(path=vdb_path)
