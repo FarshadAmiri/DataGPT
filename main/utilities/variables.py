@@ -6,7 +6,7 @@ from pprint import pprint
 llm_url = "http://localhost:8002/v1"
 
 # Vector DB & Retreival 
-INDEXING_CHUNK_SIZE = 384
+INDEXING_CHUNK_SIZE = 512
 INDEXING_CHUNK_OVERLAP = 64
 max_n_retreivals = 4
 rerank_score_threshold = -8.0
