@@ -1,2 +1,0 @@
-bug: RAG fails when included docs are empty in No collection mode and maybe
-in collection mode when collection is empty of docs.
