@@ -12,35 +12,18 @@ python -m vllm.entrypoints.openai.api_server \
 
 
 
+model source: ~/.cache/huggingface/hub/models--Qwen--Qwen3-4B-AWQ
+
+source vllm-venv/bin/activate
+
 python -m vllm.entrypoints.openai.api_server \
 --host 0.0.0.0 --port 8002 \
---model Qwen/Qwen2.5-7B-Instruct-AWQ \
+--model /home/farshad/models/Qwen3-4B-AWQ \
+--served-model-name Qwen3-4B \
 --dtype auto \
 --quantization awq \
---max-model-len 1024 \
---gpu-memory-utilization 0.8 \
+--max-model-len 16384 \
+--gpu-memory-utilization 0.80 \
 --enforce-eager \
---swap-space 2
-
-
-python -m vllm.entrypoints.openai.api_server \
-  --host 0.0.0.0 --port 8002 \
-  --model openai/gpt-oss-20b \
-  --dtype auto \
-  --max-model-len 1024 \
-  --gpu-memory-utilization 0.80 \
-  --enforce-eager \
-  --swap-space 2
-
-
-python -m vllm.entrypoints.openai.api_server \
-  --host 0.0.0.0 \
-  --port 8002 \
-  --model "/mnt/c/Users/Farshad/.cache/huggingface/hub/models--TheBloke--Mistral-7B-Instruct-v0.1-GPTQ" \
-  --dtype float16 \
-  --quantization gptq \
-  --max-model-len 1024 \
-  --gpu-memory-utilization 0.80 \
-  --enforce-eager \
-  --swap-space 2
+--swap-space 1
 

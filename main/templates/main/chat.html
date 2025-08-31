@@ -109,21 +109,32 @@
     <br>
     <div style="max-height: 800px; overflow-y: auto;">
     <form id="thread-form" action="{% url 'main:chat' 0 %}" method="post" style="padding: 0; margin: 0; border: 0;">
-    {% csrf_token %}
-    <ul class="nav nav-pills flex-column" id="chats">
-      <input type="hidden" id="active-thread" value="{{active_thread_id}}">
-      {% for thread in chat_threads %}
-      <div class="list-group-item list-group-item-action py-3 lh-tight rag-thread {% if active_thread_id == thread.id %}current{% endif %}" name="form_thread_id" id="{{thread.id}}" style="margin-bottom: 10px;" onclick="sendEncryptedForm(this, 'thread')">
-        <div class="d-flex w-100 align-items-center justify-content-between">
-          <strong class="mb-1 thread_name {% if active_thread_id == thread.id %}current{% endif %}">{{ thread.name }}</strong>
-          <small class="text-muted"></small>
-        </div>
-        {% with thread.id as thread_id %}
-        <div class="col-10 mb-1 text-small" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ threads_preview|get_dict_value:thread_id }}</div>
-        {% endwith %}
-      </div>
-      {% endfor %}
-    </ul>
+        {% csrf_token %}
+    <div id="chat-sidebar">
+      <ul class="list-group" id="chats">
+        <input type="hidden" id="active-thread" value="{{active_thread_id}}">
+        
+        {% for thread in chat_threads %}
+          <li class="list-group-item list-group-item-action py-3 lh-tight rag-thread {% if active_thread_id == thread.id %}current{% endif %}" 
+              name="form_thread_id" 
+              id="{{thread.id}}" 
+              onclick="sendEncryptedForm(this, 'thread')">
+
+            <div class="d-flex w-100 align-items-center justify-content-between">
+              <strong class="mb-1 thread_name {% if active_thread_id == thread.id %}current{% endif %}">
+                {{ thread.name }}
+              </strong>
+            </div>
+
+            {% with thread.id as thread_id %}
+              <div class="mb-1 text-small">
+                {{ threads_preview|get_dict_value:thread_id }}
+              </div>
+            {% endwith %}
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
     </form>
     </div>
     <div class="mt-auto">

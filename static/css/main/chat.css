@@ -306,90 +306,62 @@ body{
 }
 
 /* ------------- Thread items ------------ */
+/* --------- Sidebar container --------- */
+#chat-sidebar {
+  max-height: none;       /* remove its own height limit */
+  overflow: visible;      /* disable its own scrollbar */
+  padding: 5px;
+}
+
+/* --------- Thread list --------- */
+.rag-thread {
+  width: 100%;           /* always full width */
+  white-space: nowrap;   /* prevent wrapping inside items */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;        /* avoid inline wrapping */
+  margin-bottom: 6px;    /* spacing between threads */
+}
+
+/* --------- Thread items --------- */
 .rag-thread {
   cursor: pointer;
   border-radius: 8px;
-  /* background: linear-gradient(to top, #2b2b2b 0%, #424242 100%); */
   background-color: #3b3b3b;
-  padding: 6px 10px;              /* smaller height */
-  margin-bottom: 6px;             /* less spacing between items */
+  padding: 6px 10px;
+  margin-bottom: 6px;
   box-shadow: 0 1px 2px rgba(0,0,0,0.04);
-  /* transition: all 0.2s ease-in-out; */
-}
-
-.rag-thread:hover {
-  /* background: linear-gradient(to top, #707070 0%, #757575 100%); */
-  background-color: #565656;
-  box-shadow: 0 3px 6px rgba(0,0,0,0.08);
-  /* transform: translateY(-1px); */
-}
-
-.rag-thread:last-child {
-  border-radius: 8px;  /* ensures bottom corners are rounded */
-}
-
-.list-group-item.current {
-  border: none;
-  /* background: linear-gradient(to right, #7dbff5, #5caaf2); */
-  /* background: linear-gradient(to right, #93edff, #8dd7ff, #ccafff); */
-  /* background: linear-gradient(to right, #71787a, #616c71); */
-  background-color: #666666;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
-  color: #ffffff;
-  padding: 6px 10px;  /* keep same compact size */
-}
-
-.list-group-item.current:hover {
-  border: none;
-  /* background: linear-gradient(to right, #7dbff5, #5caaf2); */
-  /* background: linear-gradient(to right, #60e2ff, hsl(201, 100%, 69%), #b78aff); */
-  background: linear-gradient(to right, rgb(79, 85, 87), #474e4f);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
-  padding: 6px 10px;  /* keep same compact size */
-}
-
-.list-group-item:hover {
-  border: none;
-  /* background: linear-gradient(to right, #7dbff5, #5caaf2); */
-  background: linear-gradient(to right, #616161);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
-  color: #ffffff;
-  padding: 6px 10px;  /* keep same compact size */
-}
-
-.list-group-item.current strong {
-  color: #ffffff;
-}
-
-.thread_name {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #d3d3d3;
-  line-height: 1.2;
-}
-
-.col-10.text-small {
-  font-size: 0.75rem;
-  color: #ffffff;
+  width: 100%;           /* full width, no wrapping */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.list-group-item:hover strong {
-  color: #96d94a;
+.rag-thread:hover {
+  background-color: #565656;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.08);
 }
 
-/* ------------- End of Thread items ------------- */
-
-/* -------------- Scroller ----------------------- */
-#chats {
-  max-height: 80vh;
-  overflow-y: auto;
-  padding-right: 6px;  /* space for scrollbar */
-  box-sizing: content-box; /* make sure padding doesn’t shrink content width */
+.list-group-item.current {
+  background-color: #666666;
+  color: #fff;
+  padding: 6px 10px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
 }
-/* ------------- End of Scroller ---------------- */
+
+/* optional: adjust text inside threads */
+.thread_name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #d3d3d3;
+}
+
+.text-small {
+  font-size: 0.75rem;
+  color: #fff;
+}
+
+/* ------------- End of Thread items ---------------- */
 
 #new-rag-btn {
   /* background-image: radial-gradient( circle 759px at -6.7% 50%,  rgb(110, 156, 105) 0%, rgb(148, 197, 142) 26.2%, rgb(168, 212, 161) 50.6%, rgb(144, 199, 137) 74.1%, rgb(108, 134, 105) 100.3% ); */

@@ -12,7 +12,6 @@ from main.models import Thread, ChatMessage, Document
 from main.utilities.RAG import embedding_model_st, rerank_minilm, rerank_alibaba
 from main.utilities.translation import translate_en_fa
 from main.utilities.variables import *
-from main.utilities.variables import *
 from main.utilities.encryption import *
 from main.utilities.helper_functions import remove_non_printable
 import numpy as np
@@ -214,6 +213,7 @@ class RAGConsumer(AsyncConsumer):
 
 
     def build_payload(self, prompt, *, chat_history=None, rag_contexts=None, context_as_system=False, temperature=0.7):
+        global model_name
         """
         Build payload for LLM request including chat history and RAG contexts
         """
@@ -237,6 +237,7 @@ class RAGConsumer(AsyncConsumer):
                 "content": (
                     "You are an AI assistant that answers questions directly. "
                     "Do not add greetings or extra commentary."
+                    "Use emojies when it is relevant."
                 )
             },
             *chat_history
@@ -250,7 +251,8 @@ class RAGConsumer(AsyncConsumer):
         })
 
         payload = {
-            "model": "Qwen/Qwen3-4B-AWQ",
+            # "model": "/home/farshad/models/Qwen3-4B-AWQ",
+            "model": model_name,
             "messages": messages,
             "stream": True,
             "temperature": temperature,
@@ -432,11 +434,13 @@ class RAGConsumer(AsyncConsumer):
 
 
     def keyword_extractor(self, text, llm_url, keyword_extractor_prompt):
+        global model_name
         client = OpenAI(base_url=llm_url, api_key="not-needed")
         prompt = f"{keyword_extractor_prompt}User: {text}\nKeywords:"
 
         resp = client.chat.completions.create(
-            model="Qwen/Qwen3-4B-AWQ",
+            model=model_name,
+            # model="/home/farshad/models/Qwen3-4B-AWQ",
             messages=[
                 {"role": "system", "content": "You are a keyword extraction assistant."},
                 {"role": "user", "content": prompt}
