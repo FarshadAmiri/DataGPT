@@ -237,7 +237,7 @@ class RAGConsumer(AsyncConsumer):
                 "content": (
                     "You are an AI assistant that answers questions directly. "
                     "Do not add greetings or extra commentary."
-                    "Use emojies when it is relevant."
+                    "Always Use emojies in titles and texts for more beautiful output."
                 )
             },
             *chat_history

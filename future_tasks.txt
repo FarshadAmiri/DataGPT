@@ -3,3 +3,9 @@
 * correct &lt;= &gt;= in showing codes
 
 * test if embedding model works fine ALWAYS when offline
+
+* codes should always be ltr, even when whole response is in persian
+
+* adaptive history size based on messages lengths and llm max token input limit
+
+* response translation become a llm-based and preserves text markdown.
