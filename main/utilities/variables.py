@@ -3,8 +3,9 @@ from pprint import pprint
 
 
 # LLM
-# model_name = "Qwen/Qwen3-4B-AWQ"
-model_name = "Qwen3-4B"
+# model_name = "Qwen3-4B"
+model_name = "Qwen2.5-7B-Instruct-AWQ"
+
 llm_url = "http://localhost:8002/v1"
 
 # Vector DB & Retreival 

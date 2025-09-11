@@ -18,6 +18,7 @@ import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 import aiohttp
 from openai import OpenAI
+import requests
 
 
 class RAGConsumer(AsyncConsumer):
@@ -235,9 +236,12 @@ class RAGConsumer(AsyncConsumer):
             {
                 "role": "system",
                 "content": (
-                    "You are an AI assistant that answers questions directly. "
-                    "Do not add greetings or extra commentary."
-                    "Always Use emojies in titles and texts for more beautiful output."
+                    """You are an AI assistant that answers questions directly.
+                    Always use emojis in titles and headings. Use emojis in the text wherever it makes it more engaging or fun.
+                    Do not skip emojis even if the text is short.
+                    Use emojies in headlines.
+                    Do not add greetings or extra commentary.
+                    Be consistent."""
                 )
             },
             *chat_history
@@ -435,24 +439,29 @@ class RAGConsumer(AsyncConsumer):
 
     def keyword_extractor(self, text, llm_url, keyword_extractor_prompt):
         global model_name
-        client = OpenAI(base_url=llm_url, api_key="not-needed")
-        prompt = f"{keyword_extractor_prompt}User: {text}\nKeywords:"
+        endpoint = llm_url.rstrip("/") + "/chat/completions"
 
-        resp = client.chat.completions.create(
-            model=model_name,
-            # model="/home/farshad/models/Qwen3-4B-AWQ",
-            messages=[
-                {"role": "system", "content": "You are a keyword extraction assistant."},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.7,
-            max_tokens=30,
-            extra_body={  # 👇 disables thinking traces
-                "chat_template_kwargs": {"enable_thinking": False}
-            }
-        )
+        messages = [
+            {"role": "system", "content": "You are a keyword extraction assistant."},
+            {"role": "user", "content": f"{keyword_extractor_prompt}User: {text}\nKeywords:"}
+        ]
+        payload = {
+            "model": model_name,
+            "messages": messages,
+            "temperature": 0.7,
+            "max_tokens": 30,
+            "stream": False,
+            "chat_template_kwargs": {"enable_thinking": False}
+        }
 
-        generated_text = resp.choices[0].message.content.strip()
+        headers = {"Content-Type": "application/json"}
+
+        resp = requests.post(endpoint, json=payload, headers=headers)
+        if resp.status_code != 200:
+            raise RuntimeError(f"Keyword extractor failed {resp.status_code}: {resp.text}")
+
+        data = resp.json()
+        generated_text = data["choices"][0]["message"]["content"].strip()
 
         if "Keywords:" in generated_text:
             extracted_keywords = generated_text.split("Keywords:")[-1].strip()
@@ -461,5 +470,7 @@ class RAGConsumer(AsyncConsumer):
 
         print("Extracted Keywords:", extracted_keywords)
         return extracted_keywords
+
+
 
 

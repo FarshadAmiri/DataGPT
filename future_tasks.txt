@@ -9,3 +9,5 @@
 * adaptive history size based on messages lengths and llm max token input limit
 
 * response translation become a llm-based and preserves text markdown.
+
+* it prints <br> in table fields
