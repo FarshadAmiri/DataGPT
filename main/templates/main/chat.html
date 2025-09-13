@@ -467,11 +467,14 @@
 
 <script>
 var status = "free";
+var scroll_status = 1;
 var copyButtons = document.getElementsByClassName('copy-btn');
 var spinner = document.getElementById("spinner");
 var spinnerLoader = document.getElementById("spinner_loader");
 var spinnerLoader2 = document.getElementById("spinner_loader_2");
 var deleteThreadBtn = document.getElementById("delete-thread-btn");
+let lastScrollTop = 0; // for detecting upward scrolls
+
 
 function copyTextToClipboard(text) {
   var textarea = document.createElement("textarea");
@@ -737,10 +740,11 @@ socket.onmessage = function(e) {
         });
     } else if (chatMsgData.mode === "new") {
       status = "working";
+  scroll_status = 1;
       var field = rag_response.replace('{rag_response}', chatMsgData.message);
       field = field.replace('{time}', "Today  " + time);
       $('#board').append(field);
-      scrollToEnd();
+  scrollToEnd(scroll_status);
       copyButtons = document.getElementsByClassName('copy-btn');
       // Add event listener to each copy button
       Array.from(copyButtons).forEach(function(button) {
@@ -750,6 +754,7 @@ socket.onmessage = function(e) {
         });
       });
     } else if (chatMsgData.mode === "last") {
+      scroll_status = 1;
       var messageId = chatMsgData.message_id;
       const ragResponses = document.getElementsByClassName('rag-response');
       const lastRagResponse = ragResponses[ragResponses.length - 1];
@@ -802,12 +807,19 @@ socket.onmessage = function(e) {
   // Add copy buttons to any new code blocks after streaming update
   if (typeof installCodeCopy === 'function') installCodeCopy(lastRagResponse);
 
-      // ✅ Language direction detection using visible text only (no tags)
-      const visibleText = lastRagResponse.textContent || "";
-      const persianChars = (visibleText.match(/[\u0600-\u06FF\u0750-\u077F]/g) || []).length;
+      // ✅ Language direction detection excluding code blocks (<pre> elements)
+      const tmpNode = lastRagResponse.cloneNode(true);
+      tmpNode.querySelectorAll('pre').forEach(n => n.remove());
+      const visibleText = (tmpNode.textContent || "").trim();
+      const englishChars = (visibleText.match(/[A-Za-z]/g) || []).length;
       const totalChars = visibleText.length || 1;
 
-      if (persianChars / totalChars > 0.3) {
+      if (englishChars / totalChars > 0.3) {
+        // Mostly English → LTR
+        lastRagResponse.style.direction = "ltr";
+        lastRagResponse.style.textAlign = "left";
+      } else {
+        // Otherwise consider Persian → RTL
         lastRagResponse.style.direction = "rtl";
         lastRagResponse.style.textAlign = "right";
         lastRagResponse.style.fontSize = "15px";
@@ -815,12 +827,10 @@ socket.onmessage = function(e) {
         lastRagResponse.style.fontWeight = "bold";
         lastRagResponse.style.lineHeight = 1.65;
         lastRagResponse.style.paddingRight = "10px";
-      } else {
-        lastRagResponse.style.direction = "ltr";
-        lastRagResponse.style.textAlign = "left";
       }
 
       scrollToEndIfNearBottom();
+      // scrollToEnd();
     }
 }
 
@@ -846,47 +856,99 @@ window.onunload = function () {
 
 /*   Scroller function */
 
-function scrollToEnd() {
-    $('#board').stop().animate({
-        scrollTop: $('#board')[0].scrollHeight
-    }, 300);
-  }
+function scrollToEnd(statusArg) {
+  const s = (typeof statusArg === 'number') ? statusArg : scroll_status;
+  if (s !== 1) return;
+  programmaticScroll = true;
+  $('#board').stop().animate({
+    scrollTop: $('#board')[0].scrollHeight
+  }, 300, function() { programmaticScroll = false; });
+}
 
 let userScrolling = false;
 const scrollThreshold = 200; // distance from bottom to still auto-scroll
 
 const $board = $('#board');
+let programmaticScroll = false;   // ignore scroll events from our own animations
+let userScrollIntent = false;     // recent user interaction suggests manual scrolling
+let intentTimeoutId = null;
 
 // Detect user scroll
 $board.on('scroll', function() {
-    userScrolling = true;
+  const currentTop = $board.scrollTop();
+  if (!programmaticScroll) {
+    const upDelta = lastScrollTop - currentTop; // positive if moved up
+    // Lock only when user intended to scroll and actually moved up a bit
+    if (userScrollIntent && upDelta > 2) {
+      scroll_status = 0;
+    }
+  }
+  lastScrollTop = currentTop;
 
-    // Reset after a short delay to allow auto-scroll again
-    clearTimeout($board.data('scrollTimeout'));
-    $board.data('scrollTimeout', setTimeout(() => {
-        userScrolling = false;
-    }, 500)); // 0.5s after user stops, auto-scroll allowed again
+  userScrolling = true;
+  // Reset after a short delay to allow auto-scroll again (only when near bottom)
+  clearTimeout($board.data('scrollTimeout'));
+  $board.data('scrollTimeout', setTimeout(() => {
+    userScrolling = false;
+  }, 500));
+});
+
+// Mark user intent on interactions that typically precede a manual scroll
+$board.on('wheel touchstart pointerdown mousedown', function() {
+  userScrollIntent = true;
+  if (intentTimeoutId) clearTimeout(intentTimeoutId);
+  intentTimeoutId = setTimeout(() => { userScrollIntent = false; }, 800);
+});
+
+document.addEventListener('keydown', (e) => {
+  const upKeys = ['ArrowUp', 'PageUp', 'Home'];
+  if (upKeys.includes(e.key)) {
+    userScrollIntent = true;
+    if (intentTimeoutId) clearTimeout(intentTimeoutId);
+    intentTimeoutId = setTimeout(() => { userScrollIntent = false; }, 800);
+  }
 });
 
 function scrollToEndIfNearBottom() {
-    const scrollTop = $board.scrollTop();
-    const scrollHeight = $board[0].scrollHeight;
-    const clientHeight = $board.innerHeight();
+  if (scroll_status !== 1) return; // respect user scroll-up lock
+  const scrollTop = $board.scrollTop();
+  const scrollHeight = $board[0].scrollHeight;
+  const clientHeight = $board.innerHeight();
 
-    // Only auto-scroll if user is not actively scrolling and near bottom
-    if (!userScrolling && scrollTop + clientHeight >= scrollHeight - scrollThreshold) {
-        $board.stop().animate({
-            scrollTop: scrollHeight
-        }, 450);
-    }
+  // Only auto-scroll if user is not actively scrolling and near bottom
+  if (!userScrolling && scrollTop + clientHeight >= scrollHeight - scrollThreshold) {
+    $board.stop().animate({
+      scrollTop: scrollHeight
+    }, 600);
+  }
 }
 
 /* END of scroller function */
 
 
-function isPersianText(text) {
-  const persianChars = (text.match(/[\u0600-\u06FF\u0750-\u077F]/g) || []).length;
-  return persianChars / text.length > 0.3;
+function isPersianText(input) {
+  let visibleText = '';
+  // If an element is passed, clone and strip <pre> blocks
+  if (input && typeof input === 'object' && input.nodeType === 1) {
+    const tmp = input.cloneNode(true);
+    tmp.querySelectorAll('pre').forEach(n => n.remove());
+    visibleText = (tmp.textContent || '').trim();
+  } else {
+    const str = String(input || '');
+    if (/<pre[\s>]/i.test(str)) {
+      const tmp = document.createElement('div');
+      tmp.innerHTML = str;
+      tmp.querySelectorAll('pre').forEach(n => n.remove());
+      visibleText = (tmp.textContent || '').trim();
+    } else {
+      visibleText = str;
+    }
+  }
+
+  const totalChars = visibleText.length || 1;
+  const englishChars = (visibleText.match(/[A-Za-z]/g) || []).length;
+  // Return true for Persian styling when English proportion is not dominant (>30%)
+  return (englishChars / totalChars) <= 0.3;
 }
 
 // 🔹 simple bold formatter
@@ -1080,8 +1142,8 @@ window.onload = function() {
     // 🔹 insert HTML into DOM
     p.innerHTML = renderedText;
 
-    // 🔹 detect Persian
-    if (isPersianText(p.textContent)) {
+  // 🔹 detect Persian (exclude code blocks)
+  if (isPersianText(p)) {
       p.style.fontFamily = "IranSans";
       p.style.fontSize = '15px';
       p.style.fontWeight = 'bold';
@@ -1245,25 +1307,31 @@ function spinnerDisappears2() {
   });
 
 function inferTextareaLanguage(content) {
-  
-  // Regular expression for matching Persian characters
-  const persianRegex = /[\u0600-\u06FF]/g;
-  
-  // Extracting the first 20 characters
-  const first20Chars = content.slice(0, 20);
-  
-  // Counting the number of Persian characters
-  const persianMatches = first20Chars.match(persianRegex);
-  const persianCount = persianMatches ? persianMatches.length : 0;
-  
-  const totalCharacters = first20Chars.length;
-  const persianPercentage = (persianCount / totalCharacters) * 100;
-  
-  if (persianPercentage >= 70) {
-    return 'Persian';
+  const str = String(content || '');
+
+  let visibleText = '';
+  // If HTML with <pre> blocks is present, strip them via DOM
+  if (/<pre[\s>]/i.test(str)) {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = str;
+    tmp.querySelectorAll('pre').forEach(n => n.remove());
+    visibleText = (tmp.textContent || '').trim();
   } else {
-    return 'English';
+    // Otherwise, strip Markdown-style code from plain text
+    const fencedRe = /```[\s\S]*?```/g;    // triple backtick blocks
+    const inlineRe = /`[^`]*`/g;            // inline backticks
+    const lines = str
+      .replace(fencedRe, '')
+      .replace(inlineRe, '')
+      .split('\n')
+      // drop lines that look like indented code (tabs or >=4 spaces)
+      .filter(line => !/^(\t| {4,})/.test(line));
+    visibleText = lines.join('\n');
   }
+
+  const totalChars = visibleText.length || 1; // avoid divide by zero
+  const englishChars = (visibleText.match(/[A-Za-z]/g) || []).length;
+  return (englishChars / totalChars) > 0.3 ? 'English' : 'Persian';
 }
 
 
@@ -1349,7 +1417,6 @@ function installCodeCopy(root) {
     pre.appendChild(btn);
   });
 }
-
 
 </script>
 </body>
