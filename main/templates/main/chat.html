@@ -467,14 +467,11 @@
 
 <script>
 var status = "free";
-var scroll_status = 1;
 var copyButtons = document.getElementsByClassName('copy-btn');
 var spinner = document.getElementById("spinner");
 var spinnerLoader = document.getElementById("spinner_loader");
 var spinnerLoader2 = document.getElementById("spinner_loader_2");
 var deleteThreadBtn = document.getElementById("delete-thread-btn");
-let lastScrollTop = 0; // for detecting upward scrolls
-
 
 function copyTextToClipboard(text) {
   var textarea = document.createElement("textarea");
@@ -687,7 +684,7 @@ socket.onopen = function(e) {
         lastUserQuery.style.lineHeight = 1.65;
       }
 
-  scrollToEnd(1);
+      scrollToEnd();
       msgInput.val('');
       formData[0].reset();
       spinner.style.display = 'block';
@@ -740,11 +737,10 @@ socket.onmessage = function(e) {
         });
     } else if (chatMsgData.mode === "new") {
       status = "working";
-      scroll_status = 1;
       var field = rag_response.replace('{rag_response}', chatMsgData.message);
       field = field.replace('{time}', "Today  " + time);
       $('#board').append(field);
-  scrollToEnd(scroll_status);
+      scrollToEnd();
       copyButtons = document.getElementsByClassName('copy-btn');
       // Add event listener to each copy button
       Array.from(copyButtons).forEach(function(button) {
@@ -754,7 +750,6 @@ socket.onmessage = function(e) {
         });
       });
     } else if (chatMsgData.mode === "last") {
-      scroll_status = 1;
       var messageId = chatMsgData.message_id;
       const ragResponses = document.getElementsByClassName('rag-response');
       const lastRagResponse = ragResponses[ragResponses.length - 1];
@@ -807,11 +802,8 @@ socket.onmessage = function(e) {
   // Add copy buttons to any new code blocks after streaming update
   if (typeof installCodeCopy === 'function') installCodeCopy(lastRagResponse);
 
-  // ✅ Language direction detection excluding code blocks
-  // Clone node, strip <pre> and <code>, then measure only natural text
-  const tmpNode = lastRagResponse.cloneNode(true);
-  tmpNode.querySelectorAll('pre, code').forEach(n => n.remove());
-  const visibleText = (tmpNode.textContent || "").trim();
+      // ✅ Language direction detection using visible text only (no tags)
+      const visibleText = lastRagResponse.textContent || "";
       const persianChars = (visibleText.match(/[\u0600-\u06FF\u0750-\u077F]/g) || []).length;
       const totalChars = visibleText.length || 1;
 
@@ -826,8 +818,9 @@ socket.onmessage = function(e) {
       } else {
         lastRagResponse.style.direction = "ltr";
         lastRagResponse.style.textAlign = "left";
-      };
-  scrollToEnd(scroll_status);
+      }
+
+      scrollToEndIfNearBottom();
     }
 }
 
@@ -853,13 +846,11 @@ window.onunload = function () {
 
 /*   Scroller function */
 
-function scrollToEnd(statusArg) {
-  const s = (typeof statusArg === 'number') ? statusArg : scroll_status;
-  if (s !== 1) return;
-  $('#board').stop().animate({
-    scrollTop: $('#board')[0].scrollHeight
-  }, 300);
-}
+function scrollToEnd() {
+    $('#board').stop().animate({
+        scrollTop: $('#board')[0].scrollHeight
+    }, 300);
+  }
 
 let userScrolling = false;
 const scrollThreshold = 200; // distance from bottom to still auto-scroll
@@ -868,32 +859,25 @@ const $board = $('#board');
 
 // Detect user scroll
 $board.on('scroll', function() {
-  const currentTop = $board.scrollTop();
-  // If user scrolls up even a little, disable auto-scroll for current stream
-  if (currentTop < lastScrollTop) {
-    scroll_status = 0;
-  }
-  lastScrollTop = currentTop;
+    userScrolling = true;
 
-  userScrolling = true;
-  // Reset after a short delay to allow auto-scroll again (only when near bottom)
-  clearTimeout($board.data('scrollTimeout'));
-  $board.data('scrollTimeout', setTimeout(() => {
-    userScrolling = false;
-  }, 500));
+    // Reset after a short delay to allow auto-scroll again
+    clearTimeout($board.data('scrollTimeout'));
+    $board.data('scrollTimeout', setTimeout(() => {
+        userScrolling = false;
+    }, 500)); // 0.5s after user stops, auto-scroll allowed again
 });
 
 function scrollToEndIfNearBottom() {
-  if (scroll_status !== 1) return; // respect user scroll-up lock
-  const scrollTop = $board.scrollTop();
+    const scrollTop = $board.scrollTop();
     const scrollHeight = $board[0].scrollHeight;
     const clientHeight = $board.innerHeight();
 
     // Only auto-scroll if user is not actively scrolling and near bottom
     if (!userScrolling && scrollTop + clientHeight >= scrollHeight - scrollThreshold) {
-    $board.stop().animate({
-      scrollTop: scrollHeight
-    }, 450);
+        $board.stop().animate({
+            scrollTop: scrollHeight
+        }, 450);
     }
 }
 
