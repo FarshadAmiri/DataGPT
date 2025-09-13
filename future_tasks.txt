@@ -11,3 +11,12 @@
 * response translation become a llm-based and preserves text markdown.
 
 * it prints <br> in table fields
+
+* input should be capacity to extend to multiple lines and next line can be add
+by ctrl + enter in input area
+
+* adaptive use of RAG or Standard - embed functionality into keyword_extractor
+
+* add attribute RAG_Standatd_Adaptive into chat thread model
+
+* code blocks show popular languages correctly: python, sql, css, js, html, c#, c, c++

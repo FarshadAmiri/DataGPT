@@ -835,3 +835,66 @@ pre code {
   border-radius: 6px;
   overflow-x: auto;
 }
+
+
+/* Ensure all code blocks are LTR, while allowing nested spans to manage their own bidi where needed */
+pre,
+pre code {
+  direction: ltr;
+  unicode-bidi: isolate; /* keeps overall block LTR without forcing nested tokens */
+}
+
+pre {
+  background: #0d1117;       /* dark background */
+  color: #e6edf3;             /* light text */
+  padding: 12px 16px;
+  border-radius: 8px;
+  overflow-x: auto;           /* horizontal scroll if needed */
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+code {
+  background: transparent;
+}
+
+/* Ensure ALL code blocks and their contents are never bold, even inside bold Persian containers */
+pre, pre *, code, code * {
+  font-weight: 400 !important;
+}
+
+/* --- Keep code blocks readable inside Persian responses --- */
+/* Override bold/Iransans that may be applied to the Persian text container */
+.rag-response-Fa pre,
+.rag-response-Fa code {
+  font-family: "JetBrains Mono", "Fira Code", Consolas, monospace !important;
+  font-weight: 400 !important; /* prevent bold in code */
+  direction: ltr !important;
+  unicode-bidi: isolate !important;
+  text-align: left !important;
+}
+
+/* Also ensure nested Prism tokens inside Persian responses stay normal weight */
+.rag-response-Fa pre *,
+.rag-response-Fa code * {
+  font-family: "JetBrains Mono", "Fira Code", Consolas, monospace !important;
+  font-weight: 400 !important;
+}
+
+/* Let comments inside code follow their own script direction, so Persian comments render correctly */
+pre code .token.comment {
+  unicode-bidi: plaintext; /* determine base direction from the first strong character of the comment */
+}
+
+/* --- Prism.js background overrides --- */
+pre[class*="language-"] {
+  background-color: #171717 !important;
+}
+pre[class*="language-"] code {
+  background-color: transparent !important;
+}
+/* Optional: inline code with language- */
+code[class*="language-"] {
+  background-color: #171717 !important;
+}

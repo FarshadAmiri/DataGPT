@@ -13,6 +13,12 @@
     <link rel="stylesheet" type="text/css" href="{% static 'css/bootstrap.min.css' %}">
     <link rel="stylesheet" type="text/css" href="{% static 'css/sidebars.css' %}">
     <link rel="stylesheet" type="text/css" href="{% static 'css/main/chat.css' %}">
+    
+    <link rel="stylesheet" type="text/css" href="{% static 'css/prism-tomorrow.css' %}">
+    <script src="{% static 'js/prism.js' %}"></script>
+    <script src="{% static 'js/prism-javascript.js' %}"></script>
+    <script src="{% static 'js/prism-python.js' %}"></script>
+
     <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
     <script src="{% static 'js/sidebars.js' %}"></script>
     <script src="{% static 'crypto-js.js' %}"></script>
@@ -783,6 +789,18 @@ socket.onmessage = function(e) {
       // This handles headings, bold, hr, tables, and now code blocks
       const rendered = renderLightMarkdown(nextRaw);
       lastRagResponse.innerHTML = rendered;
+      // Prism.js: highlight all code blocks after update
+      if (window.Prism) {
+        Prism.highlightAll();
+      }
+
+        // Prism.js: highlight all code blocks after update
+        if (window.Prism) {
+          Prism.highlightAll();
+        }
+
+  // Add copy buttons to any new code blocks after streaming update
+  if (typeof installCodeCopy === 'function') installCodeCopy(lastRagResponse);
 
       // ✅ Language direction detection using visible text only (no tags)
       const visibleText = lastRagResponse.textContent || "";
@@ -859,7 +877,7 @@ function scrollToEndIfNearBottom() {
     if (!userScrolling && scrollTop + clientHeight >= scrollHeight - scrollThreshold) {
         $board.stop().animate({
             scrollTop: scrollHeight
-        }, 360);
+        }, 450);
     }
 }
 
@@ -887,6 +905,13 @@ function escapeHtml(str) {
     .replace(/'/g, "&#39;");
 }
 
+// Decode any pre-escaped HTML entities so we don't double-escape them later
+function decodeHtmlEntities(str) {
+  const txt = document.createElement('textarea');
+  txt.innerHTML = str;
+  return txt.value;
+}
+
 // Inline markdown (bold) for a line
 function applyInlineFormatting(text) {
   // **bold**
@@ -898,7 +923,8 @@ function applyInlineFormatting(text) {
 // - Horizontal rule: --- / *** / ___ (optional)
 // - Bold: **text**
 function renderLightMarkdown(raw) {
-  const safe = escapeHtml(raw).replace(/\r\n?/g, "\n");
+  const decoded = decodeHtmlEntities(raw);
+  const safe = escapeHtml(decoded).replace(/\r\n?/g, "\n");
   const lines = safe.split("\n");
   const out = [];
 
@@ -926,7 +952,8 @@ function renderLightMarkdown(raw) {
 
 
 function renderLightMarkdown(raw) {
-  const safe = escapeHtml(raw).replace(/\r\n?/g, "\n");
+  const decoded = decodeHtmlEntities(raw);
+  const safe = escapeHtml(decoded).replace(/\r\n?/g, "\n");
   const lines = safe.split("\n");
   const out = [];
 
@@ -943,7 +970,7 @@ function renderLightMarkdown(raw) {
       if (!inCodeBlock) {
         inCodeBlock = true;
         codeLang = codeBlockStart[1] || "";
-        out.push(`<pre><code class="language-${codeLang}">`);
+        out.push(`<pre><code class="language-python">`);
       } else {
         inCodeBlock = false;
         codeLang = "";
@@ -954,8 +981,8 @@ function renderLightMarkdown(raw) {
     }
 
     if (inCodeBlock) {
-      // inside code block, preserve spaces and escape HTML
-      out.push(escapeHtml(line) + "\n");
+      // inside code block, content is already escaped once in `safe`; avoid double-escaping
+      out.push(line + "\n");
       i++;
       continue;
     }
@@ -1084,6 +1111,12 @@ window.onload = function() {
     var lastContainer = containers[containers.length - 1];
     lastContainer.scrollIntoView();
   }
+  // Prism.js: highlight all code blocks after initial load
+  if (window.Prism) {
+    Prism.highlightAll();
+  }
+  // Add copy buttons to code blocks on initial load
+  if (typeof installCodeCopy === 'function') installCodeCopy();
 };
 
 
@@ -1272,6 +1305,49 @@ function updateTemperatureLabel() {
   const slider = document.getElementById("temperature");
   const label = document.getElementById("temperatureValue");
   label.textContent = parseFloat(slider.value).toFixed(2);
+}
+
+// Minimal ChatGPT-like copy button for code blocks (text-only)
+function installCodeCopy(root) {
+  const scope = root || document;
+  scope.querySelectorAll('pre > code').forEach((code) => {
+    const pre = code.parentElement;
+    if (!pre || pre.querySelector('.code-copy-btn')) return;
+    // Ensure positioning context
+    if (!pre.style.position) pre.style.position = 'relative';
+    const btn = document.createElement('button');
+    btn.className = 'code-copy-btn';
+    btn.type = 'button';
+    btn.title = 'Copy code';
+    btn.textContent = 'Copy code';
+    // Inline styling to avoid CSS edits
+    Object.assign(btn.style, {
+      position: 'absolute', top: '8px', right: '8px',
+      background: 'rgba(32,34,37,0.85)', border: 'none', borderRadius: '6px',
+      padding: '4px 8px', cursor: 'pointer', zIndex: 10, color: '#ffffff',
+      fontSize: '12px', lineHeight: '1.2'
+    });
+    btn.addEventListener('mouseenter', () => { btn.style.background = '#444'; });
+    btn.addEventListener('mouseleave', () => { btn.style.background = 'rgba(32,34,37,0.85)'; });
+    btn.addEventListener('click', (e) => {
+      e.preventDefault(); e.stopPropagation();
+      const text = code.innerText;
+      (navigator.clipboard?.writeText(text) || Promise.reject())
+        .then(() => {
+          btn.textContent = 'Copied';
+          setTimeout(() => { btn.textContent = 'Copy code'; }, 1100);
+        })
+        .catch(() => {
+          const ta = document.createElement('textarea');
+          ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px';
+          document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+          document.body.removeChild(ta);
+          btn.textContent = 'Copied';
+          setTimeout(() => { btn.textContent = 'Copy code'; }, 1100);
+        });
+    });
+    pre.appendChild(btn);
+  });
 }
 
 
