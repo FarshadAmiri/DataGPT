@@ -818,6 +818,11 @@ socket.onmessage = function(e) {
         // Mostly English → LTR
         lastRagResponse.style.direction = "ltr";
         lastRagResponse.style.textAlign = "left";
+        lastRagResponse.style.fontSize = "16px";
+        lastRagResponse.style.fontFamily = "Tahoma";
+        lastRagResponse.style.fontWeight = "normal";
+        lastRagResponse.style.lineHeight = 1.65;
+        lastRagResponse.style.paddingRight = "10px";
       } else {
         // Otherwise consider Persian → RTL
         lastRagResponse.style.direction = "rtl";
@@ -919,7 +924,7 @@ function scrollToEndIfNearBottom() {
   if (!userScrolling && scrollTop + clientHeight >= scrollHeight - scrollThreshold) {
     $board.stop().animate({
       scrollTop: scrollHeight
-    }, 600);
+    }, 700);
   }
 }
 

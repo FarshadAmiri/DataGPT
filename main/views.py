@@ -61,7 +61,7 @@ def chat_view(request, thread_id=None):
         for thread in threads:
             if ChatMessage.objects.filter(thread__id=thread.id).count() > 0:
                 txt = ChatMessage.objects.filter(thread__id=thread.id).latest('timestamp').message[:80]
-                msg_initial_words = get_first_words(txt, 45) + "..."
+                msg_initial_words = get_first_words(txt, 40) + "..."
                 threads_preview[thread.id] = msg_initial_words
             else:
                 threads_preview[thread.id] = "Empty chat"
