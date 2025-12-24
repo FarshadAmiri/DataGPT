@@ -11,17 +11,33 @@ Ask questions in plain English and get answers from:
 
 The LLM automatically generates the right SQL/Pandas queries and returns actual data, not hallucinations.
 
-## Key features
+## Core Capabilities
 
-- Real-time streaming chat (like ChatGPT)
-- Multiple collection types - documents, databases, or Excel files
-- Smart query generation with auto-retry on errors
-- Data inspection - when a query returns nothing, it checks what values actually exist
-- Per-collection schema analysis (LLM-generated descriptions of your data)
-- Reindex capability for database/Excel collections when schema changes
-- Response contexts modal - see the actual queries and raw results
-- RSA + AES encryption for client-server communication
-- Dark theme UI
+**Intelligent Retrieval**
+- Vector-based semantic search across documents (RAG)
+- Context-aware chunking with similarity scoring and reranking
+- Automatic source attribution with citation tracking
+
+**Database Intelligence**
+- Automatic schema discovery and LLM-powered analysis for SQL databases (MySQL, PostgreSQL, SQLite) and MongoDB
+- Natural language to SQL/NoSQL query translation
+- Adaptive retry logic with error correction - learns from failed queries
+- Schema reindexing for evolving database structures
+
+**Spreadsheet Analysis**
+- Pandas-based querying for Excel/CSV files (up to 5 files per collection)
+- Automatic data profiling - column types, null analysis, unique value detection
+- Smart data inspection - suggests correct values when queries return empty results
+
+**Query Transparency**
+- Response contexts modal displays actual SQL/Pandas queries and raw results
+- Real-time query execution tracking with attempt history
+- No black boxes - see exactly what's being queried
+
+**Security & Performance**
+- End-to-end encryption (RSA + AES-ECB) for all client-server communication
+- WebSocket-based streaming for low-latency responses
+- Per-collection access control with user permissions
 
 ## Tech stack
 
