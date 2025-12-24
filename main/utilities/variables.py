@@ -15,6 +15,9 @@ max_n_retreivals = 4
 rerank_score_threshold = -8.0
 history_size = 3
 
+# Database/Excel Query Settings
+MAX_QUERY_RETRIES = 7  # Maximum attempts to generate and execute correct query
+
 # stop_sequence = "User:"
 stop_sequence = "Human:"
 

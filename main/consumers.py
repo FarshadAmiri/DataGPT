@@ -579,7 +579,10 @@ The query results above are the authoritative source. If it says "14", your answ
             generate_database_query, execute_sql_query, execute_mongodb_query,
             execute_pandas_query, format_query_results
         )
-        from main.utilities.variables import llm_url
+        from main.utilities.variables import llm_url, MAX_QUERY_RETRIES
+        
+        # Use configured max retries
+        max_retries = MAX_QUERY_RETRIES
         
         # Get collection information
         collection = await self.get_base_collection()
@@ -765,12 +768,48 @@ The query results above are the authoritative source. If it says "14", your answ
                     return formatted_results, source_nodes_dict
                 else:
                     print(f"Query execution failed: {result}")
-                    # Store failed query info
-                    error_label = f"Error (Attempt {attempt + 1})"
-                    source_nodes_dict[error_label] = f"Query: {query}\n\nError: {result}"
                     
-                    # Store error for next attempt
-                    previous_error = f"Query: {query}\nError: {result}"
+                    # Analyze the error to provide better feedback
+                    error_type = "Unknown error"
+                    error_hint = ""
+                    
+                    if "SyntaxError" in result:
+                        error_type = "Syntax Error"
+                        if "unterminated string" in result:
+                            error_hint = "CRITICAL: You have an unterminated string literal. Check for missing quotes (' or \").\nExample of error: dfs['name] should be dfs['name']\nCarefully review ALL string literals in your code."
+                        elif "invalid syntax" in result:
+                            error_hint = "CRITICAL: Invalid Python syntax. Check for missing brackets, parentheses, or incorrect operators."
+                    elif "KeyError" in result:
+                        error_type = "Key Error"
+                        error_hint = "The DataFrame key or column name doesn't exist. Double-check the exact names from the schema."
+                    elif "NameError" in result:
+                        error_type = "Name Error"
+                        error_hint = "Variable or function name not defined. Only use 'dfs', 'pd', and built-in functions."
+                    
+                    # Store failed query info with enhanced feedback
+                    error_label = f"Error (Attempt {attempt + 1})"
+                    source_nodes_dict[error_label] = f"Query: {query}\n\nError Type: {error_type}\nError: {result}"
+                    
+                    # Enhanced error message for next attempt
+                    previous_error = f"""❌ PREVIOUS ATTEMPT FAILED - {error_type}
+
+Query that FAILED:
+{query}
+
+Error Message:
+{result}
+
+{error_hint}
+
+🔧 WHAT YOU MUST DO DIFFERENTLY:
+1. READ the error message carefully - it tells you EXACTLY what's wrong
+2. FIX the specific issue mentioned (don't just retry the same broken code)
+3. For syntax errors: carefully check quotes, brackets, parentheses
+4. For key errors: verify the exact DataFrame key and column names from schema
+5. Test your logic: does the query make sense?
+
+Generate a CORRECTED query that fixes this specific error."""
+                    
                     query_counter += 1
                     
                     if attempt < max_retries - 1:

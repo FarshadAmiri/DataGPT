@@ -819,7 +819,9 @@ CRITICAL RULES - YOU MUST FOLLOW THESE EXACTLY:
 5. Use proper JOINs only when needed and ensure join columns exist in both tables
 6. Query should be safe (no DROP, DELETE, UPDATE, INSERT, etc.)
 7. Add LIMIT 100 to prevent excessive results
-8. Double-check column names match the schema exactly (case-sensitive)"""
+8. Double-check column names match the schema exactly (case-sensitive)
+9. SYNTAX CRITICAL: Check for typos, missing commas, unmatched parentheses
+10. LOGIC CRITICAL: Verify the query answers the actual question"""
     
     elif db_type == 'mongodb':
         query_type = "MongoDB"
@@ -830,7 +832,8 @@ CRITICAL RULES:
 2. Use ONLY collection and field names from the schema above
 3. Use proper MongoDB query syntax
 4. Query should be safe (no delete operations)
-5. Limit results to 100 documents"""
+5. Limit results to 100 documents
+6. SYNTAX CRITICAL: Proper Python dict syntax with matching braces"""
     
     else:  # Excel/CSV
         query_type = "Pandas"
@@ -845,15 +848,32 @@ CRITICAL RULES:
 6. Use ONLY column names that exist in the schema above
 7. Use pandas operations for data manipulation (filtering, grouping, value_counts, etc.)
 8. Keep code safe (no file I/O, no imports)
-9. Example for counting: result = dfs['filename_Sheet1']['Country'].value_counts()
-10. Example for filtering: result = len(dfs['filename_Sheet1'][dfs['filename_Sheet1']['Country'] == 'France'])
+9. SYNTAX CRITICAL: All strings must have matching quotes - 'text' or "text" (not 'text or text")
+10. SYNTAX CRITICAL: All brackets must be balanced - [] () {}
+11. Example for counting: result = dfs['filename_Sheet1']['Country'].value_counts()
+12. Example for filtering: result = len(dfs['filename_Sheet1'][dfs['filename_Sheet1']['Country'] == 'France'])
 
 IMPORTANT: Check the schema for the exact dataframe_key and use it correctly!"""
     
     # Add error context if this is a retry
     error_context = ""
     if previous_error:
-        error_context = f"\n\nIMPORTANT - Your previous query failed with this error:\n{previous_error}\n\nPlease fix the error by:\n1. Checking column names exist in the schema\n2. Using correct table aliases\n3. Ensuring JOIN columns exist in both tables\n4. Verifying all column references are valid\n\nGenerate a corrected query that fixes this specific error."
+        error_context = f"""
+
+⚠️ CRITICAL - YOUR PREVIOUS QUERY FAILED:
+{previous_error}
+
+🚫 DO NOT GENERATE THE SAME BROKEN QUERY AGAIN!
+✅ You MUST fix the specific error mentioned above.
+
+If the error says 'unterminated string', FIX your quotes.
+If the error says 'KeyError', use the EXACT column name from schema.
+If the error says 'SyntaxError', carefully review Python syntax.
+
+📝 REMEMBER: You are trying to answer the user's question below.
+Generate a CORRECTED query that:
+1. Fixes the error
+2. Actually answers the user's question"""
     
     prompt = f"""You are a {query_type} query generation assistant.
 
