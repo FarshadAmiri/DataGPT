@@ -93,13 +93,13 @@ html, body {
   -webkit-text-fill-color: transparent;
   justify-content: center;
   align-items: center;
-  padding-left: 30px;
+  padding-left: 10px;
   padding-top: 10px;
 }
 
 #page_title:hover {
   background-color: rgba(0, 0, 0, 0.0);
-  border-radius: 30px;
+  /* border-radius: 30px; */
   color: rgb(138, 228, 246);
 }
 
