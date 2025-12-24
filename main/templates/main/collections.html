@@ -69,24 +69,70 @@
   </div>
   <div class="col-lg-8 col-md-12" style="margin-bottom: 0px; padding-bottom: 0px;">
   <div class="messages">
-  <table class="table">
-    <thead>
-      <tr>
-        <th>Document Name</th>
-        <th>Date created</th>
-        <th>User created</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for document in documents %}
-      <tr>
-        <td>{{ document.name }}</td>
-        <td>{{ document.time_created }}</td>
-        <td>{{ document.user.username }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  
+  {% if active_collection_type == 'database' or active_collection_type == 'excel' %}
+    <!-- Database/Excel Collection: Show Schema Analysis -->
+    <div class="schema-analysis-container" style="padding: 20px; background-color: #1a1a1a00; border-radius: 8px;">
+      <h4 style="margin-bottom: 20px; color: #17a2b8; font-weight: bold;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-database" viewBox="0 0 16 16" style="margin-right: 8px;">
+          <path d="M4.318 2.687C5.234 2.271 6.536 2 8 2s2.766.27 3.682.687C12.644 3.125 13 3.627 13 4c0 .374-.356.875-1.318 1.313C10.766 5.729 9.464 6 8 6s-2.766-.27-3.682-.687C3.356 4.875 3 4.373 3 4c0-.374.356-.875 1.318-1.313M13 5.698V7c0 .374-.356.875-1.318 1.313C10.766 8.729 9.464 9 8 9s-2.766-.27-3.682-.687C3.356 7.875 3 7.373 3 7V5.698c.271.202.58.378.904.525C4.978 6.711 6.427 7 8 7s3.022-.289 4.096-.777A5 5 0 0 0 13 5.698M14 4c0-1.007-.875-1.755-1.904-2.223C11.022 1.289 9.573 1 8 1s-3.022.289-4.096.777C2.875 2.245 2 2.993 2 4v9c0 1.007.875 1.755 1.904 2.223C4.978 15.71 6.427 16 8 16s3.022-.289 4.096-.777C13.125 14.755 14 14.007 14 13zm-1 4.698V10c0 .374-.356.875-1.318 1.313C10.766 11.729 9.464 12 8 12s-2.766-.27-3.682-.687C3.356 10.875 3 10.373 3 10V8.698c.271.202.58.378.904.525C4.978 9.71 6.427 10 8 10s3.022-.289 4.096-.777A5 5 0 0 0 13 8.698m0 3V13c0 .374-.356.875-1.318 1.313C10.766 14.729 9.464 15 8 15s-2.766-.27-3.682-.687C3.356 13.875 3 13.373 3 13v-1.302c.271.202.58.378.904.525C4.978 12.71 6.427 13 8 13s3.022-.289 4.096-.777c.324-.147.633-.323.904-.525"/>
+        </svg>
+        {% if active_collection_type == 'database' %}
+          Database Schema Analysis
+          {% if db_type %}<span style="font-size: 0.9em; color: #2da3f1; margin-left: 10px;">( {{ db_type|upper }} )</span>{% endif %}
+        {% else %}
+          Excel/CSV Schema Analysis
+        {% endif %}
+      </h4>
+      
+      {% if db_schema_analysis %}
+        <div class="schema-content" style="background-color: #30303000; padding: 20px; border-radius: 6px; max-height: 600px; overflow-y: auto;">
+          {{ db_schema_analysis|markdown_to_html }}
+        </div>
+        
+        {% if db_extra_knowledge %}
+        <div class="extra-knowledge" style="margin-top: 20px;">
+          <h5 style="color: #ffc107; margin-bottom: 10px; font-weight: bold;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-info-circle" viewBox="0 0 16 16" style="margin-right: 6px;">
+              <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>
+              <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533z"/>
+              <path d="M9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0"/>
+            </svg>
+            Additional Knowledge (Provided by Supervisor)
+          </h5>
+          <div style="background-color: #3d3d00; padding: 15px; border-radius: 6px; border-left: 4px solid #ffc107;">
+            <p style="margin: 0; white-space: pre-wrap; word-wrap: break-word; font-size: 14px; line-height: 1.5; color: #ffecb3;">{{ db_extra_knowledge }}</p>
+          </div>
+        </div>
+        {% endif %}
+      {% else %}
+        <div class="alert alert-warning" role="alert" style="background-color: #3d3d00; color: #ffecb3; border: 1px solid #ffc107;">
+          <strong>No schema analysis available.</strong> The schema may not have been analyzed during collection creation.
+        </div>
+      {% endif %}
+    </div>
+  {% else %}
+    <!-- Document-based Collection: Show Documents Table -->
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Document Name</th>
+          <th>Date created</th>
+          <th>User created</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for document in documents %}
+        <tr>
+          <td>{{ document.name }}</td>
+          <td>{{ document.time_created }}</td>
+          <td>{{ document.user.username }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+  
   </div>
   {% comment %} <div class="chat-box">
     <div class="messages" id="board">
@@ -138,13 +184,36 @@
   <div class="d-flex flex-column flex-shrink-0 p-3 text-white bg-dark sidebar" style="margin-right: 0;">
   <h3 id="collection-name-right-sidebar">{{ active_collection_name }}</h3>
   <span class="small_text">Created by <span class="small_text_ylw">@{{ active_collection_creator }}</span></span>
+  {% if active_collection_type %}
+  <span class="small_text" style="margin-top: 5px;">
+    Type: <span class="small_text_ylw">
+      {% if active_collection_type == 'database' %}Database{% elif active_collection_type == 'excel' %}Excel/CSV{% else %}Document{% endif %}
+    </span>
+  </span>
+  {% endif %}
   <hr>
   <ul class="nav nav-pills flex-column">
+    {% if active_collection_type == 'document' or not active_collection_type %}
     <li class="nav-item">
       <a href="{% url 'main:collection_add_docs' active_collection_id %}" id="add-docs-btn" class="nav-link active text-center" aria-current="page" data-bs-toggle="modal" data-bs-target="#addDocsModal" data-bs-whatever="@getbootstrap">
         Add new documents
       </a>
     </li>
+    {% endif %}
+    {% if active_collection_type == 'database' or active_collection_type == 'excel' %}
+    <li class="nav-item">
+      <button id="reindex-collection-btn" class="btn btn-warning nav-link active text-center" style="width: 100%; border: none;" data-collection-id="{{ active_collection_id }}" data-collection-name="{{ active_collection_name }}">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-repeat" viewBox="0 0 16 16" style="margin-right: 5px;">
+          <path d="M11.534 7h3.932a.25.25 0 0 1 .192.41l-1.966 2.36a.25.25 0 0 1-.384 0l-1.966-2.36a.25.25 0 0 1 .192-.41m-11 2h3.932a.25.25 0 0 0 .192-.41L2.692 6.23a.25.25 0 0 0-.384 0L.342 8.59A.25.25 0 0 0 .534 9"/>
+          <path fill-rule="evenodd" d="M8 3c-1.552 0-2.94.707-3.857 1.818a.5.5 0 1 1-.771-.636A6.002 6.002 0 0 1 13.917 7H12.9A5 5 0 0 0 8 3M3.1 9a5.002 5.002 0 0 0 8.757 2.182.5.5 0 1 1 .771.636A6.002 6.002 0 0 1 2.083 9z"/>
+        </svg>
+        <span id="reindex-btn-text">Reindex Schema</span>
+        <div class="spinner-border spinner-border-sm" role="status" id="reindex-spinner" style="display: none; margin-left: 8px;">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+      </button>
+    </li>
+    {% endif %}
     <li class="nav-item" style="margin-top: 14px;">
       <a href="{% url 'main:delete_collection' active_collection_id %}" id="delete-collection-btn" class="btn btn-danger nav-link active text-center">
         Delete this collection
@@ -157,25 +226,95 @@
 {% endif %}
 </div>
 </div>
+
+<!-- Reindex Status Alert -->
+<div id="reindex-alert" class="alert" role="alert" style="position: fixed; top: 20px; right: 20px; z-index: 9999; display: none; min-width: 300px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); border-radius: 8px;">
+  <div style="display: flex; align-items: center; justify-content: space-between;">
+    <div style="display: flex; align-items: center;">
+      <span id="reindex-alert-icon" style="margin-right: 10px; font-size: 1.5em;"></span>
+      <span id="reindex-alert-message" style="font-weight: 500;"></span>
+    </div>
+    <button type="button" class="btn-close" onclick="closeReindexAlert()" aria-label="Close" style="margin-left: 15px;"></button>
+  </div>
+</div>
+
 <div class="modal fade" id="newCollectionModal" tabindex="0" aria-labelledby="newCollection" aria-hidden="true">
-  <div class="modal-dialog">
+  <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="newCollection">Create a new collection</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" data-bs-newCollectionName="{{ new_collection_name }}"></button>
       </div>
       <div class="modal-body">
-        <form action="{%  url 'main:create_collection' %}" method="post" enctype="multipart/form-data">
+        <form action="{%  url 'main:create_collection' %}" method="post" enctype="multipart/form-data" id="collection-create-form">
         {% csrf_token %}
           <div class="mb-3">
             <label for="new-collection-name" class="col-form-label">Collection name</label>
             <input type="text" class="form-control" id="new-collection-name" name="new-collection-name">
           </div>
+          
           <div class="mb-3">
-            <label for="docForm" class="form-label">Add primary knowledge sources (you can add later)</label>
-            <input class="form-control" type="file" id="docForm" name="files" multiple>
+            <label for="collection-type" class="col-form-label">Collection Type</label>
+            <select class="form-select" id="collection-type" name="collection-type" onchange="toggleCollectionTypeFields()">
+              <option value="document" selected>Document-based (RAG)</option>
+              <option value="database">Database-backed</option>
+              <option value="excel">Excel/CSV-backed</option>
+            </select>
           </div>
-          <div id="uploadedDocuments" class="mt-3"></div>
+          
+          <!-- Document-based fields -->
+          <div id="document-fields">
+            <div class="mb-3">
+              <label for="docForm" class="form-label">Add primary knowledge sources (you can add later)</label>
+              <input class="form-control" type="file" id="docForm" name="files" multiple>
+            </div>
+            <div id="uploadedDocuments" class="mt-3"></div>
+          </div>
+          
+          <!-- Database-backed fields -->
+          <div id="database-fields" style="display: none;">
+            <div class="mb-3">
+              <label for="db-type" class="col-form-label">Database Type</label>
+              <select class="form-select" id="db-type" name="db-type">
+                <option value="sqlite">SQLite</option>
+                <option value="mysql">MySQL</option>
+                <option value="postgresql">PostgreSQL</option>
+                <option value="mongodb">MongoDB</option>
+              </select>
+            </div>
+            
+            <div class="mb-3" id="db-file-field">
+              <label for="db-file" class="form-label">Database File</label>
+              <input class="form-control" type="file" id="db-file" name="db-file" accept=".db,.sqlite,.sqlite3">
+              <small class="form-text text-muted">Upload SQLite database file</small>
+            </div>
+            
+            <div class="mb-3" id="db-connection-field" style="display: none;">
+              <label for="db-connection-string" class="col-form-label">Connection String</label>
+              <input type="text" class="form-control" id="db-connection-string" name="db-connection-string" placeholder="e.g., mysql://user:pass@localhost:3306/dbname">
+              <small class="form-text text-muted">Format: protocol://user:password@host:port/database</small>
+            </div>
+            
+            <div class="mb-3">
+              <label for="db-extra-knowledge" class="col-form-label">Additional Information (Optional)</label>
+              <textarea class="form-control" id="db-extra-knowledge" name="db-extra-knowledge" rows="3" placeholder="Provide any additional context about the database, tables, relationships, or query patterns..."></textarea>
+            </div>
+          </div>
+          
+          <!-- Excel/CSV-backed fields -->
+          <div id="excel-fields" style="display: none;">
+            <div class="mb-3">
+              <label for="excel-files" class="form-label">Excel/CSV Files (Max 5)</label>
+              <input class="form-control" type="file" id="excel-files" name="excel-files" multiple accept=".xlsx,.xls,.csv">
+              <small class="form-text text-muted">Upload up to 5 Excel or CSV files</small>
+            </div>
+            
+            <div class="mb-3">
+              <label for="excel-extra-knowledge" class="col-form-label">Additional Information (Optional)</label>
+              <textarea class="form-control" id="excel-extra-knowledge" name="excel-extra-knowledge" rows="3" placeholder="Provide any additional context about the data structure, relationships between files, or query patterns..."></textarea>
+            </div>
+          </div>
+          
       </div>
       <div class="modal-footer">
         <div class="spinner-border text-primary" id="spinner_loader" role="status" style="display: none;">
@@ -322,6 +461,152 @@ function spinnerDisappears() {
 function spinnerDisappears2() {
   spinnerLoader2.style.display = 'none' ;
 }
+
+function toggleCollectionTypeFields() {
+  var collectionType = document.getElementById("collection-type").value;
+  var documentFields = document.getElementById("document-fields");
+  var databaseFields = document.getElementById("database-fields");
+  var excelFields = document.getElementById("excel-fields");
+  
+  // Hide all fields first
+  documentFields.style.display = "none";
+  databaseFields.style.display = "none";
+  excelFields.style.display = "none";
+  
+  // Show relevant fields
+  if (collectionType === "document") {
+    documentFields.style.display = "block";
+  } else if (collectionType === "database") {
+    databaseFields.style.display = "block";
+    toggleDatabaseConnectionFields();
+  } else if (collectionType === "excel") {
+    excelFields.style.display = "block";
+  }
+}
+
+function toggleDatabaseConnectionFields() {
+  var dbType = document.getElementById("db-type").value;
+  var dbFileField = document.getElementById("db-file-field");
+  var dbConnectionField = document.getElementById("db-connection-field");
+  
+  if (dbType === "sqlite") {
+    dbFileField.style.display = "block";
+    dbConnectionField.style.display = "none";
+  } else {
+    dbFileField.style.display = "none";
+    dbConnectionField.style.display = "block";
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  var dbTypeSelect = document.getElementById("db-type");
+  if (dbTypeSelect) {
+    dbTypeSelect.addEventListener('change', toggleDatabaseConnectionFields);
+  }
+  
+  // Reindex collection handler
+  var reindexBtn = document.getElementById('reindex-collection-btn');
+  if (reindexBtn) {
+    reindexBtn.addEventListener('click', function(event) {
+      event.preventDefault();
+      
+      var collectionId = this.getAttribute('data-collection-id');
+      var collectionName = this.getAttribute('data-collection-name');
+      var btnText = document.getElementById('reindex-btn-text');
+      var spinner = document.getElementById('reindex-spinner');
+      
+      // Disable button and show spinner
+      reindexBtn.disabled = true;
+      btnText.textContent = 'Reindexing...';
+      spinner.style.display = 'inline-block';
+      
+      // Make AJAX request to reindex
+      fetch("{% url 'main:reindex_collection' active_collection_id %}", {
+        method: 'GET',
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      })
+      .then(response => {
+        if (response.ok) {
+          // Success
+          showReindexAlert('success', '✓ Schema reindexed successfully!', collectionName);
+          // Reload page after 1.5 seconds to show updated schema
+          setTimeout(() => {
+            window.location.reload();
+          }, 1500);
+        } else {
+          // Error
+          showReindexAlert('error', '✗ Failed to reindex schema. Please try again.', collectionName);
+          resetReindexButton();
+        }
+      })
+      .catch(error => {
+        console.error('Reindex error:', error);
+        showReindexAlert('error', '✗ An error occurred during reindexing.', collectionName);
+        resetReindexButton();
+      });
+    });
+  }
+});
+
+function resetReindexButton() {
+  var reindexBtn = document.getElementById('reindex-collection-btn');
+  var btnText = document.getElementById('reindex-btn-text');
+  var spinner = document.getElementById('reindex-spinner');
+  
+  if (reindexBtn) {
+    reindexBtn.disabled = false;
+    btnText.textContent = 'Reindex Schema';
+    spinner.style.display = 'none';
+  }
+}
+
+function showReindexAlert(type, message, collectionName) {
+  var alert = document.getElementById('reindex-alert');
+  var icon = document.getElementById('reindex-alert-icon');
+  var msg = document.getElementById('reindex-alert-message');
+  
+  // Set icon and colors based on type
+  if (type === 'success') {
+    alert.className = 'alert alert-success';
+    alert.style.backgroundColor = '#155724';
+    alert.style.borderColor = '#28a745';
+    alert.style.color = '#d4edda';
+    icon.textContent = '✓';
+    icon.style.color = '#28a745';
+  } else {
+    alert.className = 'alert alert-danger';
+    alert.style.backgroundColor = '#721c24';
+    alert.style.borderColor = '#dc3545';
+    alert.style.color = '#f8d7da';
+    icon.textContent = '✗';
+    icon.style.color = '#dc3545';
+  }
+  
+  msg.textContent = message;
+  alert.style.display = 'block';
+  
+  // Auto-hide after 5 seconds (unless success, which reloads)
+  if (type !== 'success') {
+    setTimeout(() => {
+      closeReindexAlert();
+    }, 5000);
+  }
+}
+
+function closeReindexAlert() {
+  var alert = document.getElementById('reindex-alert');
+  alert.style.display = 'none';
+}
+
+// Add event listener for database type change
+document.addEventListener('DOMContentLoaded', function() {
+  var dbTypeSelect = document.getElementById("db-type");
+  if (dbTypeSelect) {
+    dbTypeSelect.addEventListener("change", toggleDatabaseConnectionFields);
+  }
+});
 
 </script>
 </body>

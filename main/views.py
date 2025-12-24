@@ -107,9 +107,10 @@ def chat_view(request, thread_id=None):
         active_thread_name = active_thread.name
         rag_docs = active_thread.docs.all()
         base_collection_name = None if active_thread.base_collection == None else active_thread.base_collection.name
+        base_collection_type = None if active_thread.base_collection == None else active_thread.base_collection.collection_type
         print(f"\ncollections: {collections}\n")
         context = {"chat_threads": threads, "active_thread_id": thread_id, "active_thread_name": active_thread_name, "rag_docs": rag_docs,
-                   "base_collection_name": base_collection_name ,"messages": messages, "threads_preview": threads_preview, 'collections': collections,}
+                   "base_collection_name": base_collection_name, "base_collection_type": base_collection_type, "messages": messages, "threads_preview": threads_preview, 'collections': collections,}
         print(f"\n\n{active_thread_name}\n\n")
         return render(request, 'main/chat.html', context)
 
@@ -239,7 +240,11 @@ def collections_view(request, collection_id=None,):
         collection = Collection.objects.get(id=collection_id)
         documents = collection.docs.all()
         context = {"collections": collections, "active_collection_id": collection.id, "active_collection_name": collection.name,
-                    "active_collection_creator": collection.user_created, "documents": documents,}
+                    "active_collection_creator": collection.user_created, "documents": documents,
+                    "active_collection_type": collection.collection_type,
+                    "db_schema_analysis": collection.db_schema_analysis,
+                    "db_type": collection.db_type,
+                    "db_extra_knowledge": collection.db_extra_knowledge,}
         return render(request, 'main/collections.html', context)
 
 
@@ -249,53 +254,249 @@ def collection_create_view(request,):
     user = request.user
     if request.method == "POST":
         global collections_path
-        uploaded_files = request.FILES.getlist('files')
         collection_name = request.POST.get("new-collection-name", None)
+        collection_type = request.POST.get("collection-type", "document")
+        
         if collection_name == all_docs_collection_name:
             random_characters = ''.join(random.choices(string.ascii_letters + string.digits, k=5))
-            collection_name +=  random_characters
+            collection_name += random_characters
 
-        allowed_groups = Group.objects.all() # Can be specified by user while creation
+        allowed_groups = Group.objects.all()  # Can be specified by user while creation
         
-        collection_path = os.path.join(collections_path, f'collection_{collection_name}')
-        docs_path = os.path.join(collection_path, "docs")
-        create_rag(collection_path)
-        create_folder(docs_path)
-        create_all_docs_collection()
+        # Handle different collection types
+        if collection_type == "document":
+            # Original document-based collection logic
+            uploaded_files = request.FILES.getlist('files')
+            collection_path = os.path.join(collections_path, f'collection_{collection_name}')
+            docs_path = os.path.join(collection_path, "docs")
+            create_rag(collection_path)
+            create_folder(docs_path)
+            create_all_docs_collection()
 
-        index = index_builder(collection_path)
-        all_docs_index = index_builder(all_docs_collection_path)
-        collection_vdb = Collection.objects.create(user_created=user, name=collection_name, description=None, loc=collection_path)
+            index = index_builder(collection_path)
+            all_docs_index = index_builder(all_docs_collection_path)
+            collection_vdb = Collection.objects.create(
+                user_created=user, 
+                name=collection_name, 
+                description=None, 
+                loc=collection_path,
+                collection_type='document'
+            )
 
-        all_docs_collection_vdb = Collection.objects.get(name=all_docs_collection_name)
-        collection_vdb.allowed_groups.set(allowed_groups)
-        for file in uploaded_files:
-            file_name = file.name
-            print(f"\nfile_name: {file_name} is in progress...\n")
-            doc_path = os.path.join(docs_path, file_name)
-            doc_path = default_storage.get_available_name(doc_path)
-            default_storage.save(doc_path, ContentFile(file.read()))
+            all_docs_collection_vdb = Collection.objects.get(name=all_docs_collection_name)
+            collection_vdb.allowed_groups.set(allowed_groups)
+            
+            for file in uploaded_files:
+                file_name = file.name
+                print(f"\nfile_name: {file_name} is in progress...\n")
+                doc_path = os.path.join(docs_path, file_name)
+                doc_path = default_storage.get_available_name(doc_path)
+                default_storage.save(doc_path, ContentFile(file.read()))
 
-            document = SimpleDirectoryReader(input_files=[doc_path]).load_data()
-            doc_sha256 = hash_file(doc_path)["sha256"]
+                document = SimpleDirectoryReader(input_files=[doc_path]).load_data()
+                doc_sha256 = hash_file(doc_path)["sha256"]
 
-            doc_obj = Document.objects.create(user=user, name=file_name, public=False,
-                                              description=None, loc=doc_path, sha256=doc_sha256)
-            # Create indexes
-            if doc_sha256 not in all_docs_collection_vdb.docs.values_list("sha256", flat=True):
-                for idx, chunked_doc in enumerate(document):
-                    doc = llama_index_doc(text=chunked_doc.text, id_=f"{doc_obj.id}_{idx}")
-                    index.insert(doc)
-                    all_docs_index.insert(doc)
-                all_docs_collection_vdb.docs.add(doc_obj)
-                collection_vdb.docs.add(doc_obj)
+                doc_obj = Document.objects.create(user=user, name=file_name, public=False,
+                                                  description=None, loc=doc_path, sha256=doc_sha256)
+                # Create indexes
+                if doc_sha256 not in all_docs_collection_vdb.docs.values_list("sha256", flat=True):
+                    for idx, chunked_doc in enumerate(document):
+                        doc = llama_index_doc(text=chunked_doc.text, id_=f"{doc_obj.id}_{idx}")
+                        index.insert(doc)
+                        all_docs_index.insert(doc)
+                    all_docs_collection_vdb.docs.add(doc_obj)
+                    collection_vdb.docs.add(doc_obj)
+                else:
+                    for idx, chunked_doc in enumerate(document):
+                        doc = llama_index_doc(text=chunked_doc.text, id_=f"{doc_obj.id}_{idx}")
+                        index.insert(doc)
+                    collection_vdb.docs.add(doc_obj)
+        
+        elif collection_type == "database":
+            # Database-backed collection
+            from main.utilities.database_utils import (
+                analyze_sqlite_schema, analyze_mysql_schema, 
+                analyze_postgresql_schema, analyze_mongodb_schema,
+                generate_schema_analysis_text
+            )
+            from main.utilities.variables import llm_url
+            
+            db_type = request.POST.get("db-type", "sqlite")
+            db_extra_knowledge = request.POST.get("db-extra-knowledge", "")
+            
+            collection_path = os.path.join(collections_path, f'collection_{collection_name}')
+            create_folder(collection_path)
+            
+            # Handle database connection
+            if db_type == "sqlite":
+                db_file = request.FILES.get('db-file')
+                if db_file:
+                    db_file_path = os.path.join(collection_path, db_file.name)
+                    default_storage.save(db_file_path, ContentFile(db_file.read()))
+                    
+                    # Analyze schema
+                    schema_dict = analyze_sqlite_schema(db_file_path)
+                    schema_analysis = generate_schema_analysis_text(schema_dict, llm_url, db_extra_knowledge)
+                    
+                    collection_vdb = Collection.objects.create(
+                        user_created=user,
+                        name=collection_name,
+                        description=None,
+                        loc=collection_path,
+                        collection_type='database',
+                        db_type=db_type,
+                        db_connection_string=db_file_path,
+                        db_schema_analysis=schema_analysis,
+                        db_extra_knowledge=db_extra_knowledge
+                    )
             else:
-                for idx, chunked_doc in enumerate(document):
-                    doc = llama_index_doc(text=chunked_doc.text, id_=f"{doc_obj.id}_{idx}")
-                    index.insert(doc)
-                collection_vdb.docs.add(doc_obj)
+                # MySQL, PostgreSQL, MongoDB
+                db_connection_string = request.POST.get("db-connection-string", "")
+                
+                try:
+                    # Analyze schema based on database type
+                    if db_type == "mysql":
+                        schema_dict = analyze_mysql_schema(db_connection_string)
+                    elif db_type == "postgresql":
+                        schema_dict = analyze_postgresql_schema(db_connection_string)
+                    elif db_type == "mongodb":
+                        schema_dict = analyze_mongodb_schema(db_connection_string)
+                    else:
+                        schema_dict = {"error": "Unsupported database type"}
+                    
+                    schema_analysis = generate_schema_analysis_text(schema_dict, llm_url, db_extra_knowledge)
+                    
+                    collection_vdb = Collection.objects.create(
+                        user_created=user,
+                        name=collection_name,
+                        description=None,
+                        loc=collection_path,
+                        collection_type='database',
+                        db_type=db_type,
+                        db_connection_string=db_connection_string,
+                        db_schema_analysis=schema_analysis,
+                        db_extra_knowledge=db_extra_knowledge
+                    )
+                except Exception as e:
+                    print(f"Error analyzing database schema: {e}")
+                    # Create collection anyway with error message
+                    collection_vdb = Collection.objects.create(
+                        user_created=user,
+                        name=collection_name,
+                        description=None,
+                        loc=collection_path,
+                        collection_type='database',
+                        db_type=db_type,
+                        db_connection_string=db_connection_string,
+                        db_schema_analysis=f"Error analyzing schema: {str(e)}",
+                        db_extra_knowledge=db_extra_knowledge
+                    )
+            
+            collection_vdb.allowed_groups.set(allowed_groups)
+        
+        elif collection_type == "excel":
+            # Excel/CSV-backed collection
+            from main.utilities.database_utils import analyze_excel_files, generate_schema_analysis_text
+            from main.utilities.variables import llm_url
+            
+            excel_files = request.FILES.getlist('excel-files')[:5]  # Max 5 files
+            excel_extra_knowledge = request.POST.get("excel-extra-knowledge", "")
+            
+            collection_path = os.path.join(collections_path, f'collection_{collection_name}')
+            create_folder(collection_path)
+            
+            # Save Excel/CSV files
+            file_paths = []
+            for file in excel_files:
+                file_path = os.path.join(collection_path, file.name)
+                default_storage.save(file_path, ContentFile(file.read()))
+                file_paths.append(file_path)
+            
+            # Analyze schema
+            schema_dict = analyze_excel_files(file_paths)
+            schema_analysis = generate_schema_analysis_text(schema_dict, llm_url, excel_extra_knowledge)
+            
+            collection_vdb = Collection.objects.create(
+                user_created=user,
+                name=collection_name,
+                description=None,
+                loc=collection_path,
+                collection_type='excel',
+                excel_file_paths=file_paths,
+                db_schema_analysis=schema_analysis,
+                db_extra_knowledge=excel_extra_knowledge
+            )
+            
+            collection_vdb.allowed_groups.set(allowed_groups)
 
         return redirect('main:collection', collection_id=collection_vdb.id)
+
+
+@login_required(login_url='users:login')
+@user_passes_test(lambda user: user.is_admin() or user.is_advanced_user() or user.is_superuser)
+def collection_reindex_view(request, collection_id):
+    user = request.user
+    collection_id = int(collection_id)
+    collection = Collection.objects.get(id=collection_id)
+    
+    # Check permissions
+    if user.is_advanced_user() and not (user.is_admin() or user.is_superuser):
+        if collection.user_created != user:
+            return redirect('main:main_collection')
+    
+    # Only reindex database and Excel collections
+    if collection.collection_type not in ['database', 'excel']:
+        return redirect('main:collection', collection_id=collection_id)
+    
+    from main.utilities.database_utils import (
+        analyze_sqlite_schema, analyze_mysql_schema,
+        analyze_postgresql_schema, analyze_mongodb_schema,
+        analyze_excel_files, generate_schema_analysis_text
+    )
+    from main.utilities.variables import llm_url
+    
+    try:
+        if collection.collection_type == 'database':
+            db_type = collection.db_type
+            db_connection_string = collection.db_connection_string
+            db_extra_knowledge = collection.db_extra_knowledge or ""
+            
+            # Re-analyze schema based on database type
+            if db_type == 'sqlite':
+                schema_dict = analyze_sqlite_schema(db_connection_string)
+            elif db_type == 'mysql':
+                schema_dict = analyze_mysql_schema(db_connection_string)
+            elif db_type == 'postgresql':
+                schema_dict = analyze_postgresql_schema(db_connection_string)
+            elif db_type == 'mongodb':
+                schema_dict = analyze_mongodb_schema(db_connection_string)
+            else:
+                schema_dict = {"error": "Unsupported database type"}
+            
+            # Generate new schema analysis
+            schema_analysis = generate_schema_analysis_text(schema_dict, llm_url, db_extra_knowledge)
+            
+            # Update collection
+            collection.db_schema_analysis = schema_analysis
+            collection.save()
+            
+        elif collection.collection_type == 'excel':
+            file_paths = collection.excel_file_paths or []
+            excel_extra_knowledge = collection.db_extra_knowledge or ""
+            
+            # Re-analyze Excel files
+            schema_dict = analyze_excel_files(file_paths)
+            schema_analysis = generate_schema_analysis_text(schema_dict, llm_url, excel_extra_knowledge)
+            
+            # Update collection
+            collection.db_schema_analysis = schema_analysis
+            collection.save()
+        
+        print(f"Collection '{collection.name}' schema successfully reindexed.")
+    except Exception as e:
+        print(f"Error reindexing collection schema: {e}")
+    
+    return redirect('main:collection', collection_id=collection_id)
 
 
 @login_required(login_url='users:login')

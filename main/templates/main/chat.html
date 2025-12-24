@@ -265,6 +265,15 @@
         <div>
           <!-- Mode Selection -->
           <div class="mb-3">
+            {% if base_collection_type == 'database' or base_collection_type == 'excel' %}
+            <div class="btn-group" role="group" aria-label="Chat Mode">
+              <input type="radio" class="btn-check" name="chatMode" id="modeStandard" value="standard" onchange="updateMode()">
+              <label class="btn btn-outline-primary" for="modeStandard">Standard</label>
+    
+              <input type="radio" class="btn-check" name="chatMode" id="modeDatabase" value="database" checked onchange="updateMode()">
+              <label class="btn btn-outline-primary" for="modeDatabase">Database</label>
+            </div>
+            {% else %}
             <div class="btn-group" role="group" aria-label="Chat Mode">
               <input type="radio" class="btn-check" name="chatMode" id="modeStandard" value="standard" onchange="updateMode()">
               <label class="btn btn-outline-primary" for="modeStandard">Standard</label>
@@ -272,6 +281,7 @@
               <input type="radio" class="btn-check" name="chatMode" id="modeRag" value="rag" checked onchange="updateMode()">
               <label class="btn btn-outline-primary" for="modeRag">RAG</label>
             </div>
+            {% endif %}
           </div>
     
           <!-- Temperature Slider -->
@@ -575,8 +585,8 @@ const rag_response = '<div class="container">' +
 '<button class="context-btn" aria-current="page" data-bs-toggle="modal" data-bs-target="#contextModal" onclick="getContext(this)"><img id="context-icon"></button>' +
 '</div>'
 
-const contextField = '<label for="{context_id}" class="col-form-label" style="color: #000000">{context_label}</label>' + 
-'<textarea type="text" class="form-control" rows="5" id="{context_id}" disabled>{context_text}</textarea>'
+const contextField = '<label for="{context_id}" class="col-form-label" style="color: #000000; font-weight: bold;">{context_label}</label>' + 
+'<textarea type="text" class="form-control" rows="{rows}" id="{context_id}" style="font-family: monospace; font-size: 12px; white-space: pre-wrap;" disabled>{context_text}</textarea>'
 
 function decrypt_text(text) {
     var aesRawKey = localStorage.getItem("aesRawKey_rag");
@@ -731,9 +741,20 @@ socket.onmessage = function(e) {
           var encryptedContextText = encryptedContexts[encryptedKey];
           var contextText = decrypt_text(encryptedContextText)
           
+          // Determine number of rows based on content length and type
+          var rows = 5;  // default
+          if (key.toLowerCase().includes('query')) {
+            // For queries, use fewer rows initially
+            rows = Math.min(10, Math.max(3, Math.ceil(contextText.split('\n').length)));
+          } else if (key.toLowerCase().includes('result') || key.toLowerCase().includes('error')) {
+            // For results and errors, use more rows
+            rows = Math.min(20, Math.max(8, Math.ceil(contextText.split('\n').length)));
+          }
+          
           var context = contextField.replace("{context_id}", contextId);
           context = context.replace("{context_label}", contextLabel);
           context = context.replace("{context_text}", contextText);
+          context = context.replace("{rows}", rows);
           
           var contextDiv = document.getElementById("context-div");
           contextDiv.innerHTML += context;
@@ -1344,7 +1365,7 @@ function updateMode() {
     const mode = document.querySelector('input[name="chatMode"]:checked').value;
     const ragSection = document.getElementById("ragArgumentsContainer");
 
-    if (mode === "rag") {
+    if (mode === "rag" || mode === "database") {
         // Show
         ragSection.style.display = "block";
         // Allow a tiny delay for CSS transition to apply

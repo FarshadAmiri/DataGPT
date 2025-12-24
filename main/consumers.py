@@ -1,6 +1,9 @@
 import asyncio
 import json
 import threading
+import os
+import re
+from typing import Dict, Tuple
 from django.contrib.auth import get_user_model
 from channels.consumer import AsyncConsumer
 from channels.db import database_sync_to_async
@@ -58,7 +61,7 @@ class RAGConsumer(AsyncConsumer):
         username = self.user.username
         encrypted_message = dict_data.get("encrypted_message")
         encrypted_aes_key = dict_data.get("encrypted_aes_key")
-        chat_mode = dict_data.get("chat_mode")  # "standard" or "rag"
+        chat_mode = dict_data.get("chat_mode")  # "standard", "rag", or "database"
         similarity_cutoff = float(dict_data.get("similarity_cutoff", 0.0))  # convert to float
         rerank_enabled = dict_data.get("rerank")
         temperature = float(dict_data.get("temperature", 0.7))  # convert to float
@@ -95,6 +98,7 @@ class RAGConsumer(AsyncConsumer):
 
 
         # ---- RAG retrieval ----
+        source_nodes_dict = {}
         if chat_mode == "rag":
             extracted_query = self.keyword_extractor(query, llm_url, keyword_extractor_prompt)
             print(f"\n\nextracted_query: {extracted_query}\n\n")
@@ -104,7 +108,6 @@ class RAGConsumer(AsyncConsumer):
             chunk_texts = results.get("documents", [])
             chunk_embs = np.array(results.get("embeddings", []))
 
-            source_nodes_dict = {}
             top_chunks = []
             top_chunks_with_scores = []
 
@@ -168,14 +171,24 @@ class RAGConsumer(AsyncConsumer):
                 rag_contexts = "No relevant context found."
             
 
+        elif chat_mode == "database":
+            # Database-powered mode
+            rag_contexts_str, source_nodes_dict = await self._handle_database_query(query)
+            # Wrap in list since build_payload expects a list
+            rag_contexts = [rag_contexts_str] if rag_contexts_str else []
+            
         elif chat_mode == "standard":
             rag_contexts = None
 
         # print("self.history:\n", self.history)
         
+        # For database mode, mark it so we can prioritize database results over history
+        is_database_mode = (chat_mode == "database")
+        
         try:
             full_response = await self.stream_llm_response(llm_url, query, username, aes_key, temperature=temperature, 
-                                                            chat_history=self.history, rag_contexts=rag_contexts, context_as_system=True)
+                                                            chat_history=self.history, rag_contexts=rag_contexts, 
+                                                            context_as_system=True, is_database_mode=is_database_mode)
         except Exception as e:
             print("Streaming error:", e)
             full_response = ""
@@ -183,9 +196,11 @@ class RAGConsumer(AsyncConsumer):
         print("\n\nRESPONSE GENERATION COMPLETED\n\n")
         try:
             full_response = full_response.strip()
-            if chat_mode=="rag":
+            if chat_mode == "rag":
                 message_id = await self.create_chat_message(full_response, rag_response=True, source_nodes=json.dumps(source_nodes_dict))
-            elif chat_mode=="standard":
+            elif chat_mode == "database":
+                message_id = await self.create_chat_message(full_response, rag_response=True, source_nodes=json.dumps(source_nodes_dict))
+            elif chat_mode == "standard":
                 message_id = await self.create_chat_message(full_response, rag_response=True)
 
             await self.send({
@@ -213,46 +228,129 @@ class RAGConsumer(AsyncConsumer):
             yield token
 
 
-    def build_payload(self, prompt, *, chat_history=None, rag_contexts=None, context_as_system=False, temperature=0.7):
+    def build_payload(self, prompt, *, chat_history=None, rag_contexts=None, context_as_system=False, temperature=0.7, is_database_mode=False):
         global model_name
         """
         Build payload for LLM request including chat history and RAG contexts
+        For database mode, prioritizes fresh query results over potentially wrong chat history
         """
         # Ensure defaults
         chat_history = chat_history or []
         rag_contexts = rag_contexts or []
 
-        # Prepare context message from RAG results
+        # Prepare context message from RAG/Database results
         rag_text = "\n\n".join(rag_contexts) if rag_contexts else ""
-        if rag_text:
-            rag_message = {
-                "role": "system" if context_as_system else "user",
-                "content": f"Context information:\n{rag_text}"
-            }
+        
+        # Detect if this is database/Excel results
+        # For SQL: look for SELECT, Columns:, COUNT(*)
+        # For Pandas/Excel: check if is_database_mode is True (since it's set for both database and excel)
+        has_database_results = (
+            "SELECT" in rag_text or "Columns:" in rag_text or "COUNT(*)" in rag_text or
+            "dfs[" in rag_text or  # Pandas DataFrame query
+            is_database_mode  # Trust the flag when explicitly set
+        )
+        
+        if is_database_mode and has_database_results:
+            # DATABASE MODE: Fresh query results take ABSOLUTE PRIORITY
+            # Limit chat history to prevent accumulation of wrong answers
+            # Only keep last 2 exchanges (4 messages) to maintain context but minimize false info
+            limited_history = chat_history[-4:] if len(chat_history) > 4 else chat_history
+            
+            # Extract the actual numeric result if present
+            result_number = None
+            if "**RESULT:" in rag_text:
+                import re
+                match = re.search(r'\*\*RESULT:\s*(\d+)\*\*', rag_text)
+                if match:
+                    result_number = match.group(1)
+            
+            messages = [
+                {
+                    "role": "system",
+                    "content": (
+                        """You are an AI assistant that answers questions using database/Excel query results.
+                        
+                        ABSOLUTE PRIORITY RULES - THESE OVERRIDE EVERYTHING:
+                        1. The database/Excel query results provided below are the ONLY source of truth
+                        2. IGNORE any conflicting information from chat history
+                        3. If chat history says "5 people" but query shows "2 people", use "2 people"
+                        4. NEVER use numbers, names, or data from previous messages if query provides fresh data
+                        5. Chat history is ONLY for understanding context, NOT for data values
+                        6. Trust ONLY the query results - they are authoritative and current
+                        7. Do NOT make up, hallucinate, or invent any data
+                        8. If query result shows 14, the answer is 14, not any other number
+                        9. When query returns a number, that IS the answer - state it directly
+                        10. Excel/Pandas queries return actual data from the files - trust them completely
+                        11. Look for **RESULT:** in the query results - that is the direct answer
+                        
+                        Formatting:
+                        - Use emojis in titles and headings
+                        - Be clear and direct
+                        - Show the actual data from the query
+                        - If the query result is a number, state it in your answer"""
+                    )
+                },
+                # Put database results FIRST as a system message (highest priority)
+                {
+                    "role": "system",
+                    "content": f"""CURRENT QUERY RESULTS (USE THIS DATA - IT IS THE TRUTH):
+{rag_text}
+
+⚠️ CRITICAL: The data above is fresh from the database/Excel file RIGHT NOW. Use ONLY this data for your answer.
+If previous chat messages have different numbers or data, IGNORE them - they may be outdated or wrong.
+The query results above are the authoritative source. If it says "14", your answer MUST include "14".
+{'THE ANSWER IS: ' + result_number if result_number else ''}"""
+                },
+                # Then add limited chat history (for context only)
+                *limited_history,
+                # Finally the user's current question with INJECTED ANSWER if we have it
+                {
+                    "role": "user",
+                    "content": f"{prompt}\n\n{'IMPORTANT: The answer from the query is: ' + result_number + '. Use this number in your response.' if result_number else 'Reminder: Use ONLY the database results provided above. Ignore any conflicting data from chat history.'}"
+                }
+            ]
         else:
-            rag_message = None
+            # REGULAR MODE (RAG or Standard): Original behavior
+            if rag_text:
+                context_prefix = "Context information:"
+                rag_message = {
+                    "role": "system" if context_as_system else "user",
+                    "content": f"{context_prefix}\n{rag_text}\n\nIMPORTANT: Answer using ONLY the data above. Do not add, modify, or invent any data."
+                }
+            else:
+                rag_message = None
 
-        messages = [
-            {
-                "role": "system",
-                "content": (
-                    """You are an AI assistant that answers questions directly.
-                    Always use emojis in titles and headings. Use emojis in the text wherever it makes it more engaging or fun.
-                    Do not skip emojis even if the text is short.
-                    Use emojies in headlines.
-                    Do not add greetings or extra commentary.
-                    Be consistent."""
-                )
-            },
-            *chat_history
-        ]
-        if rag_message:
-            messages.append(rag_message)
+            messages = [
+                {
+                    "role": "system",
+                    "content": (
+                        """You are an AI assistant that answers questions directly and honestly.
+                        
+                        CRITICAL RULES:
+                        1. ONLY use information from the provided context - NEVER make up or hallucinate data
+                        2. If context shows database results, use ONLY those exact results
+                        3. Do NOT invent, assume, or fabricate any data not in the context
+                        4. If you don't have enough information, say so clearly
+                        5. Be honest about any errors or limitations
+                        6. Always use emojis in titles and headings to make it engaging
+                        7. Do not add greetings or extra commentary
+                        8. Be consistent and accurate
+                        
+                        When presenting database results:
+                        - Show only the data provided in the context
+                        - Do not make up additional rows or values
+                        - If filters were applied, respect them exactly"""
+                    )
+                },
+                *chat_history
+            ]
+            if rag_message:
+                messages.append(rag_message)
 
-        messages.append({
-            "role": "user",
-            "content": prompt
-        })
+            messages.append({
+                "role": "user",
+                "content": prompt
+            })
 
         payload = {
             # "model": "/home/farshad/models/Qwen3-4B-AWQ",
@@ -270,7 +368,7 @@ class RAGConsumer(AsyncConsumer):
 
 
     async def stream_llm_response(self, llm_url, prompt, username, aes_key,
-                                temperature=0.7, chat_history=None, rag_contexts=None, context_as_system=False):
+                                temperature=0.7, chat_history=None, rag_contexts=None, context_as_system=False, is_database_mode=False):
         """
         Stream response from LLM API and send over WebSocket in chunks
         """
@@ -280,7 +378,8 @@ class RAGConsumer(AsyncConsumer):
             chat_history=chat_history,
             rag_contexts=rag_contexts,
             context_as_system=context_as_system,
-            temperature=temperature
+            temperature=temperature,
+            is_database_mode=is_database_mode
         )
 
         headers = {"Content-Type": "application/json"}
@@ -470,6 +569,236 @@ class RAGConsumer(AsyncConsumer):
 
         print("Extracted Keywords:", extracted_keywords)
         return extracted_keywords
+
+    async def _handle_database_query(self, user_question: str, max_retries: int = 3) -> Tuple[str, Dict[str, str]]:
+        """
+        Handle database-powered queries with retry logic
+        Returns (formatted_results, source_nodes_dict) where source_nodes_dict contains queries and results
+        """
+        from main.utilities.database_utils import (
+            generate_database_query, execute_sql_query, execute_mongodb_query,
+            execute_pandas_query, format_query_results
+        )
+        from main.utilities.variables import llm_url
+        
+        # Get collection information
+        collection = await self.get_base_collection()
+        
+        if not collection:
+            return "Error: No database collection associated with this thread.", {}
+        
+        collection_type = collection.collection_type
+        
+        if collection_type not in ['database', 'excel']:
+            return "Error: This collection is not database-backed.", {}
+        
+        # Get schema analysis
+        schema_analysis = collection.db_schema_analysis
+        db_type = collection.db_type if collection_type == 'database' else 'excel'
+        
+        if not schema_analysis:
+            return "Error: No schema analysis available for this database.", {}
+        
+        # Track all queries and results
+        source_nodes_dict = {}
+        query_counter = 1
+        previous_error = None  # Track error from previous attempt
+        
+        # Generate and execute query with retry logic
+        for attempt in range(max_retries):
+            try:
+                print(f"\n[Attempt {attempt + 1}/{max_retries}] Generating database query...")
+                
+                # Generate query using LLM, passing previous error if any
+                query = await asyncio.get_event_loop().run_in_executor(
+                    None,
+                    generate_database_query,
+                    user_question,
+                    schema_analysis,
+                    db_type,
+                    llm_url,
+                    self.history,
+                    previous_error
+                )
+                
+                if not query:
+                    if attempt < max_retries - 1:
+                        continue
+                    return "Error: Failed to generate query for your question.", source_nodes_dict
+                
+                print(f"Generated query: {query}")
+                
+                # Store the query in source_nodes_dict
+                query_label = f"Query #{query_counter}" if query_counter > 1 else "Query"
+                source_nodes_dict[query_label] = query
+                
+                # Execute query based on database type
+                if collection_type == 'database':
+                    if db_type in ['sqlite', 'mysql', 'postgresql']:
+                        success, result = await asyncio.get_event_loop().run_in_executor(
+                            None,
+                            execute_sql_query,
+                            db_type,
+                            collection.db_connection_string,
+                            query
+                        )
+                    elif db_type == 'mongodb':
+                        # Parse query string to dict
+                        try:
+                            import ast
+                            query_dict = ast.literal_eval(query)
+                            # Extract collection name from query or use default
+                            # For now, we'll need to parse this from the query
+                            success, result = await asyncio.get_event_loop().run_in_executor(
+                                None,
+                                execute_mongodb_query,
+                                collection.db_connection_string,
+                                "default",  # TODO: Extract collection name from query
+                                query_dict
+                            )
+                        except Exception as e:
+                            success = False
+                            result = f"Failed to parse MongoDB query: {str(e)}"
+                    else:
+                        success = False
+                        result = f"Unsupported database type: {db_type}"
+                
+                elif collection_type == 'excel':
+                    file_paths = collection.excel_file_paths or []
+                    success, result = await asyncio.get_event_loop().run_in_executor(
+                        None,
+                        execute_pandas_query,
+                        file_paths,
+                        query
+                    )
+                
+                if success:
+                    # Check if result is empty/zero for Excel queries - might need data inspection
+                    should_inspect_data = False
+                    if collection_type == 'excel':
+                        if isinstance(result, (int, float)) and result == 0:
+                            should_inspect_data = True
+                        elif isinstance(result, list) and len(result) == 0:
+                            should_inspect_data = True
+                    
+                    # If Excel query returned 0, inspect the data to find similar values
+                    if should_inspect_data and attempt == 0:  # Only on first attempt
+                        print("[Data Inspection] Query returned 0, checking for similar values...")
+                        
+                        # Send a message to user that we're inspecting data
+                        await self.send({
+                            "type": "websocket.send",
+                            "text": json.dumps({
+                                "message": "🔍 Analyzing data to find relevant values...",
+                                "username": "system",
+                                "mode": "status"
+                            })
+                        })
+                        
+                        # Extract column name from query (look for patterns like ['ColumnName'])
+                        column_match = re.search(r"\['(\w+)'\]\s*==", query)
+                        if column_match:
+                            column_name = column_match.group(1)
+                            print(f"[Data Inspection] Extracting unique values for column: {column_name}")
+                            
+                            # Get the DataFrame key from schema
+                            file_paths_list = collection.excel_file_paths or []
+                            if file_paths_list:
+                                # Extract filename and construct DataFrame key
+                                first_file = file_paths_list[0]
+                                file_base = os.path.splitext(os.path.basename(first_file))[0]
+                                df_key = f"{file_base}_Sheet1"  # Assuming Sheet1 for now
+                                
+                                # Query to get unique values for that column
+                                inspection_query = f"result = dfs['{df_key}']['{column_name}'].unique().tolist()"
+                                
+                                try:
+                                    inspect_success, unique_values = await asyncio.get_event_loop().run_in_executor(
+                                        None,
+                                        execute_pandas_query,
+                                        file_paths_list,
+                                        inspection_query
+                                    )
+                                    
+                                    if inspect_success and unique_values:
+                                        print(f"[Data Inspection] Found unique values: {unique_values}")
+                                        
+                                        # Add inspection results to context
+                                        inspection_info = f"\n\n📊 DATA INSPECTION:\nThe column '{column_name}' contains these unique values: {unique_values}\n"
+                                        inspection_info += f"Your query searched for a value that doesn't exist. Try one of the actual values listed above."
+                                        
+                                        source_nodes_dict["Data Inspection"] = f"Column '{column_name}' unique values: {unique_values}"
+                                        
+                                        # Add to previous_error so next attempt knows about available values
+                                        previous_error = f"Query returned 0 results.\n\nAvailable values in '{column_name}' column: {unique_values}\n\nPlease modify the query to use one of these exact values."
+                                        query_counter += 1
+                                        
+                                        # Continue to retry with this information
+                                        continue
+                                except Exception as inspect_error:
+                                    print(f"[Data Inspection] Failed: {inspect_error}")
+                    
+                    # Format results for LLM to use
+                    formatted_results = format_query_results(result, db_type)
+                    
+                    # Store raw results in source_nodes_dict
+                    result_label = f"Raw Result #{query_counter}" if query_counter > 1 else "Raw Result"
+                    
+                    # Convert result to string format for display
+                    if db_type in ['sqlite', 'mysql', 'postgresql']:
+                        # Format SQL results as table
+                        if isinstance(result, dict) and 'columns' in result and 'rows' in result:
+                            raw_display = f"Columns: {', '.join(result['columns'])}\n\n"
+                            raw_display += "Rows:\n"
+                            for row in result['rows'][:50]:  # Limit to first 50 rows for display
+                                raw_display += str(row) + "\n"
+                            if len(result['rows']) > 50:
+                                raw_display += f"\n... ({len(result['rows']) - 50} more rows)"
+                    elif db_type == 'mongodb':
+                        raw_display = json.dumps(result, indent=2)[:2000]  # Limit to 2000 chars
+                    else:  # Excel/Pandas
+                        raw_display = str(result)[:2000]  # Limit to 2000 chars
+                    
+                    source_nodes_dict[result_label] = raw_display
+                    
+                    print(f"Query executed successfully. Results:\n{formatted_results[:500]}...")
+                    return formatted_results, source_nodes_dict
+                else:
+                    print(f"Query execution failed: {result}")
+                    # Store failed query info
+                    error_label = f"Error (Attempt {attempt + 1})"
+                    source_nodes_dict[error_label] = f"Query: {query}\n\nError: {result}"
+                    
+                    # Store error for next attempt
+                    previous_error = f"Query: {query}\nError: {result}"
+                    query_counter += 1
+                    
+                    if attempt < max_retries - 1:
+                        # Continue to next attempt with error context
+                        continue
+                    return f"Error executing query after {max_retries} attempts: {result}", source_nodes_dict
+            
+            except Exception as e:
+                print(f"Exception in database query handling: {e}")
+                error_label = f"Exception (Attempt {attempt + 1})"
+                source_nodes_dict[error_label] = str(e)
+                
+                # Store exception for next attempt
+                previous_error = f"Exception: {str(e)}"
+                query_counter += 1
+                if attempt < max_retries - 1:
+                    continue
+                return f"Error: {str(e)}", source_nodes_dict
+        
+        return "Error: Failed to execute database query after multiple attempts.", source_nodes_dict
+
+    @database_sync_to_async
+    def get_base_collection(self):
+        """Get the base collection for the current thread"""
+        from main.models import Collection
+        if self.thread.base_collection:
+            return self.thread.base_collection
+        return None
 
 
 

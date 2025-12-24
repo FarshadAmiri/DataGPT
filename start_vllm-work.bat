@@ -1,3 +1,2 @@
 @echo off
 wsl -e bash -ic "cd ~ && source vllm-venv/bin/activate && python -m vllm.entrypoints.openai.api_server --host 0.0.0.0 --port 8002 --model /home/user_1/models/Qwen2.5-7B-Instruct-AWQ --served-model-name Qwen2.5-7B-Instruct-AWQ --dtype auto --quantization awq --max-model-len 16384 --gpu-memory-utilization 0.80 --enforce-eager --swap-space 1; exec bash"
-vllm_commands.txt
