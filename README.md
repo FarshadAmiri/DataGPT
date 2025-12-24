@@ -1,6 +1,6 @@
-# RAG Chat Application
+# DataGPT
 
-A Django-based chat interface that lets you query different data sources using natural language. Built with WebSockets for real-time streaming responses.
+Chat with your data sources using natural language. Query documents, databases, and spreadsheets through a single interface - no SQL or coding required.
 
 ## What it does
 
