@@ -93,26 +93,24 @@
     <div class="row">
       <div class="col-lg-2 col-md-12" style="padding: 0;" id="left-sidebar">
         <div class="d-flex flex-column flex-shrink-0 p-3 text-white bg-dark sidebar" style="margin-left: 0;">
-    <a href="{% url 'main:main_chat' %}" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-white text-decoration-none justify-content-center" id="page_title_a">
-      <img src="{% static 'icons/DataGPT_1.png' %}" alt="DataGPT" style="height: 46px; width: auto;" id="page_title">
+    <a href="{% url 'main:main_chat' %}" class="d-flex align-items-center mb-2 mb-md-0 me-md-auto text-white text-decoration-none justify-content-center" id="page_title_a">
+      <img src="{% static 'icons/DataGPT_1.png' %}" alt="DataGPT" style="height: 45px; width: auto;" id="page_title">
     </a>
-    <br>
-    <ul class="nav nav-pills flex-column">
+    <ul class="nav nav-pills flex-column" style="margin-top: 8px;">
       <li class="nav-item">
         <a href="{% url 'main:create_rag' %}" id="new-rag-btn" class="nav-link active text-center" aria-current="page" data-bs-toggle="modal" data-bs-target="#newRagModal" data-bs-whatever="@getbootstrap">
           New RAG thread
         </a>
       </li>
       {% if user|has_group:"Admin" or user|has_group:"Advanced_user" or user.is_superuser%}
-      <li class="nav-item" style="margin-top: 10px; margin-bottom: 10px">
+      <li class="nav-item" style="margin-top: 10px; margin-bottom: 5px">
         <a href="{% url 'main:main_collection' %}" id="new-collection-btn" class="nav-link active text-center">
           Collections
         </a>
       </li>
       {% endif %}
     </ul>
-    <br>
-    <div style="max-height: 800px; overflow-y: auto;">
+    <div style="max-height: 800px; overflow-y: auto; margin-top: 8px;">
     <form id="thread-form" action="{% url 'main:chat' 0 %}" method="post" style="padding: 0; margin: 0; border: 0;">
         {% csrf_token %}
     <div id="chat-sidebar">
@@ -300,7 +298,11 @@
           </div>
     
           <!-- RAG Arguments -->
+          {% if base_collection_type == 'database' or base_collection_type == 'excel' %}
+          <div id="ragArgumentsContainer" class="rag-section mb-3" style="display: none;">
+          {% else %}
           <div id="ragArgumentsContainer" class="rag-section mb-3">
+          {% endif %}
             <span id="rag-arguements-text">RAG Arguments</span>
     
             <!-- Similarity Cutoff -->
@@ -838,10 +840,10 @@ socket.onmessage = function(e) {
         // Mostly English → LTR
         lastRagResponse.style.direction = "ltr";
         lastRagResponse.style.textAlign = "left";
-        lastRagResponse.style.fontSize = "16px";
-        lastRagResponse.style.fontFamily = "Tahoma";
+        lastRagResponse.style.fontSize = "17px";
+        lastRagResponse.style.fontFamily = "Calibri";
         lastRagResponse.style.fontWeight = "normal";
-        lastRagResponse.style.lineHeight = 1.65;
+        lastRagResponse.style.lineHeight = 1.7;
         lastRagResponse.style.paddingRight = "10px";
       } else {
         // Otherwise consider Persian → RTL
@@ -850,7 +852,7 @@ socket.onmessage = function(e) {
         lastRagResponse.style.fontSize = "15px";
         lastRagResponse.style.fontFamily = "IranSans";
         lastRagResponse.style.fontWeight = "bold";
-        lastRagResponse.style.lineHeight = 1.65;
+        lastRagResponse.style.lineHeight = 1.7;
         lastRagResponse.style.paddingRight = "10px";
       }
 
@@ -1364,15 +1366,15 @@ function updateMode() {
     const mode = document.querySelector('input[name="chatMode"]:checked').value;
     const ragSection = document.getElementById("ragArgumentsContainer");
 
-    if (mode === "rag" || mode === "database") {
-        // Show
+    if (mode === "rag") {
+        // Show only for RAG mode
         ragSection.style.display = "block";
         // Allow a tiny delay for CSS transition to apply
         requestAnimationFrame(() => {
             ragSection.classList.remove("hidden");
         });
     } else {
-        // Hide
+        // Hide for standard and database modes
         ragSection.classList.add("hidden");
         // After transition, remove from layout completely
         setTimeout(() => {
