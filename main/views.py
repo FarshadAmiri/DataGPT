@@ -228,7 +228,7 @@ def collections_view(request, collection_id=None,):
             collections = Collection.objects.all()
         elif user.is_advanced_user():
             collections = Collection.objects.filter(user_created=user)
-        collections = collections.annotate(total_docs=Count('docs')).values('id', 'name', 'total_docs', 'user_created').order_by('-total_docs')
+        collections = collections.annotate(total_docs=Count('docs')).values('id', 'name', 'total_docs', 'user_created', 'collection_type').order_by('-total_docs')
         if (collection_id is None) and (len(collections) > 0):
             collection_id = int(collections[0]["id"])
             return redirect('main:collection', collection_id=collection_id)
