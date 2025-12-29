@@ -106,11 +106,12 @@ def chat_view(request, thread_id=None):
         active_thread = Thread.objects.get(id=thread_id)
         active_thread_name = active_thread.name
         rag_docs = active_thread.docs.all()
-        base_collection_name = None if active_thread.base_collection == None else active_thread.base_collection.name
-        base_collection_type = None if active_thread.base_collection == None else active_thread.base_collection.collection_type
+        base_collection = active_thread.base_collection
+        base_collection_name = None if base_collection == None else base_collection.name
+        base_collection_type = None if base_collection == None else base_collection.collection_type
         print(f"\ncollections: {collections}\n")
         context = {"chat_threads": threads, "active_thread_id": thread_id, "active_thread_name": active_thread_name, "rag_docs": rag_docs,
-                   "base_collection_name": base_collection_name, "base_collection_type": base_collection_type, "messages": messages, "threads_preview": threads_preview, 'collections': collections,}
+                   "base_collection": base_collection, "base_collection_name": base_collection_name, "base_collection_type": base_collection_type, "messages": messages, "threads_preview": threads_preview, 'collections': collections,}
         print(f"\n\n{active_thread_name}\n\n")
         return render(request, 'main/chat.html', context)
 

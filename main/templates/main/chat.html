@@ -247,126 +247,165 @@
     <div class="col-lg-2 col-md-12" style="padding: 0; padding-top: 5px;" id="right-sidebar">
       {% if no_threads != True %}
       <div class="d-flex flex-column flex-shrink-0 p-3 text-white bg-dark sidebar-right" style="margin-right: 0px; height: 100%;">
-        
-        <!-- Active thread name -->
-        <h3 id="thread-name-right-sidebar">{{ active_thread_name }}</h3>
-        <hr>
     
         <!-- Documents Section -->
         {% if base_collection_name == None %}
-          <h5>Included documents:</h5>
-          <div class="doc-list flex-grow-1" style="max-height: 90px; overflow-y: auto;">
+          <div class="section-header">
+            <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style="margin-right: 8px;">
+              <path d="M5 4a.5.5 0 0 0 0 1h6a.5.5 0 0 0 0-1H5zm-.5 2.5A.5.5 0 0 1 5 6h6a.5.5 0 0 1 0 1H5a.5.5 0 0 1-.5-.5zM5 8a.5.5 0 0 0 0 1h6a.5.5 0 0 0 0-1H5zm0 2a.5.5 0 0 0 0 1h3a.5.5 0 0 0 0-1H5z"/>
+              <path d="M2 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2zm10-1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1z"/>
+            </svg>
+            <h5 style="margin: 0; display: inline-block;">Documents</h5>
+          </div>
+          <div class="doc-list-container">
             {% if rag_docs %}
-              <ul class="nav nav-pills flex-column doc-name-sidebar" style="margin: 0; padding: 0;">
-                {% for doc in rag_docs %}
-                  <li data-toggle="tooltip" data-placement="top"
-                      title='"{{ doc.loc|path_end_part }}" in RAG database'
-                      style="margin-bottom: 4px; list-style: none;">
-                    * {{ doc.name }}
-                  </li>
-                {% endfor %}
-              </ul>
+              {% for doc in rag_docs %}
+                <div class="doc-item" data-toggle="tooltip" data-placement="top" title='"{{ doc.loc|path_end_part }}" in RAG database'>
+                  <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16" class="doc-icon">
+                    <path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5L14 4.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5h-2z"/>
+                  </svg>
+                  <span class="doc-name">{{ doc.name }}</span>
+                </div>
+              {% endfor %}
             {% else %}
-              <p class="no-docs" style="margin: 0; color: gray; font-style: italic;">No document added yet.</p>
+              <div class="empty-state">
+                <svg width="24" height="24" fill="currentColor" viewBox="0 0 16 16" style="opacity: 0.4; margin-bottom: 8px;">
+                  <path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5L14 4.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5h-2z"/>
+                </svg>
+                <p class="empty-text">No documents added yet</p>
+              </div>
             {% endif %}
           </div>
         {% else %}
-          <h5>Base collection:</h5>
-          <div style="max-height: 300px; overflow-y: auto;">
-            <ul class="nav nav-pills flex-column doc-name-sidebar">
-              <li data-toggle="tooltip" data-placement="top"
-                  title='"{{ base_collection_name }}" in RAG database'
-                  style="margin-bottom: 15px;">
-                {{ base_collection_name }}
-              </li>
-            </ul>
+          <div class="section-header">
+            <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style="margin-right: 8px;">
+              <path d="M1 2.5A1.5 1.5 0 0 1 2.5 1h3A1.5 1.5 0 0 1 7 2.5v3A1.5 1.5 0 0 1 5.5 7h-3A1.5 1.5 0 0 1 1 5.5v-3zM2.5 2a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5h-3zm6.5.5A1.5 1.5 0 0 1 10.5 1h3A1.5 1.5 0 0 1 15 2.5v3A1.5 1.5 0 0 1 13.5 7h-3A1.5 1.5 0 0 1 9 5.5v-3zm1.5-.5a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5h-3zM1 10.5A1.5 1.5 0 0 1 2.5 9h3A1.5 1.5 0 0 1 7 10.5v3A1.5 1.5 0 0 1 5.5 15h-3A1.5 1.5 0 0 1 1 13.5v-3zm1.5-.5a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5h-3zm6.5.5A1.5 1.5 0 0 1 10.5 9h3a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5h-3A1.5 1.5 0 0 1 9 13.5v-3zm1.5-.5a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5h-3z"/>
+            </svg>
+            <h5 style="margin: 0; display: inline-block;">Collection</h5>
+          </div>
+          <div class="collection-item" data-bs-toggle="modal" data-bs-target="#collectionInfoModal" style="cursor: pointer;">
+            <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" class="collection-icon">
+              <path d="M.54 3.87.5 3a2 2 0 0 1 2-2h3.672a2 2 0 0 1 1.414.586l.828.828A2 2 0 0 0 9.828 3h3.982a2 2 0 0 1 1.992 2.181l-.637 7A2 2 0 0 1 13.174 14H2.826a2 2 0 0 1-1.991-1.819l-.637-7a1.99 1.99 0 0 1 .342-1.31zM2.19 4a1 1 0 0 0-.996 1.09l.637 7a1 1 0 0 0 .995.91h10.348a1 1 0 0 0 .995-.91l.637-7A1 1 0 0 0 13.81 4H2.19zm4.69-1.707A1 1 0 0 0 6.172 2H2.5a1 1 0 0 0-1 .981l.006.139C1.72 3.042 1.95 3 2.19 3h5.396l-.707-.707z"/>
+            </svg>
+            <div style="flex: 1; overflow: hidden;">
+              <span class="collection-name">{{ base_collection_name }}</span>
+              <span class="collection-type">
+                {% if base_collection_type == 'database' %}
+                  (MySQL database)
+                {% elif base_collection_type == 'excel' %}
+                  (Excel files)
+                {% elif base_collection_type == 'document' %}
+                  (Text documents)
+                {% else %}
+                  ({{ base_collection_type }})
+                {% endif %}
+              </span>
+            </div>
+            <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16" style="opacity: 0.5; margin-left: 8px;">
+              <path fill-rule="evenodd" d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708z"/>
+            </svg>
           </div>
         {% endif %}
     
-        <hr class="my-3">
-    
         <!-- Chat mode & RAG arguments (always present) -->
-        <div>
+        <div class="settings-section">
           <!-- Mode Selection -->
-          <div class="mb-3">
+          <div class="setting-card">
+            <div class="setting-label">
+              <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style="margin-right: 6px;">
+                <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z"/>
+                <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319z"/>
+              </svg>
+              Mode
+            </div>
             {% if base_collection_type == 'database' or base_collection_type == 'excel' %}
-            <div class="btn-group" role="group" aria-label="Chat Mode">
-              <input type="radio" class="btn-check" name="chatMode" id="modeStandard" value="standard" onchange="updateMode()">
-              <label class="btn btn-outline-primary" for="modeStandard">Standard</label>
+            <div class="mode-toggle">
+              <input type="radio" class="mode-input" name="chatMode" id="modeStandard" value="standard" onchange="updateMode()">
+              <label class="mode-option" for="modeStandard">Standard</label>
     
-              <input type="radio" class="btn-check" name="chatMode" id="modeDatabase" value="database" checked onchange="updateMode()">
-              <label class="btn btn-outline-primary" for="modeDatabase">Database</label>
+              <input type="radio" class="mode-input" name="chatMode" id="modeDatabase" value="database" checked onchange="updateMode()">
+              <label class="mode-option" for="modeDatabase">Database</label>
             </div>
             {% else %}
-            <div class="btn-group" role="group" aria-label="Chat Mode">
-              <input type="radio" class="btn-check" name="chatMode" id="modeStandard" value="standard" onchange="updateMode()">
-              <label class="btn btn-outline-primary" for="modeStandard">Standard</label>
+            <div class="mode-toggle">
+              <input type="radio" class="mode-input" name="chatMode" id="modeStandard" value="standard" onchange="updateMode()">
+              <label class="mode-option" for="modeStandard">Standard</label>
     
-              <input type="radio" class="btn-check" name="chatMode" id="modeRag" value="rag" checked onchange="updateMode()">
-              <label class="btn btn-outline-primary" for="modeRag">RAG</label>
+              <input type="radio" class="mode-input" name="chatMode" id="modeRag" value="rag" checked onchange="updateMode()">
+              <label class="mode-option" for="modeRag">RAG</label>
             </div>
             {% endif %}
           </div>
-    
+
           <!-- Temperature Slider -->
-          <div id="temperatureWrapper" class="mb-3">
-            <label for="temperature" class="form-label fw-bold">
-              Temperature: <span class="sliderValues" id="temperatureValue">0.7</span>
-              <span class="info-circle">i
-                <span class="tooltip-text">
-                  Controls response randomness.<br>
-                  <br><b>Low (0 – 0.3):</b><br>Factual, precise.<br>
-                  <br><b>Medium (0.4 – 0.7):</b><br>Balanced.<br>
-                  <br><b>High (0.8 – 1.0+):</b><br>Creative, less accurate. use for brainstorming.<br>
-                </span>
-              </span>
-            </label>
-            <input type="range" class="form-range modern-slider" min="0.1" max="1.2" step="0.1" value="0.7" id="temperature" oninput="updateTemperatureLabel()">
-          </div>
-    
-          <!-- RAG Arguments -->
-          {% if base_collection_type == 'database' or base_collection_type == 'excel' %}
-          <div id="ragArgumentsContainer" class="rag-section mb-3" style="display: none;">
-          {% else %}
-          <div id="ragArgumentsContainer" class="rag-section mb-3">
-          {% endif %}
-            <span id="rag-arguements-text">RAG Arguments</span>
-    
-            <!-- Similarity Cutoff -->
-            <div id="similarityCutoffWrapper" class="mb-3">
-              <label for="similarityCutoff" class="form-label fw-bold">
-                Similarity Cutoff:&nbsp<span class="sliderValues" id="cutoffValue">0.50</span>
+          <div class="setting-card" id="temperatureWrapper">
+            <label for="temperature" class="setting-label-with-value">
+              <span class="label-text">
+                Temperature
                 <span class="info-circle">i
                   <span class="tooltip-text">
-                    Filters retrieved context by relevance.<br>
-
-                    <br><b>High cutoff:</b><br>Only top-matches → precise, may miss info.<br>
-
-                    <br><b>Low cutoff:</b><br>More matches → broader, may add noise.<br>
-                    <br>Raise if answers feel noisy; lower if context feels missing.
+                    Controls response randomness.<br>
+                    <br><b>Low (0 – 0.3):</b><br>Factual, precise.<br>
+                    <br><b>Medium (0.4 – 0.7):</b><br>Balanced.<br>
+                    <br><b>High (0.8 – 1.0+):</b><br>Creative, less accurate. Use for brainstorming.<br>
                   </span>
                 </span>
+              </span>
+              <span class="setting-value" id="temperatureValue">0.7</span>
+            </label>
+            <input type="range" class="modern-range" min="0.1" max="1.2" step="0.1" value="0.7" id="temperature" oninput="updateTemperatureLabel()">
+          </div>
+          <br>
+          <!-- RAG Arguments -->
+          {% if base_collection_type == 'database' or base_collection_type == 'excel' %}
+          <div id="ragArgumentsContainer" class="rag-settings" style="display: none;">
+          {% else %}
+          <div id="ragArgumentsContainer" class="rag-settings">
+          {% endif %}
+            <div class="rag-header">
+              <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style="margin-right: 6px;">
+                <path d="M1 2.5A1.5 1.5 0 0 1 2.5 1h3A1.5 1.5 0 0 1 7 2.5v3A1.5 1.5 0 0 1 5.5 7h-3A1.5 1.5 0 0 1 1 5.5v-3zm8 0A1.5 1.5 0 0 1 10.5 1h3A1.5 1.5 0 0 1 15 2.5v3A1.5 1.5 0 0 1 13.5 7h-3A1.5 1.5 0 0 1 9 5.5v-3zm-8 8A1.5 1.5 0 0 1 2.5 9h3A1.5 1.5 0 0 1 7 10.5v3A1.5 1.5 0 0 1 5.5 15h-3A1.5 1.5 0 0 1 1 13.5v-3zm8 0A1.5 1.5 0 0 1 10.5 9h3a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5h-3A1.5 1.5 0 0 1 9 13.5v-3z"/>
+              </svg>
+              RAG Settings
+            </div>
+    
+            <!-- Similarity Cutoff -->
+            <div class="setting-card" id="similarityCutoffWrapper">
+              <label for="similarityCutoff" class="setting-label-with-value">
+                <span class="label-text">
+                  Similarity Cutoff
+                  <span class="info-circle">i
+                    <span class="tooltip-text">
+                      Filters retrieved context by relevance.<br>
+                      <br><b>High cutoff:</b><br>Only top-matches → precise, may miss info.<br>
+                      <br><b>Low cutoff:</b><br>More matches → broader, may add noise.<br>
+                      <br>Raise if answers feel noisy; lower if context feels missing.
+                    </span>
+                  </span>
+                </span>
+                <span class="setting-value" id="cutoffValue">0.50</span>
               </label>
-              <input type="range" class="form-range modern-slider" min="0.25" max="0.95" step="0.05" value="0.50" id="similarityCutoff" oninput="updateCutoffLabel()">
+              <input type="range" class="modern-range" min="0.25" max="0.95" step="0.05" value="0.50" id="similarityCutoff" oninput="updateCutoffLabel()">
             </div>
     
             <!-- Rerank Toggle -->
-            <div class="mb-3 modern-switch">
-              <label class="form-label fw-bold mb-0" for="rerankSwitch" id="rerankLabel">
-                Reranker
-                <span class="info-circle">i
-                  <span class="tooltip-text">
-                    Reorders retrieved chunks by relevance.<br>
-
-                    <br><b>ON:</b><br>probably Better quality but slower.<br>
-
-                    <br><b>OFF:</b><br>Faster, but less reliable.
+            <div class="setting-card toggle-card">
+              <label class="toggle-label" for="rerankSwitch" id="rerankLabel">
+                <span class="label-text">
+                  Reranker
+                  <span class="info-circle">i
+                    <span class="tooltip-text">
+                      Reorders retrieved chunks by relevance.<br>
+                      <br><b>ON:</b><br>Probably better quality but slower.<br>
+                      <br><b>OFF:</b><br>Faster, but less reliable.
+                    </span>
                   </span>
                 </span>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="rerankSwitch">
+                  <span class="toggle-slider"></span>
+                </label>
               </label>
-              <div class="form-check form-switch">
-                <input class="form-check-input" type="checkbox" id="rerankSwitch">
-              </div>
             </div>
           </div>
         </div>
@@ -399,10 +438,10 @@
 </div>
 <div class="modal fade" id="newRagModal" tabindex="0" aria-labelledby="newRag" aria-hidden="true">
   <div class="modal-dialog">
-    <div class="modal-content">
+    <div class="modal-content dark-modal">
       <div class="modal-header">
         <h5 class="modal-title" id="newRag">Create a new RAG thread</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" data-bs-newRagName="{{ new_rag_name }}"></button>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" data-bs-newRagName="{{ new_rag_name }}"></button>
       </div>
       <div class="modal-body">
         <form action="{%  url 'main:create_rag' %}" method="post" enctype="multipart/form-data">
@@ -451,10 +490,10 @@
 {% if no_threads != True %}
 <div class="modal fade" id="addDocsModal" tabindex="0" aria-labelledby="addDocs" aria-hidden="true">
   <div class="modal-dialog">
-    <div class="modal-content">
+    <div class="modal-content dark-modal">
       <div class="modal-header">
         <h5 class="modal-title" id="addDocs">Add new documents</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" data-bs-newRagName="{{ new_rag_name }}"></button>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" data-bs-newRagName="{{ new_rag_name }}"></button>
       </div>
       <div class="modal-body">
         <form action="{%  url 'main:add_docs' active_thread_id %}" method="post" enctype="multipart/form-data">
@@ -490,13 +529,74 @@
 </div>
 <div class="modal fade" id="contextModal" tabindex="0" aria-labelledby="context" aria-hidden="true">
   <div class="modal-dialog modal-xl">
-    <div class="modal-content">
+    <div class="modal-content dark-modal">
       <div class="modal-header">
         <h5 class="modal-title" id="context">Response contexts</h5>
       </div>
       <div class="modal-body">
           <div class="mb-3" id="context-div">
           </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% if base_collection_name != None %}
+<!-- Collection Info Modal -->
+<div class="modal fade" id="collectionInfoModal" tabindex="-1" aria-labelledby="collectionInfoTitle" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content dark-modal">
+      <div class="modal-header">
+        <h5 class="modal-title" id="collectionInfoTitle">
+          <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16" style="margin-right: 8px;">
+            <path d="M.54 3.87.5 3a2 2 0 0 1 2-2h3.672a2 2 0 0 1 1.414.586l.828.828A2 2 0 0 0 9.828 3h3.982a2 2 0 0 1 1.992 2.181l-.637 7A2 2 0 0 1 13.174 14H2.826a2 2 0 0 1-1.991-1.819l-.637-7a1.99 1.99 0 0 1 .342-1.31zM2.19 4a1 1 0 0 0-.996 1.09l.637 7a1 1 0 0 0 .995.91h10.348a1 1 0 0 0 .995-.91l.637-7A1 1 0 0 0 13.81 4H2.19zm4.69-1.707A1 1 0 0 0 6.172 2H2.5a1 1 0 0 0-1 .981l.006.139C1.72 3.042 1.95 3 2.19 3h5.396l-.707-.707z"/>
+          </svg>
+          {{ base_collection_name }}
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="collection-info">
+          <div class="info-row">
+            <span class="info-label">Type:</span>
+            <span class="info-value">
+              {% if base_collection_type == 'database' %}
+                MySQL Database
+              {% elif base_collection_type == 'excel' %}
+                Excel Files
+              {% elif base_collection_type == 'document' %}
+                Text Documents
+              {% else %}
+                {{ base_collection_type|title }}
+              {% endif %}
+            </span>
+          </div>
+          {% if base_collection.db_schema_analysis %}
+          <div class="info-section">
+            <h6 class="section-title">Schema Analysis:</h6>
+            <div class="analysis-content">
+              {{ base_collection.db_schema_analysis|markdown_to_html }}
+            </div>
+          </div>
+          {% endif %}
+          {% if rag_docs %}
+          <div class="info-section">
+            <h6 class="section-title">Included Documents:</h6>
+            <div class="document-list">
+              {% for doc in rag_docs %}
+                <div class="document-item">
+                  <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5L14 4.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5h-2z"/>
+                  </svg>
+                  <div class="doc-details">
+                    <div class="doc-title">{{ doc.name }}</div>
+                    <div class="doc-path">{{ doc.loc|path_end_part }}</div>
+                  </div>
+                </div>
+              {% endfor %}\n            </div>
+          </div>
+          {% endif %}
+        </div>
       </div>
     </div>
   </div>
@@ -728,6 +828,16 @@ socket.onopen = function(e) {
       scrollToEnd();
       msgInput.val('');
       formData[0].reset();
+      
+      // Reset textarea direction and font to LTR/English
+      const msgTextarea = document.getElementById('msgInput');
+      if (msgTextarea) {
+        msgTextarea.style.direction = 'ltr';
+        msgTextarea.style.textAlign = 'left';
+        msgTextarea.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        msgTextarea.style.height = 'auto';
+      }
+      
       spinner.style.display = 'block';
     }
   });
@@ -1485,7 +1595,42 @@ if (textarea) {
   const inputContainer = textarea.closest('.modern-input-container');
   let previousHeight = textarea.offsetHeight;
   
+  // Function to reset textarea to default LTR state
+  function resetTextareaDirection() {
+    textarea.style.direction = 'ltr';
+    textarea.style.textAlign = 'left';
+    textarea.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    textarea.style.height = 'auto';
+    previousHeight = textarea.offsetHeight;
+  }
+  
+  // Function to detect if text starts with RTL characters (Arabic/Persian)
+  function detectRTL(text) {
+    // RTL character ranges: Arabic (0600-06FF), Persian (additional Arabic), Hebrew (0590-05FF)
+    const rtlPattern = /[\u0591-\u07FF\uFB1D-\uFDFD\uFE70-\uFEFC]/;
+    const lines = text.split('\n');
+    
+    // Check if any line starts with RTL character
+    for (let line of lines) {
+      const trimmed = line.trim();
+      if (trimmed.length > 0 && rtlPattern.test(trimmed[0])) {
+        return true;
+      }
+    }
+    return false;
+  }
+  
   textarea.addEventListener('input', function() {
+    // If textarea is empty, reset to LTR
+    if (this.value.trim() === '') {
+      resetTextareaDirection();
+    } else {
+      // Detect and set text direction
+      const isRTL = detectRTL(this.value);
+      this.style.direction = isRTL ? 'rtl' : 'ltr';
+      this.style.textAlign = isRTL ? 'right' : 'left';
+      this.style.fontFamily = isRTL ? 'IranSans, Tahoma, Arial' : '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    }
     // Reset height to get accurate scrollHeight
     this.style.height = 'auto';
     const newHeight = Math.min(this.scrollHeight, 200);
