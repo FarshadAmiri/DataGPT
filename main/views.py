@@ -61,7 +61,10 @@ def chat_view(request, thread_id=None):
         for thread in threads:
             if ChatMessage.objects.filter(thread__id=thread.id).count() > 0:
                 txt = ChatMessage.objects.filter(thread__id=thread.id).latest('timestamp').message[:80]
-                msg_initial_words = get_first_words(txt, 35) + "..."
+                preview_raw = get_first_words(txt, 40)
+                preview_clean = ''.join(ch if (ch.isalnum() or ch.isspace() or ch in '.,!?') else '' for ch in preview_raw)
+                preview_clean = ' '.join(preview_clean.split())  # collapse extra spaces
+                msg_initial_words = (preview_clean + '...') if preview_clean else '...'
                 threads_preview[thread.id] = msg_initial_words
             else:
                 threads_preview[thread.id] = "Empty chat"
