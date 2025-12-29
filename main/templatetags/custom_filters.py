@@ -63,6 +63,9 @@ def markdown_to_html(text):
         return ""
     
     lines = text.split('\n')
+    # Remove leading empty lines to avoid blank space at the top
+    while lines and not lines[0].strip():
+        lines.pop(0)
     html_lines = []
     in_list = False
     
