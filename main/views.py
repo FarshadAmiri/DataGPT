@@ -441,6 +441,8 @@ def collection_create_view(request,):
 @login_required(login_url='users:login')
 @user_passes_test(lambda user: user.is_admin() or user.is_advanced_user() or user.is_superuser)
 def collection_reindex_view(request, collection_id):
+    from django.http import JsonResponse
+    
     user = request.user
     collection_id = int(collection_id)
     collection = Collection.objects.get(id=collection_id)
@@ -460,6 +462,9 @@ def collection_reindex_view(request, collection_id):
         analyze_excel_files, generate_schema_analysis_text
     )
     from main.utilities.variables import llm_url
+    
+    # Store the old schema in case of failure
+    old_schema_analysis = collection.db_schema_analysis
     
     try:
         if collection.collection_type == 'database':
@@ -482,7 +487,15 @@ def collection_reindex_view(request, collection_id):
             # Generate new schema analysis
             schema_analysis = generate_schema_analysis_text(schema_dict, llm_url, db_extra_knowledge)
             
-            # Update collection
+            # Check if schema analysis contains error message
+            if schema_analysis and "Error generating schema analysis" in schema_analysis:
+                # Restore old schema and return error
+                print(f"LLM error during reindexing: Schema analysis contains error message")
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({'success': False, 'error': 'LLM server unavailable. Previous schema preserved.'}, status=500)
+                return redirect('main:collection', collection_id=collection_id)
+            
+            # Update collection only if successful
             collection.db_schema_analysis = schema_analysis
             collection.save()
             
@@ -494,13 +507,26 @@ def collection_reindex_view(request, collection_id):
             schema_dict = analyze_excel_files(file_paths)
             schema_analysis = generate_schema_analysis_text(schema_dict, llm_url, excel_extra_knowledge)
             
-            # Update collection
+            # Check if schema analysis contains error message
+            if schema_analysis and "Error generating schema analysis" in schema_analysis:
+                # Restore old schema and return error
+                print(f"LLM error during reindexing: Schema analysis contains error message")
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({'success': False, 'error': 'LLM server unavailable. Previous schema preserved.'}, status=500)
+                return redirect('main:collection', collection_id=collection_id)
+            
+            # Update collection only if successful
             collection.db_schema_analysis = schema_analysis
             collection.save()
         
         print(f"Collection '{collection.name}' schema successfully reindexed.")
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': True})
     except Exception as e:
+        # Preserve old schema on any error
         print(f"Error reindexing collection schema: {e}")
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
     
     return redirect('main:collection', collection_id=collection_id)
 
