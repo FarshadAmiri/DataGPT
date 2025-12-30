@@ -26,8 +26,11 @@
     </a>
     <ul class="nav nav-pills flex-column" style="margin-top: 15px;">
       <li class="nav-item">
-        <a href="{% url 'main:create_collection' %}" id="new-collection-btn" class="nav-link active text-center" aria-current="page" data-bs-toggle="modal" data-bs-target="#newCollectionModal" data-bs-whatever="@getbootstrap">
-          Create a new collection
+        <a href="{% url 'main:create_collection' %}" id="new-collection-btn" class="text-center" aria-current="page" data-bs-toggle="modal" data-bs-target="#newCollectionModal" data-bs-whatever="@getbootstrap" style="display: flex; align-items: center; justify-content: center; padding: 12px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; border-radius: 8px; color: #ffffff; text-decoration: none; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); font-size: 14px; font-weight: 600; letter-spacing: 0.3px; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.25); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(102, 126, 234, 0.4)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(102, 126, 234, 0.25)';">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style="margin-right: 8px;">
+            <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+          </svg>
+          New Collection
         </a>
       </li>
     </ul>
@@ -186,36 +189,72 @@
     </span>
   </span>
   {% endif %}
+  
+  {% if active_collection_type == 'database' %}
+    {% if db_type == 'sqlite' %}
+      <span class="small_text" style="margin-top: 8px; display: block;">
+        File: 
+        <a href="{% url 'main:collection_download_file' active_collection_id 0 %}" class="small_text_ylw" style="word-break: break-all; text-decoration: underline; cursor: pointer;" download>
+          📥 {{ db_connection_string|path_end_part|default:"N/A" }}
+        </a>
+      </span>
+    {% else %}
+      <span class="small_text" style="margin-top: 8px; display: block;">
+        Address: <span class="small_text_ylw" style="word-break: break-all;">{{ db_connection_string|default:"N/A" }}</span>
+      </span>
+    {% endif %}
+  {% elif active_collection_type == 'excel' %}
+    {% if excel_file_paths %}
+      <span class="small_text" style="margin-top: 8px; display: block;">
+        Files: <span class="small_text_ylw">{{ excel_file_paths|length }} file(s)</span>
+      </span>
+      <div style="margin-top: 8px; max-height: 150px; overflow-y: auto;">
+        {% for file_path in excel_file_paths %}
+          <div class="small_text" style="margin-bottom: 4px; word-break: break-all; font-size: 0.85em;">
+            <a href="{% url 'main:collection_download_file' active_collection_id forloop.counter0 %}" style="color: #ffc107; text-decoration: underline; cursor: pointer;" download>
+              📥 {{ file_path|path_end_part }}
+            </a>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endif %}
   <hr>
-  <ul class="nav nav-pills flex-column">
+  <ul class="nav nav-pills flex-column" style="list-style: none; padding: 0;">
     {% if active_collection_type == 'document' or not active_collection_type %}
-    <li class="nav-item">
-      <a href="{% url 'main:collection_add_docs' active_collection_id %}" id="add-docs-btn" class="nav-link active text-center" aria-current="page" data-bs-toggle="modal" data-bs-target="#addDocsModal" data-bs-whatever="@getbootstrap">
-        Add new documents
+    <li class="nav-item" style="margin-bottom: 10px;">
+      <a href="{% url 'main:collection_add_docs' active_collection_id %}" id="add-docs-btn" class="text-center" aria-current="page" data-bs-toggle="modal" data-bs-target="#addDocsModal" data-bs-whatever="@getbootstrap" style="display: flex; align-items: center; justify-content: center; padding: 11px 18px; background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); border: none; border-radius: 8px; color: #ffffff; text-decoration: none; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); font-size: 13px; font-weight: 600; letter-spacing: 0.3px; box-shadow: 0 3px 10px rgba(17, 153, 142, 0.25); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 5px 16px rgba(17, 153, 142, 0.4)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 3px 10px rgba(17, 153, 142, 0.25)';">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style="margin-right: 6px;">
+          <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+        </svg>
+        Add Documents
       </a>
     </li>
     {% endif %}
     {% if active_collection_type == 'database' or active_collection_type == 'excel' %}
-    <li class="nav-item">
-      <button id="reindex-collection-btn" class="btn btn-warning nav-link active text-center" style="width: 100%; border: none;" data-collection-id="{{ active_collection_id }}" data-collection-name="{{ active_collection_name }}">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-repeat" viewBox="0 0 16 16" style="margin-right: 5px;">
+    <li class="nav-item" style="margin-bottom: 10px;">
+      <button id="reindex-collection-btn" class="text-center" style="width: 100%; display: flex; align-items: center; justify-content: center; padding: 11px 18px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border: none; border-radius: 8px; color: #ffffff; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); font-size: 13px; font-weight: 600; letter-spacing: 0.3px; box-shadow: 0 3px 10px rgba(240, 147, 251, 0.25); cursor: pointer; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;" data-collection-id="{{ active_collection_id }}" data-collection-name="{{ active_collection_name }}" onmouseover="if(!this.disabled) {this.style.transform='translateY(-2px)'; this.style.boxShadow='0 5px 16px rgba(240, 147, 251, 0.4)';}" onmouseout="if(!this.disabled) {this.style.transform='translateY(0)'; this.style.boxShadow='0 3px 10px rgba(240, 147, 251, 0.25)';}">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-arrow-repeat" viewBox="0 0 16 16" style="margin-right: 6px;">
           <path d="M11.534 7h3.932a.25.25 0 0 1 .192.41l-1.966 2.36a.25.25 0 0 1-.384 0l-1.966-2.36a.25.25 0 0 1 .192-.41m-11 2h3.932a.25.25 0 0 0 .192-.41L2.692 6.23a.25.25 0 0 0-.384 0L.342 8.59A.25.25 0 0 0 .534 9"/>
           <path fill-rule="evenodd" d="M8 3c-1.552 0-2.94.707-3.857 1.818a.5.5 0 1 1-.771-.636A6.002 6.002 0 0 1 13.917 7H12.9A5 5 0 0 0 8 3M3.1 9a5.002 5.002 0 0 0 8.757 2.182.5.5 0 1 1 .771.636A6.002 6.002 0 0 1 2.083 9z"/>
         </svg>
-        <span id="reindex-btn-text">Reindex Schema</span>
+        <span id="reindex-btn-text">Reindex</span>
         <div class="spinner-border spinner-border-sm" role="status" id="reindex-spinner" style="display: none; margin-left: 8px;">
           <span class="visually-hidden">Loading...</span>
         </div>
       </button>
     </li>
     {% endif %}
-    <li class="nav-item" style="margin-top: 14px;">
-      <a href="{% url 'main:delete_collection' active_collection_id %}" id="delete-collection-btn" class="btn btn-danger nav-link active text-center">
-        Delete this collection
+    <li class="nav-item" style="margin-top: 10px;">
+      <a href="{% url 'main:delete_collection' active_collection_id %}" id="delete-collection-btn" class="text-center" style="display: flex; align-items: center; justify-content: center; padding: 11px 18px; background: rgba(220, 53, 69, 0.1); border: 1.5px solid rgba(220, 53, 69, 0.5); border-radius: 8px; color: #ff6b7a; text-decoration: none; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); font-size: 13px; font-weight: 600; letter-spacing: 0.3px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;" onmouseover="this.style.background='linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%)'; this.style.borderColor='transparent'; this.style.color='#ffffff'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 5px 16px rgba(220, 53, 69, 0.35)';" onmouseout="this.style.background='rgba(220, 53, 69, 0.1)'; this.style.borderColor='rgba(220, 53, 69, 0.5)'; this.style.color='#ff6b7a'; this.style.transform='translateY(0)'; this.style.boxShadow='none';">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style="margin-right: 6px;">
+          <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/>
+          <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/>
+        </svg>
+        Delete Collection
       </a>
     </li>
   </ul>
-  <hr>
   </div>
 </div>
 {% endif %}
@@ -311,12 +350,12 @@
           </div>
           
       </div>
-      <div class="modal-footer">
+      <div class="modal-footer" style="border-top: 1px solid #3a3a3a; padding: 20px 24px; background: #2a2a2a;">
         <div class="spinner-border text-primary" id="spinner_loader" role="status" style="display: none;">
           <span class="sr-only"></span>
         </div>
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Discard</button>
-        <button type="submit" class="btn btn-primary" onclick="spinnerAppears(); checkNewName(event)">Create</button>
+        <button type="button" class="btn" data-bs-dismiss="modal" style="padding: 10px 24px; background: rgba(108, 117, 125, 0.1); border: 1.5px solid rgba(108, 117, 125, 0.4); border-radius: 8px; color: #b0b0b0; font-size: 14px; font-weight: 600; letter-spacing: 0.3px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;" onmouseover="this.style.background='rgba(108, 117, 125, 0.2)'; this.style.borderColor='rgba(108, 117, 125, 0.6)'; this.style.color='#ffffff';" onmouseout="this.style.background='rgba(108, 117, 125, 0.1)'; this.style.borderColor='rgba(108, 117, 125, 0.4)'; this.style.color='#b0b0b0';">Cancel</button>
+        <button type="submit" class="btn" onclick="spinnerAppears(); checkNewName(event)" style="padding: 10px 24px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; border-radius: 8px; color: #ffffff; font-size: 14px; font-weight: 600; letter-spacing: 0.3px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 18px rgba(102, 126, 234, 0.45)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(102, 126, 234, 0.3)';">Create Collection</button>
       </div>
       </form>
     </div>
@@ -351,12 +390,12 @@
           </div>
           <div id="uploadedDocuments" class="mt-3"></div>
       </div>
-      <div class="modal-footer">
+      <div class="modal-footer" style="border-top: 1px solid #3a3a3a; padding: 20px 24px; background: #2a2a2a;">
         <div class="spinner-border text-primary" id="spinner_loader_2" role="status" style="display: none;">
           <span class="sr-only"></span>
         </div>
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Discard</button>
-        <button type="submit" class="btn btn-primary" onclick="spinnerAppears2()">Add documents</button>
+        <button type="button" class="btn" data-bs-dismiss="modal" style="padding: 10px 24px; background: rgba(108, 117, 125, 0.1); border: 1.5px solid rgba(108, 117, 125, 0.4); border-radius: 8px; color: #b0b0b0; font-size: 14px; font-weight: 600; letter-spacing: 0.3px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;" onmouseover="this.style.background='rgba(108, 117, 125, 0.2)'; this.style.borderColor='rgba(108, 117, 125, 0.6)'; this.style.color='#ffffff';" onmouseout="this.style.background='rgba(108, 117, 125, 0.1)'; this.style.borderColor='rgba(108, 117, 125, 0.4)'; this.style.color='#b0b0b0';">Cancel</button>
+        <button type="submit" class="btn" onclick="spinnerAppears2()" style="padding: 10px 24px; background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); border: none; border-radius: 8px; color: #ffffff; font-size: 14px; font-weight: 600; letter-spacing: 0.3px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 4px 12px rgba(17, 153, 142, 0.3); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 18px rgba(17, 153, 142, 0.45)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(17, 153, 142, 0.3)';">Add Documents</button>
       </div>
       </form>
     </div>

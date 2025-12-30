@@ -232,7 +232,7 @@ def collections_view(request, collection_id=None,):
             collections = Collection.objects.all()
         elif user.is_advanced_user():
             collections = Collection.objects.filter(user_created=user)
-        collections = collections.annotate(total_docs=Count('docs')).values('id', 'name', 'total_docs', 'user_created', 'collection_type').order_by('-total_docs')
+        collections = collections.annotate(total_docs=Count('docs')).values('id', 'name', 'total_docs', 'user_created', 'collection_type', 'db_type', 'db_connection_string', 'excel_file_paths').order_by('-total_docs')
         if (collection_id is None) and (len(collections) > 0):
             collection_id = int(collections[0]["id"])
             return redirect('main:collection', collection_id=collection_id)
@@ -248,6 +248,8 @@ def collections_view(request, collection_id=None,):
                     "active_collection_type": collection.collection_type,
                     "db_schema_analysis": collection.db_schema_analysis,
                     "db_type": collection.db_type,
+                    "db_connection_string": collection.db_connection_string,
+                    "excel_file_paths": collection.excel_file_paths,
                     "db_extra_knowledge": collection.db_extra_knowledge,}
         return render(request, 'main/collections.html', context)
 
@@ -512,6 +514,56 @@ def collection_delete_view(request, collection_id):
     if user.is_admin() or user.is_superuser or (user.is_advanced_user() and collection.user_created == user):
         collection.delete()
     return redirect('main:main_collection')
+
+
+@login_required(login_url='users:login')
+@user_passes_test(lambda user: user.is_admin() or user.is_advanced_user() or user.is_superuser)
+def collection_download_file(request, collection_id, file_index):
+    from django.http import FileResponse, Http404
+    import mimetypes
+    
+    user = request.user
+    collection_id = int(collection_id)
+    file_index = int(file_index)
+    
+    try:
+        collection = Collection.objects.get(id=collection_id)
+        
+        # Check permissions
+        if user.is_advanced_user() and not (user.is_admin() or user.is_superuser):
+            if collection.user_created != user:
+                raise Http404("File not found")
+        
+        # Determine file path based on collection type
+        if collection.collection_type == 'excel':
+            if not collection.excel_file_paths or file_index >= len(collection.excel_file_paths):
+                raise Http404("File not found")
+            file_path = collection.excel_file_paths[file_index]
+        elif collection.collection_type == 'database' and collection.db_type == 'sqlite':
+            file_path = collection.db_connection_string
+        else:
+            raise Http404("File not found")
+        
+        # Check if file exists
+        if not os.path.exists(file_path):
+            raise Http404("File not found")
+        
+        # Determine content type
+        content_type, _ = mimetypes.guess_type(file_path)
+        if content_type is None:
+            content_type = 'application/octet-stream'
+        
+        # Open and return file
+        file_name = os.path.basename(file_path)
+        response = FileResponse(open(file_path, 'rb'), content_type=content_type)
+        response['Content-Disposition'] = f'attachment; filename="{file_name}"'
+        return response
+        
+    except Collection.DoesNotExist:
+        raise Http404("Collection not found")
+    except Exception as e:
+        print(f"Error downloading file: {e}")
+        raise Http404("File not found")
 
 
 @login_required(login_url='users:login')

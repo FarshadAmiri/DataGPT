@@ -17,4 +17,5 @@ urlpatterns = [
     path('Add_docs?collection_id=<int:collection_id>/', collection_add_docs_view, name='collection_add_docs'),
     path('reindex_collection?collection_id=<int:collection_id>/', collection_reindex_view, name='reindex_collection'),
     path('delete_collection?collection_id=<int:collection_id>/', collection_delete_view, name='delete_collection'),
+    path('download_file?collection_id=<int:collection_id>&file_index=<int:file_index>/', collection_download_file, name='collection_download_file'),
 ]
