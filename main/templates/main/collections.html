@@ -26,24 +26,22 @@
     </a>
     <ul class="nav nav-pills flex-column" style="margin-top: 15px;">
       <li class="nav-item">
-        <a href="{% url 'main:create_collection' %}" id="new-collection-btn" class="text-center" aria-current="page" data-bs-toggle="modal" data-bs-target="#newCollectionModal" data-bs-whatever="@getbootstrap" style="display: flex; align-items: center; justify-content: center; padding: 12px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; border-radius: 8px; color: #ffffff; text-decoration: none; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); font-size: 14px; font-weight: 600; letter-spacing: 0.3px; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.25); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(102, 126, 234, 0.4)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(102, 126, 234, 0.25)';">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style="margin-right: 8px;">
-            <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
-          </svg>
+        <a href="{% url 'main:create_collection' %}" id="new-collection-btn" class="btn-new-collection text-center" aria-current="page" data-bs-toggle="modal" data-bs-target="#newCollectionModal" data-bs-whatever="@getbootstrap">
+          <img src="{% static 'icons/plus-icon.svg' %}" alt="+" class="icon">
           New Collection
         </a>
       </li>
     </ul>
-    <div style="max-height: 800px; overflow-y: auto; margin-top: 15px;">
+    <div class="collection-list-scrollable">
     <ul class="nav nav-pills flex-column" id="#chats">
       <input type="hidden" id="active-collection" value="{{active_collection_id}}">
       {% for collection in collections %}
-      <a href="{% url 'main:collection' collection.id %}" class="list-group-item list-group-item-action lh-tight collection-box collection-type-{{ collection.collection_type|default:'document' }} {% if active_collection_id == collection.id %}current{% endif %}" id="{{collection.id}}" style="padding: 8px 5px; margin-bottom: 5px;">
+      <a href="{% url 'main:collection' collection.id %}" class="list-group-item list-group-item-action lh-tight collection-box collection-type-{{ collection.collection_type|default:'document' }} {% if active_collection_id == collection.id %}current{% endif %}" id="{{collection.id}}">
         <div class="d-flex w-100 align-items-center justify-content-between">
           <strong class="mb-1 collection_name">{{ collection.name }}</strong>
         </div>
         {% with collection.id as collection_id %}
-        <div class="mb-1 text-small" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">By <span style="font-weight: 600;">@{{ collection.user_created }}</span>  |  <span style="font-weight: 600;">{{ collection.total_docs }} docs</span></div>
+        <div class="mb-1 text-small text-small-nowrap">By <span class="text-small-bold">@{{ collection.user_created }}</span>  |  <span class="text-small-bold">{{ collection.total_docs }} docs</span></div>
         {% endwith %}
       </a>
       {% endfor %}
@@ -70,41 +68,35 @@
   
   {% if active_collection_type == 'database' or active_collection_type == 'excel' %}
     <!-- Database/Excel Collection: Show Schema Analysis -->
-    <div class="schema-analysis-container" style="padding: 20px; background-color: #1a1a1a00; border-radius: 8px;">
-      <h4 style="margin-bottom: 15px; color: #17a2b8; font-weight: bold; font-size: 18px;">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-database" viewBox="0 0 16 16" style="margin-right: 8px;">
-          <path d="M4.318 2.687C5.234 2.271 6.536 2 8 2s2.766.27 3.682.687C12.644 3.125 13 3.627 13 4c0 .374-.356.875-1.318 1.313C10.766 5.729 9.464 6 8 6s-2.766-.27-3.682-.687C3.356 4.875 3 4.373 3 4c0-.374.356-.875 1.318-1.313M13 5.698V7c0 .374-.356.875-1.318 1.313C10.766 8.729 9.464 9 8 9s-2.766-.27-3.682-.687C3.356 7.875 3 7.373 3 7V5.698c.271.202.58.378.904.525C4.978 6.711 6.427 7 8 7s3.022-.289 4.096-.777A5 5 0 0 0 13 5.698M14 4c0-1.007-.875-1.755-1.904-2.223C11.022 1.289 9.573 1 8 1s-3.022.289-4.096.777C2.875 2.245 2 2.993 2 4v9c0 1.007.875 1.755 1.904 2.223C4.978 15.71 6.427 16 8 16s3.022-.289 4.096-.777C13.125 14.755 14 14.007 14 13zm-1 4.698V10c0 .374-.356.875-1.318 1.313C10.766 11.729 9.464 12 8 12s-2.766-.27-3.682-.687C3.356 10.875 3 10.373 3 10V8.698c.271.202.58.378.904.525C4.978 9.71 6.427 10 8 10s3.022-.289 4.096-.777A5 5 0 0 0 13 8.698m0 3V13c0 .374-.356.875-1.318 1.313C10.766 14.729 9.464 15 8 15s-2.766-.27-3.682-.687C3.356 13.875 3 13.373 3 13v-1.302c.271.202.58.378.904.525C4.978 12.71 6.427 13 8 13s3.022-.289 4.096-.777c.324-.147.633-.323.904-.525"/>
-        </svg>
+    <div class="schema-analysis-container">
+      <h4 class="schema-header">
+        <img src="{% static 'icons/database-icon.svg' %}" alt="Database" class="icon">
         {% if active_collection_type == 'database' %}
           Database Schema Analysis
-          {% if db_type %}<span style="font-size: 0.9em; color: #2da3f1; margin-left: 10px;">( {{ db_type|upper }} )</span>{% endif %}
+          {% if db_type %}<span class="db-type-badge">( {{ db_type|upper }} )</span>{% endif %}
         {% else %}
           Excel/CSV Schema Analysis
         {% endif %}
       </h4>
       
       {% if db_schema_analysis %}
-        <div class="schema-content" style="background-color: #30303000; padding: 15px; border-radius: 6px; max-height: 600px; overflow-y: auto; font-size: 14px; line-height: 1.6;">
+        <div class="schema-content schema-content-wrapper">
           {{ db_schema_analysis|markdown_to_html }}
         </div>
         
         {% if db_extra_knowledge %}
-        <div class="extra-knowledge" style="margin-top: 20px;">
-          <h5 style="color: #ffc107; margin-bottom: 10px; font-weight: bold; font-size: 16px;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-info-circle" viewBox="0 0 16 16" style="margin-right: 6px;">
-              <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>
-              <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533z"/>
-              <path d="M9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0"/>
-            </svg>
+        <div class="extra-knowledge">
+          <h5 class="extra-knowledge-header">
+            <img src="{% static 'icons/info-circle-icon.svg' %}" alt="Info" class="icon">
             Additional Knowledge (Provided by Supervisor)
           </h5>
-          <div style="background-color: #3d3d00; padding: 12px; border-radius: 6px; border-left: 4px solid #ffc107;">
-            <p style="margin: 0; white-space: pre-wrap; word-wrap: break-word; font-size: 13px; line-height: 1.5; color: #ffecb3;">{{ db_extra_knowledge }}</p>
+          <div class="extra-knowledge-content">
+            <p class="extra-knowledge-text">{{ db_extra_knowledge }}</p>
           </div>
         </div>
         {% endif %}
       {% else %}
-        <div class="alert alert-warning" role="alert" style="background-color: #3d3d00; color: #ffecb3; border: 1px solid #ffc107; font-size: 14px;">
+        <div class="alert alert-warning" role="alert">
           <strong>No schema analysis available.</strong> The schema may not have been analyzed during collection creation.
         </div>
       {% endif %}
@@ -169,7 +161,7 @@
                 <div class="input-group-prepend" style="display: flex; align-items: center; margin-bottom: 0px; padding-bottom: 0px;">
                     <input type="text" placeholder="Ask RAG..." name="message" id="msgInput" style="margin-bottom: 1px; padding-bottom: 1px;">
                     <button type="submit" name="send" class="btn btn-success" id="send_btn" style="margin-bottom: 0px; padding-bottom: 5px;">
-                    <svg width="32" height="32" fill="currentColor" class="bi bi-send-fill" viewBox="0 0 16 16"><path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0M4.5 7.5a.5.5 0 0 0 0 1h5.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3a.5.5 0 0 0 0-.708l-3-3a.5.5 0 1 0-.708.708L10.293 7.5z"/></svg>
+                    <img src="{% static 'icons/send-icon.svg' %}" alt="Send" class="send-btn-svg">
                     </button>
                 </div>
             </div>
@@ -183,7 +175,7 @@
   <h3 id="collection-name-right-sidebar">{{ active_collection_name }}</h3>
   <span class="small_text">Created by <span class="small_text_ylw">@{{ active_collection_creator }}</span></span>
   {% if active_collection_type %}
-  <span class="small_text" style="margin-top: 5px;">
+  <span class="small_text small-text-mt">
     Type: <span class="small_text_ylw">
       {% if active_collection_type == 'database' %}Database{% elif active_collection_type == 'excel' %}Excel/CSV{% else %}Document{% endif %}
     </span>
@@ -192,26 +184,26 @@
   
   {% if active_collection_type == 'database' %}
     {% if db_type == 'sqlite' %}
-      <span class="small_text" style="margin-top: 8px; display: block;">
+      <span class="small_text small-text-mt-8">
         File: 
-        <a href="{% url 'main:collection_download_file' active_collection_id 0 %}" class="small_text_ylw" style="word-break: break-all; text-decoration: underline; cursor: pointer;" download>
+        <a href="{% url 'main:collection_download_file' active_collection_id 0 %}" class="small_text_ylw file-download-link" download>
           📥 {{ db_connection_string|path_end_part|default:"N/A" }}
         </a>
       </span>
     {% else %}
-      <span class="small_text" style="margin-top: 8px; display: block;">
-        Address: <span class="small_text_ylw" style="word-break: break-all;">{{ db_connection_string|default:"N/A" }}</span>
+      <span class="small_text small-text-mt-8">
+        Address: <span class="small_text_ylw file-download-link">{{ db_connection_string|default:"N/A" }}</span>
       </span>
     {% endif %}
   {% elif active_collection_type == 'excel' %}
     {% if excel_file_paths %}
-      <span class="small_text" style="margin-top: 8px; display: block;">
+      <span class="small_text small-text-mt-8">
         Files: <span class="small_text_ylw">{{ excel_file_paths|length }} file(s)</span>
       </span>
-      <div style="margin-top: 8px; max-height: 150px; overflow-y: auto;">
+      <div class="file-download-area">
         {% for file_path in excel_file_paths %}
-          <div class="small_text" style="margin-bottom: 4px; word-break: break-all; font-size: 0.85em;">
-            <a href="{% url 'main:collection_download_file' active_collection_id forloop.counter0 %}" style="color: #ffc107; text-decoration: underline; cursor: pointer;" download>
+          <div class="small_text small-text-file-item">
+            <a href="{% url 'main:collection_download_file' active_collection_id forloop.counter0 %}" class="file-download-link-yellow" download>
               📥 {{ file_path|path_end_part }}
             </a>
           </div>
@@ -220,37 +212,29 @@
     {% endif %}
   {% endif %}
   <hr>
-  <ul class="nav nav-pills flex-column" style="list-style: none; padding: 0;">
+  <ul class="nav nav-pills flex-column sidebar-nav-list">
     {% if active_collection_type == 'document' or not active_collection_type %}
-    <li class="nav-item" style="margin-bottom: 10px;">
-      <a href="{% url 'main:collection_add_docs' active_collection_id %}" id="add-docs-btn" class="text-center" aria-current="page" data-bs-toggle="modal" data-bs-target="#addDocsModal" data-bs-whatever="@getbootstrap" style="display: flex; align-items: center; justify-content: center; padding: 11px 18px; background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); border: none; border-radius: 8px; color: #ffffff; text-decoration: none; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); font-size: 13px; font-weight: 600; letter-spacing: 0.3px; box-shadow: 0 3px 10px rgba(17, 153, 142, 0.25); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 5px 16px rgba(17, 153, 142, 0.4)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 3px 10px rgba(17, 153, 142, 0.25)';">
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style="margin-right: 6px;">
-          <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
-        </svg>
+    <li class="nav-item nav-item-spacing-bottom">
+      <a href="{% url 'main:collection_add_docs' active_collection_id %}" id="add-docs-btn" class="btn-add-docs text-center" aria-current="page" data-bs-toggle="modal" data-bs-target="#addDocsModal" data-bs-whatever="@getbootstrap">
+        <img src="{% static 'icons/plus-icon.svg' %}" alt="+" class="icon">
         Add Documents
       </a>
     </li>
     {% endif %}
     {% if active_collection_type == 'database' or active_collection_type == 'excel' %}
-    <li class="nav-item" style="margin-bottom: 10px;">
-      <button id="reindex-collection-btn" class="text-center" style="width: 100%; display: flex; align-items: center; justify-content: center; padding: 11px 18px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border: none; border-radius: 8px; color: #ffffff; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); font-size: 13px; font-weight: 600; letter-spacing: 0.3px; box-shadow: 0 3px 10px rgba(240, 147, 251, 0.25); cursor: pointer; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;" data-collection-id="{{ active_collection_id }}" data-collection-name="{{ active_collection_name }}" onmouseover="if(!this.disabled) {this.style.transform='translateY(-2px)'; this.style.boxShadow='0 5px 16px rgba(240, 147, 251, 0.4)';}" onmouseout="if(!this.disabled) {this.style.transform='translateY(0)'; this.style.boxShadow='0 3px 10px rgba(240, 147, 251, 0.25)';}">
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-arrow-repeat" viewBox="0 0 16 16" style="margin-right: 6px;">
-          <path d="M11.534 7h3.932a.25.25 0 0 1 .192.41l-1.966 2.36a.25.25 0 0 1-.384 0l-1.966-2.36a.25.25 0 0 1 .192-.41m-11 2h3.932a.25.25 0 0 0 .192-.41L2.692 6.23a.25.25 0 0 0-.384 0L.342 8.59A.25.25 0 0 0 .534 9"/>
-          <path fill-rule="evenodd" d="M8 3c-1.552 0-2.94.707-3.857 1.818a.5.5 0 1 1-.771-.636A6.002 6.002 0 0 1 13.917 7H12.9A5 5 0 0 0 8 3M3.1 9a5.002 5.002 0 0 0 8.757 2.182.5.5 0 1 1 .771.636A6.002 6.002 0 0 1 2.083 9z"/>
-        </svg>
+    <li class="nav-item nav-item-spacing-bottom">
+      <button id="reindex-collection-btn" class="btn-reindex text-center" data-collection-id="{{ active_collection_id }}" data-collection-name="{{ active_collection_name }}">
+        <img src="{% static 'icons/arrow-repeat-icon.svg' %}" alt="Reindex" class="icon">
         <span id="reindex-btn-text">Reindex</span>
-        <div class="spinner-border spinner-border-sm" role="status" id="reindex-spinner" style="display: none; margin-left: 8px;">
+        <div class="spinner-border spinner-border-sm reindex-spinner" role="status" id="reindex-spinner">
           <span class="visually-hidden">Loading...</span>
         </div>
       </button>
     </li>
     {% endif %}
-    <li class="nav-item" style="margin-top: 10px;">
-      <a href="{% url 'main:delete_collection' active_collection_id %}" id="delete-collection-btn" class="text-center" style="display: flex; align-items: center; justify-content: center; padding: 11px 18px; background: rgba(220, 53, 69, 0.1); border: 1.5px solid rgba(220, 53, 69, 0.5); border-radius: 8px; color: #ff6b7a; text-decoration: none; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); font-size: 13px; font-weight: 600; letter-spacing: 0.3px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;" onmouseover="this.style.background='linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%)'; this.style.borderColor='transparent'; this.style.color='#ffffff'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 5px 16px rgba(220, 53, 69, 0.35)';" onmouseout="this.style.background='rgba(220, 53, 69, 0.1)'; this.style.borderColor='rgba(220, 53, 69, 0.5)'; this.style.color='#ff6b7a'; this.style.transform='translateY(0)'; this.style.boxShadow='none';">
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style="margin-right: 6px;">
-          <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/>
-          <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/>
-        </svg>
+    <li class="nav-item nav-item-spacing-top">
+      <a href="{% url 'main:delete_collection' active_collection_id %}" id="delete-collection-btn" class="btn-delete-collection text-center">
+        <img src="{% static 'icons/trash-icon.svg' %}" alt="Delete" class="icon">
         Delete Collection
       </a>
     </li>
@@ -262,13 +246,13 @@
 </div>
 
 <!-- Reindex Status Alert -->
-<div id="reindex-alert" class="alert" role="alert" style="position: fixed; top: 20px; right: 20px; z-index: 9999; display: none; min-width: 300px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); border-radius: 8px;">
-  <div style="display: flex; align-items: center; justify-content: space-between;">
-    <div style="display: flex; align-items: center;">
-      <span id="reindex-alert-icon" style="margin-right: 10px; font-size: 1.5em;"></span>
-      <span id="reindex-alert-message" style="font-weight: 500;"></span>
+<div id="reindex-alert" class="alert alert-custom" role="alert">
+  <div class="alert-flex-container">
+    <div class="alert-content">
+      <span id="reindex-alert-icon" class="alert-icon"></span>
+      <span id="reindex-alert-message" class="alert-message"></span>
     </div>
-    <button type="button" class="btn-close" onclick="closeReindexAlert()" aria-label="Close" style="margin-left: 15px;"></button>
+    <button type="button" class="btn-close alert-close-btn" onclick="closeReindexAlert()" aria-label="Close"></button>
   </div>
 </div>
 
@@ -350,12 +334,12 @@
           </div>
           
       </div>
-      <div class="modal-footer" style="border-top: 1px solid #3a3a3a; padding: 20px 24px; background: #2a2a2a;">
+      <div class="modal-footer modal-footer-custom">
         <div class="spinner-border text-primary" id="spinner_loader" role="status" style="display: none;">
           <span class="sr-only"></span>
         </div>
-        <button type="button" class="btn" data-bs-dismiss="modal" style="padding: 10px 24px; background: rgba(108, 117, 125, 0.1); border: 1.5px solid rgba(108, 117, 125, 0.4); border-radius: 8px; color: #b0b0b0; font-size: 14px; font-weight: 600; letter-spacing: 0.3px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;" onmouseover="this.style.background='rgba(108, 117, 125, 0.2)'; this.style.borderColor='rgba(108, 117, 125, 0.6)'; this.style.color='#ffffff';" onmouseout="this.style.background='rgba(108, 117, 125, 0.1)'; this.style.borderColor='rgba(108, 117, 125, 0.4)'; this.style.color='#b0b0b0';">Cancel</button>
-        <button type="submit" class="btn" onclick="spinnerAppears(); checkNewName(event)" style="padding: 10px 24px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; border-radius: 8px; color: #ffffff; font-size: 14px; font-weight: 600; letter-spacing: 0.3px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 18px rgba(102, 126, 234, 0.45)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(102, 126, 234, 0.3)';">Create Collection</button>
+        <button type="button" class="btn btn-modal-cancel" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" class="btn btn-modal-submit" onclick="spinnerAppears(); checkNewName(event)">Create Collection</button>
       </div>
       </form>
     </div>
@@ -390,12 +374,12 @@
           </div>
           <div id="uploadedDocuments" class="mt-3"></div>
       </div>
-      <div class="modal-footer" style="border-top: 1px solid #3a3a3a; padding: 20px 24px; background: #2a2a2a;">
+      <div class="modal-footer modal-footer-custom">
         <div class="spinner-border text-primary" id="spinner_loader_2" role="status" style="display: none;">
           <span class="sr-only"></span>
         </div>
-        <button type="button" class="btn" data-bs-dismiss="modal" style="padding: 10px 24px; background: rgba(108, 117, 125, 0.1); border: 1.5px solid rgba(108, 117, 125, 0.4); border-radius: 8px; color: #b0b0b0; font-size: 14px; font-weight: 600; letter-spacing: 0.3px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;" onmouseover="this.style.background='rgba(108, 117, 125, 0.2)'; this.style.borderColor='rgba(108, 117, 125, 0.6)'; this.style.color='#ffffff';" onmouseout="this.style.background='rgba(108, 117, 125, 0.1)'; this.style.borderColor='rgba(108, 117, 125, 0.4)'; this.style.color='#b0b0b0';">Cancel</button>
-        <button type="submit" class="btn" onclick="spinnerAppears2()" style="padding: 10px 24px; background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); border: none; border-radius: 8px; color: #ffffff; font-size: 14px; font-weight: 600; letter-spacing: 0.3px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 4px 12px rgba(17, 153, 142, 0.3); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 18px rgba(17, 153, 142, 0.45)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(17, 153, 142, 0.3)';">Add Documents</button>
+        <button type="button" class="btn btn-modal-cancel" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" class="btn btn-modal-add-docs" onclick="spinnerAppears2()">Add Documents</button>
       </div>
       </form>
     </div>
