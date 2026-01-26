@@ -163,7 +163,7 @@ D:/Projects/venv2/Scripts/python.exe check_db_support.py
 ### Update LLM URL (if needed)
 Edit `main/utilities/variables.py`:
 ```python
-llm_url = "http://localhost:8002/v1"  # Update if your vllm runs on different port
+llm_url = "http://localhost:9003/v1"  # Update if your vllm runs on different port
 ```
 
 ### Adjust Query Limits

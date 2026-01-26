@@ -6,7 +6,7 @@ from pprint import pprint
 # model_name = "Qwen3-4B"
 model_name = "Qwen2.5-7B-Instruct-AWQ"
 
-llm_url = "http://localhost:8002/v1"
+llm_url = "http://localhost:9002/v1"
 
 # Vector DB & Retreival 
 INDEXING_CHUNK_SIZE = 512

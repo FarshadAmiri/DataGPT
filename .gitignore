@@ -174,3 +174,16 @@ collections/
 /tests
 *.bin
 *.bin
+compile_latex.bat
+compile_latex.py
+DataGPT_Report_Persian.aux
+DataGPT_Report_Persian.docx
+DataGPT_Report_Persian.out
+DataGPT_Report_Persian.synctex.gz
+DataGPT_Report_Persian.tex
+DataGPT_Report_Persian.toc
+fix_english_text.py
+fix_latex_fonts.py
+generate_word_report.py
+LATEX_COMPILE_GUIDE_FA.md
+LATEX_README_FA.md
