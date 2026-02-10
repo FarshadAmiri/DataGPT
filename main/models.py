@@ -30,12 +30,14 @@ class Collection(models.Model):
     DB_TYPE_POSTGRESQL = 'postgresql'
     DB_TYPE_SQLITE = 'sqlite'
     DB_TYPE_MONGODB = 'mongodb'
+    DB_TYPE_SQLSERVER = 'sqlserver'
     
     DB_TYPE_CHOICES = [
         (DB_TYPE_MYSQL, 'MySQL'),
         (DB_TYPE_POSTGRESQL, 'PostgreSQL'),
         (DB_TYPE_SQLITE, 'SQLite'),
         (DB_TYPE_MONGODB, 'MongoDB'),
+        (DB_TYPE_SQLSERVER, 'SQL Server'),
     ]
     
     user_created =   models.ForeignKey(get_user_model(), on_delete=models.CASCADE)

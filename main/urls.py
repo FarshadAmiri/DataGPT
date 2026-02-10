@@ -1,5 +1,6 @@
 from django.urls import path
 from .views import *
+from .views_progress import indexing_progress_view
 from rest_framework.authtoken.views import obtain_auth_token
 from .views import *
 
@@ -18,4 +19,10 @@ urlpatterns = [
     path('reindex_collection?collection_id=<int:collection_id>/', collection_reindex_view, name='reindex_collection'),
     path('delete_collection?collection_id=<int:collection_id>/', collection_delete_view, name='delete_collection'),
     path('download_file?collection_id=<int:collection_id>&file_index=<int:file_index>/', collection_download_file, name='collection_download_file'),
+    path('indexing-progress/', indexing_progress_view, name='indexing_progress'),
+    # User management URLs
+    path('users/', users_list, name='users_list'),
+    path('users/create/', user_create, name='user_create'),
+    path('users/edit/<str:username>/', user_edit, name='user_edit'),
+    path('users/delete/<str:username>/', user_delete, name='user_delete'),
 ]

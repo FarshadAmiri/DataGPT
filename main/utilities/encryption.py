@@ -58,6 +58,8 @@ def encrypt_and_chunck(text, lang):
         
 
 def decode_RSA(encrypted_text, private_key_path:str='private_key.pem'):
+    if encrypted_text is None or encrypted_text == '':
+        raise ValueError("encrypted_text cannot be None or empty")
     with open(private_key_path, 'rb') as f:
         private_key_data = f.read()
     private_key = RSA.import_key(private_key_data)
@@ -77,6 +79,8 @@ def decrypt_AES_CBC(encrypted_text, encrypted_aes_key):
     return decrypted_text, aes_key
 
 def decrypt_aes_key(encrypted_aes_key):
+    if encrypted_aes_key is None or encrypted_aes_key == '':
+        raise ValueError("encrypted_aes_key cannot be None or empty")
     # decrypting AES key with our RSA private key
     aes_key = decode_RSA(encrypted_aes_key).encode('utf-8')
     aes_key = base64.b64decode(aes_key)

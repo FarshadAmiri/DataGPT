@@ -1,0 +1,394 @@
+{% load static %}
+{% load custom_filters %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script type="text/javascript" src="{% static 'jquery-3.7.1.min.js' %}"></script>
+    <link rel="icon" href="{% static 'icons/favicon5.ico' %}" type="image/x-icon">
+    <link rel="shortcut icon" href="{% static 'icons/favicon5.ico' %}" type="image/x-icon">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/bootstrap.min.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/sidebars.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/main/users.css' %}">
+    <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
+    <title>DataGPT - User Management</title>
+</head>
+<body>
+<div class="container-fluid">
+    <div class="row">
+      <div class="col-lg-2 col-md-12" style="padding: 0;" id="left-sidebar">
+        <div class="d-flex flex-column flex-shrink-0 p-3 text-white sidebar" style="margin-left: 0;">
+    <a href="{% url 'main:main_chat' %}" class="d-flex align-items-center mb-2 mb-md-0 me-md-auto text-white text-decoration-none justify-content-center" id="page_title_a">
+      <img src="{% static 'icons/DataGPT_1.png' %}" alt="DataGPT" style="height: 50px; width: auto;" id="page_title">
+    </a>
+    <ul class="nav nav-pills flex-column" style="margin-top: 15px;">
+      <li class="nav-item">
+        <a href="{% url 'main:main_chat' %}" class="nav-link text-center">
+          Back to Chat
+        </a>
+      </li>
+      {% if user|has_group:"Admin" or user|has_group:"Advanced_user" or user.is_superuser %}
+      <li class="nav-item" style="margin-top: 10px;">
+        <a href="{% url 'main:main_collection' %}" class="nav-link text-center">
+          Collections
+        </a>
+      </li>
+      {% endif %}
+    </ul>
+    <div class="mt-auto">
+    <hr>
+    <div class="dropdown">
+      <a href="#" class="d-flex align-items-center text-white text-decoration-none dropdown-toggle mb" id="dropdownUser1" data-bs-toggle="dropdown" aria-expanded="false">
+        <img id="profile-img" alt="" width="32" height="32" class="rounded-circle me-2">
+        <strong>@{{request.user.username}}</strong>
+      </a>
+      <ul class="dropdown-menu dropdown-menu-dark text-small shadow" aria-labelledby="dropdownUser1">
+        <li><a class="dropdown-item" href="{% url 'users:profile' %}">Profile</a></li>
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item" href="{% url 'users:logout' %}">Sign out</a></li>
+      </ul>
+    </div>
+    </div>
+  </div>
+  </div>
+  <div class="col-lg-10 col-md-12" style="padding: 30px;">
+    <div class="users-container">
+      <div class="users-header">
+        <h2 class="users-title">
+          <img src="{% static 'icons/users-icon.svg' %}" alt="Users" class="icon" style="width: 32px; height: 32px; margin-right: 10px;">
+          User Management
+        </h2>
+        <div class="users-actions">
+          <div class="search-container">
+            <form method="get" action="{% url 'main:users_list' %}" class="search-form">
+              <input type="text" name="search" class="search-input" placeholder="Search users..." value="{{ search_query }}">
+              <button type="submit" class="btn-search">
+                <img src="{% static 'icons/search-icon.svg' %}" alt="Search" class="icon">
+              </button>
+            </form>
+          </div>
+          <button class="btn-add-user" data-bs-toggle="modal" data-bs-target="#addUserModal">
+            <img src="{% static 'icons/plus-icon.svg' %}" alt="+" class="icon">
+            Add New User
+          </button>
+        </div>
+      </div>
+
+      <div class="table-container">
+        <table class="users-table">
+          <thead>
+            <tr>
+              <th>Username</th>
+              <th>Email</th>
+              <th>Name</th>
+              <th>Groups</th>
+              <th>Status</th>
+              <th>Permissions</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for user_item in users %}
+            <tr>
+              <td class="username-cell">
+                <a href="javascript:void(0)" class="username-link" onclick="new bootstrap.Modal(document.getElementById('editUserModal{{ user_item.pk }}')).show();">
+                  <strong>@{{ user_item.username }}</strong>
+                </a>
+              </td>
+              <td>{{ user_item.email|default:"—" }}</td>
+              <td>{{ user_item.first_name }} {{ user_item.last_name|default:"" }}</td>
+              <td>
+                <div class="groups-badges">
+                  {% for group in user_item.groups.all %}
+                    <span class="badge badge-group">{{ group.name }}</span>
+                  {% empty %}
+                    <span class="badge badge-no-group">No groups</span>
+                  {% endfor %}
+                </div>
+              </td>
+              <td>
+                {% if user_item.is_active %}
+                  <span class="badge badge-active">Active</span>
+                {% else %}
+                  <span class="badge badge-inactive">Inactive</span>
+                {% endif %}
+              </td>
+              <td>
+                <div class="permissions-badges">
+                  {% if user_item.is_superuser %}
+                    <span class="badge badge-superuser">Superuser</span>
+                  {% endif %}
+                  {% if user_item.is_staff %}
+                    <span class="badge badge-staff">Staff</span>
+                  {% endif %}
+                </div>
+              </td>
+              <td class="actions-cell">
+                <button class="btn-edit" onclick="
+                  console.log('Edit clicked for user {{ user_item.pk }}');
+                  var modalEl = document.getElementById('editUserModal{{ user_item.pk }}');
+                  console.log('Modal element:', modalEl);
+                  if (modalEl) {
+                    if (typeof bootstrap !== 'undefined') {
+                      console.log('Bootstrap found, opening modal');
+                      var modal = new bootstrap.Modal(modalEl);
+                      modal.show();
+                    } else {
+                      alert('Bootstrap not loaded!');
+                    }
+                  } else {
+                    alert('Modal not found: editUserModal{{ user_item.pk }}');
+                  }
+                " title="Edit user">
+                  <img src="{% static 'icons/edit-icon.svg' %}" alt="Edit" class="icon" style="width: 16px; height: 16px;">
+                  Edit
+                </button>
+                {% if user_item.pk != request.user.pk %}
+                <button class="btn-delete" onclick="
+                  var modalEl = document.getElementById('deleteUserModal{{ user_item.pk }}');
+                  if (modalEl && typeof bootstrap !== 'undefined') {
+                    new bootstrap.Modal(modalEl).show();
+                  }
+                " title="Delete user">
+                  <img src="{% static 'icons/trash-icon.svg' %}" alt="Delete" class="icon" style="width: 16px; height: 16px;">
+                  Delete
+                </button>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+
+        {% if not users %}
+        <div class="no-users-message">
+          <p>No users found{% if search_query %} matching "{{ search_query }}"{% endif %}.</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- User Modals (outside table for proper HTML structure) -->
+{% for user_item in users %}
+<!-- Edit User Modal for {{ user_item.username }} -->
+<div class="modal fade" id="editUserModal{{ user_item.pk }}" tabindex="-1" aria-labelledby="editUserModalLabel{{ user_item.pk }}" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="editUserModalLabel{{ user_item.pk }}">Edit User: @{{ user_item.username }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form method="post" action="{% url 'main:user_edit' user_item.username %}">
+        {% csrf_token %}
+        <div class="modal-body">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="edit-username-{{ user_item.pk }}" class="form-label">Username</label>
+                <input type="text" class="form-control" id="edit-username-{{ user_item.pk }}" name="username" value="{{ user_item.username }}" required>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="edit-email-{{ user_item.pk }}" class="form-label">Email</label>
+                <input type="email" class="form-control" id="edit-email-{{ user_item.pk }}" name="email" value="{{ user_item.email }}">
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="edit-first-name-{{ user_item.pk }}" class="form-label">First Name</label>
+                <input type="text" class="form-control" id="edit-first-name-{{ user_item.pk }}" name="first_name" value="{{ user_item.first_name }}">
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="edit-last-name-{{ user_item.pk }}" class="form-label">Last Name</label>
+                <input type="text" class="form-control" id="edit-last-name-{{ user_item.pk }}" name="last_name" value="{{ user_item.last_name }}">
+              </div>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label for="edit-password-{{ user_item.pk }}" class="form-label">New Password (leave blank to keep current)</label>
+            <input type="password" class="form-control" id="edit-password-{{ user_item.pk }}" name="password" autocomplete="new-password">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Groups</label>
+            <div class="groups-checkboxes">
+              {% for group in groups %}
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="groups" value="{{ group.id }}" id="edit-group-{{ user_item.pk }}-{{ group.id }}"
+                  {% if group in user_item.groups.all %}checked{% endif %}>
+                <label class="form-check-label" for="edit-group-{{ user_item.pk }}-{{ group.id }}">
+                  {{ group.name }}
+                </label>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+          <div class="mb-3">
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" name="is_active" id="edit-is-active-{{ user_item.pk }}" {% if user_item.is_active %}checked{% endif %}>
+              <label class="form-check-label" for="edit-is-active-{{ user_item.pk }}">
+                Active
+              </label>
+            </div>
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" name="is_staff" id="edit-is-staff-{{ user_item.pk }}" {% if user_item.is_staff %}checked{% endif %}>
+              <label class="form-check-label" for="edit-is-staff-{{ user_item.pk }}">
+                Staff Status
+              </label>
+            </div>
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" name="is_superuser" id="edit-is-superuser-{{ user_item.pk }}" {% if user_item.is_superuser %}checked{% endif %}>
+              <label class="form-check-label" for="edit-is-superuser-{{ user_item.pk }}">
+                Superuser Status
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer" style="justify-content: space-between;">
+          <div>
+            {% if user_item.pk != request.user.pk %}
+            <button type="button" class="btn-modal-delete" data-bs-toggle="modal" data-bs-target="#deleteUserModal{{ user_item.pk }}" data-bs-dismiss="modal">
+              <img src="{% static 'icons/trash-icon.svg' %}" alt="Delete" style="width: 16px; height: 16px; margin-right: 5px; filter: brightness(0) invert(1);">
+              Delete User
+            </button>
+            {% endif %}
+          </div>
+          <div>
+            <button type="button" class="btn-modal-cancel" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn-modal-submit">Save Changes</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Delete User Modal for {{ user_item.username }} -->
+<div class="modal fade" id="deleteUserModal{{ user_item.pk }}" tabindex="-1" aria-labelledby="deleteUserModalLabel{{ user_item.pk }}" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="deleteUserModalLabel{{ user_item.pk }}">Delete User</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form method="post" action="{% url 'main:user_delete' user_item.username %}">
+        {% csrf_token %}
+        <div class="modal-body">
+          <p class="delete-warning">Are you sure you want to delete user <strong>@{{ user_item.username }}</strong>?</p>
+          <p class="delete-warning-note">This action cannot be undone.</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-modal-cancel" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn-modal-delete">Delete User</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endfor %}
+
+<!-- Add User Modal -->
+<div class="modal fade" id="addUserModal" tabindex="-1" aria-labelledby="addUserModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addUserModalLabel">Add New User</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form method="post" action="{% url 'main:user_create' %}">
+        {% csrf_token %}
+        <div class="modal-body">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="add-username" class="form-label">Username <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="add-username" name="username" required>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="add-email" class="form-label">Email</label>
+                <input type="email" class="form-control" id="add-email" name="email">
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="add-first-name" class="form-label">First Name</label>
+                <input type="text" class="form-control" id="add-first-name" name="first_name">
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="add-last-name" class="form-label">Last Name</label>
+                <input type="text" class="form-control" id="add-last-name" name="last_name">
+              </div>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label for="add-password" class="form-label">Password <span class="text-danger">*</span></label>
+            <input type="password" class="form-control" id="add-password" name="password" required autocomplete="new-password">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Groups</label>
+            <div class="groups-checkboxes">
+              {% for group in groups %}
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="groups" value="{{ group.id }}" id="add-group-{{ group.id }}">
+                <label class="form-check-label" for="add-group-{{ group.id }}">
+                  {{ group.name }}
+                </label>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+          <div class="mb-3">
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" name="is_active" id="add-is-active" checked>
+              <label class="form-check-label" for="add-is-active">
+                Active
+              </label>
+            </div>
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" name="is_staff" id="add-is-staff">
+              <label class="form-check-label" for="add-is-staff">
+                Staff Status
+              </label>
+            </div>
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" name="is_superuser" id="add-is-superuser">
+              <label class="form-check-label" for="add-is-superuser">
+                Superuser Status
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-modal-cancel" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn-modal-submit">Create User</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var profileImg = document.getElementById('profile-img');
+    if (profileImg) {
+        profileImg.src = "{% static 'icons/user-circle.svg' %}";
+    }
+});
+</script>
+
+</body>
+</html>

@@ -258,10 +258,10 @@
 
 <div class="modal fade" id="newCollectionModal" tabindex="0" aria-labelledby="newCollection" aria-hidden="true">
   <div class="modal-dialog modal-lg">
-    <div class="modal-content">
+    <div class="modal-content dark-modal">
       <div class="modal-header">
         <h5 class="modal-title" id="newCollection">Create a new collection</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" data-bs-newCollectionName="{{ new_collection_name }}"></button>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" data-bs-newCollectionName="{{ new_collection_name }}"></button>
       </div>
       <div class="modal-body">
         <form action="{%  url 'main:create_collection' %}" method="post" enctype="multipart/form-data" id="collection-create-form">
@@ -298,6 +298,7 @@
                 <option value="mysql">MySQL</option>
                 <option value="postgresql">PostgreSQL</option>
                 <option value="mongodb">MongoDB</option>
+                <option value="sqlserver">SQL Server</option>
               </select>
             </div>
             
@@ -307,10 +308,38 @@
               <small class="form-text text-muted">Upload SQLite database file</small>
             </div>
             
-            <div class="mb-3" id="db-connection-field" style="display: none;">
-              <label for="db-connection-string" class="col-form-label">Connection String</label>
-              <input type="text" class="form-control" id="db-connection-string" name="db-connection-string" placeholder="e.g., mysql://user:pass@localhost:3306/dbname">
-              <small class="form-text text-muted">Format: protocol://user:password@host:port/database</small>
+            <div id="db-connection-field" style="display: none;">
+              <div class="mb-3">
+                <label for="db-host" class="col-form-label">Host / Server</label>
+                <input type="text" class="form-control" id="db-host" name="db-host" placeholder="localhost or localhost\SQLEXPRESS">
+                <small class="form-text text-muted">For SQL Server named instances use: localhost\SQLEXPRESS</small>
+              </div>
+              
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label for="db-port" class="col-form-label">Port (Optional)</label>
+                  <input type="text" class="form-control" id="db-port" name="db-port" placeholder="3306, 5432, 1433, 27017">
+                  <small class="form-text text-muted">Leave empty for default</small>
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                  <label for="db-name" class="col-form-label">Database Name</label>
+                  <input type="text" class="form-control" id="db-name" name="db-name" placeholder="mydatabase">
+                </div>
+              </div>
+              
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label for="db-username" class="col-form-label">Username <span class="text-muted">(Optional for SQL Server)</span></label>
+                  <input type="text" class="form-control" id="db-username" name="db-username" placeholder="Leave empty for Windows Auth">
+                  <small class="form-text text-muted">SQL Server: Leave blank to use Windows Authentication</small>
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                  <label for="db-password" class="col-form-label">Password</label>
+                  <input type="password" class="form-control" id="db-password" name="db-password" placeholder="••••••••">
+                </div>
+              </div>
             </div>
             
             <div class="mb-3">
@@ -335,11 +364,16 @@
           
       </div>
       <div class="modal-footer modal-footer-custom">
+        <div class="progress-indicator" id="progress_indicator" style="display: none; flex: 1; margin-right: auto;">
+          <span id="progress_text" style="color: #aaa;"></span>
+          <span id="progress_filename" style="color: #00ff88; font-weight: bold; margin-left: 8px;"></span>
+          <span id="progress_status" style="color: #aaa; margin-left: 4px;"></span>
+        </div>
         <div class="spinner-border text-primary" id="spinner_loader" role="status" style="display: none;">
           <span class="sr-only"></span>
         </div>
         <button type="button" class="btn btn-modal-cancel" data-bs-dismiss="modal">Cancel</button>
-        <button type="submit" class="btn btn-modal-submit" onclick="spinnerAppears(); checkNewName(event)">Create Collection</button>
+        <button type="submit" class="btn btn-modal-submit" onclick="submitCollectionForm(event)">Create Collection</button>
       </div>
       </form>
     </div>
@@ -347,26 +381,18 @@
 </div>
 {% if no_collections != True %}
 <div class="modal fade" id="addDocsModal" tabindex="0" aria-labelledby="addDocs" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content dark-modal">
       <div class="modal-header">
         <h5 class="modal-title" id="addDocs">Add new documents</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" data-bs-newRagName="{{ new_rag_name }}"></button>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" data-bs-newRagName="{{ new_rag_name }}"></button>
       </div>
       <div class="modal-body">
-        <form action="{%  url 'main:collection_add_docs' active_collection_id %}" method="post" enctype="multipart/form-data">
+        <form action="{%  url 'main:collection_add_docs' active_collection_id %}" method="post" enctype="multipart/form-data" id="add-docs-form">
         {% csrf_token %}
           <div class="mb-3">
             <label for="collection-name-add" class="col-form-label">Collection name</label>
             <input type="text" class="form-control" id="collection-name-add" name="new-collection-name" value="{{ active_collection_name }}" disabled>
-          </div>
-          <div class="mb-3">
-          <label for="llm" class="col-form-label">LLM</label>
-          <select class="form-select" id="llm" aria-label="Disabled select example" disabled>
-            <option>Llama2 7B</option>
-            <option value="2">Llama2 13B</option>
-            <option value="1" selected>Mistral 7B</option>
-          </select>
           </div>
           <div class="mb-3">
             <label for="docForm" class="form-label">Add knowledge source</label>
@@ -375,11 +401,16 @@
           <div id="uploadedDocuments" class="mt-3"></div>
       </div>
       <div class="modal-footer modal-footer-custom">
+        <div class="progress-indicator" id="progress_indicator_2" style="display: none; flex: 1; margin-right: auto;">
+          <span id="progress_text_2" style="color: #aaa;"></span>
+          <span id="progress_filename_2" style="color: #00ff88; font-weight: bold; margin-left: 8px;"></span>
+          <span id="progress_status_2" style="color: #aaa; margin-left: 4px;"></span>
+        </div>
         <div class="spinner-border text-primary" id="spinner_loader_2" role="status" style="display: none;">
           <span class="sr-only"></span>
         </div>
         <button type="button" class="btn btn-modal-cancel" data-bs-dismiss="modal">Cancel</button>
-        <button type="submit" class="btn btn-modal-add-docs" onclick="spinnerAppears2()">Add Documents</button>
+        <button type="submit" class="btn btn-modal-add-docs" onclick="submitAddDocsForm(event)">Add Documents</button>
       </div>
       </form>
     </div>
@@ -485,11 +516,23 @@ function toggleCollectionTypeFields() {
   var documentFields = document.getElementById("document-fields");
   var databaseFields = document.getElementById("database-fields");
   var excelFields = document.getElementById("excel-fields");
+  var docInput = document.getElementById("docForm");
+  var dbFileInput = document.getElementById("db-file");
+  var dbHostInput = document.getElementById("db-host");
+  var dbNameInput = document.getElementById("db-name");
+  var excelFilesInput = document.getElementById("excel-files");
   
   // Hide all fields first
   documentFields.style.display = "none";
   databaseFields.style.display = "none";
   excelFields.style.display = "none";
+  
+  // Clear required flags by default
+  if (docInput) docInput.required = false;
+  if (dbFileInput) dbFileInput.required = false;
+  if (dbHostInput) dbHostInput.required = false;
+  if (dbNameInput) dbNameInput.required = false;
+  if (excelFilesInput) excelFilesInput.required = false;
   
   // Show relevant fields
   if (collectionType === "document") {
@@ -499,6 +542,7 @@ function toggleCollectionTypeFields() {
     toggleDatabaseConnectionFields();
   } else if (collectionType === "excel") {
     excelFields.style.display = "block";
+    if (excelFilesInput) excelFilesInput.required = true;
   }
 }
 
@@ -506,13 +550,22 @@ function toggleDatabaseConnectionFields() {
   var dbType = document.getElementById("db-type").value;
   var dbFileField = document.getElementById("db-file-field");
   var dbConnectionField = document.getElementById("db-connection-field");
+  var dbFileInput = document.getElementById("db-file");
+  var dbHostInput = document.getElementById("db-host");
+  var dbNameInput = document.getElementById("db-name");
   
   if (dbType === "sqlite") {
     dbFileField.style.display = "block";
     dbConnectionField.style.display = "none";
+    if (dbFileInput) dbFileInput.required = true;
+    if (dbHostInput) dbHostInput.required = false;
+    if (dbNameInput) dbNameInput.required = false;
   } else {
     dbFileField.style.display = "none";
     dbConnectionField.style.display = "block";
+    if (dbFileInput) dbFileInput.required = false;
+    if (dbHostInput) dbHostInput.required = true;
+    if (dbNameInput) dbNameInput.required = true;
   }
 }
 
@@ -521,6 +574,7 @@ document.addEventListener('DOMContentLoaded', function() {
   if (dbTypeSelect) {
     dbTypeSelect.addEventListener('change', toggleDatabaseConnectionFields);
   }
+  toggleCollectionTypeFields();
   
   // Reindex collection handler
   var reindexBtn = document.getElementById('reindex-collection-btn');
@@ -616,6 +670,134 @@ function showReindexAlert(type, message, collectionName) {
 function closeReindexAlert() {
   var alert = document.getElementById('reindex-alert');
   alert.style.display = 'none';
+}
+
+// AJAX form submission with progress tracking
+var progressInterval = null;
+
+function submitCollectionForm(event) {
+  event.preventDefault();
+  
+  // Check name validation first
+  var threads = document.getElementsByClassName("collection_name");
+  var threadNames = [];
+  for (var i = 0; i < threads.length; i++) {
+    threadNames.push(threads[i].innerHTML);
+  }
+  
+  var inputName = document.getElementById("new-collection-name").value;
+  if (threadNames.includes(inputName)) {
+    alert("This collection name already exists! try another name");
+    return;
+  } else if (inputName == "") {
+    alert("You must provide a name for this collection!");
+    return;
+  }
+  
+  // Show spinner and progress
+  spinnerLoader.style.display = 'inline-block';
+  document.getElementById('progress_indicator').style.display = 'flex';
+  
+  var form = document.getElementById('collection-create-form');
+  var formData = new FormData(form);
+  
+  // Start progress polling
+  startProgressPolling('progress_text', 'progress_filename');
+  
+  fetch(form.action, {
+    method: 'POST',
+    body: formData,
+    headers: {
+      'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+    }
+  })
+  .then(response => {
+    if (response.redirected) {
+      window.location.href = response.url;
+    } else {
+      return response.text();
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    spinnerDisappears();
+    stopProgressPolling();
+    alert('An error occurred while creating the collection.');
+  });
+}
+
+function submitAddDocsForm(event) {
+  event.preventDefault();
+  
+  // Show spinner and progress
+  spinnerLoader2.style.display = 'inline-block';
+  var progressIndicator = document.getElementById('progress_indicator_2');
+  if (progressIndicator) {
+    progressIndicator.style.display = 'flex';
+  }
+  
+  var form = document.getElementById('add-docs-form');
+  if (!form) {
+    console.error('Form not found');
+    return;
+  }
+  var formData = new FormData(form);
+  
+  // Start progress polling
+  startProgressPolling('progress_text_2', 'progress_filename_2');
+  
+  fetch(form.action, {
+    method: 'POST',
+    body: formData,
+    headers: {
+      'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+    }
+  })
+  .then(response => {
+    if (response.redirected) {
+      window.location.href = response.url;
+    } else {
+      return response.text();
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    spinnerDisappears2();
+    stopProgressPolling();
+    alert('An error occurred while adding documents.');
+  });
+}
+
+function startProgressPolling(textId, filenameId) {
+  console.log('Starting progress polling for', textId, filenameId);
+  var statusId = textId.replace('_text', '_status');
+  
+  progressInterval = setInterval(() => {
+    fetch('/indexing-progress/')
+      .then(response => response.json())
+      .then(data => {
+        console.log('Progress data:', data);
+        var textElem = document.getElementById(textId);
+        var filenameElem = document.getElementById(filenameId);
+        var statusElem = document.getElementById(statusId);
+        
+        if (textElem && filenameElem && statusElem && data.current && data.total) {
+          textElem.textContent = `${data.current} / ${data.total} :`;
+          filenameElem.textContent = data.filename || '';
+          statusElem.textContent = data.filename ? ' is indexing' : '';
+        }
+      })
+      .catch(error => console.error('Progress polling error:', error));
+  }, 500);
+}
+
+function stopProgressPolling() {
+  if (progressInterval) {
+    clearInterval(progressInterval);
+    progressInterval = null;
+  }
+  document.getElementById('progress_indicator').style.display = 'none';
+  document.getElementById('progress_indicator_2').style.display = 'none';
 }
 
 // Add event listener for database type change

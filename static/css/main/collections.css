@@ -1028,5 +1028,66 @@
     border: 1px solid #ffc107;
     font-size: 14px;
   }
-  
+
+  /* Dark Modal Theme */
+  .dark-modal {
+    background-color: #212121;
+    color: #e0e0e0;
+    border: 1px solid #3a3a3a;
+  }
+
+  .dark-modal .modal-header {
+    background-color: #1a1a1a;
+    border-bottom: 1px solid #3a3a3a;
+    color: #e0e0e0;
+  }
+
+  .dark-modal .modal-title {
+    color: #ffffff;
+  }
+
+  .dark-modal .modal-body {
+    background-color: #212121;
+    color: #e0e0e0;
+  }
+
+  .dark-modal .modal-footer {
+    background-color: #1a1a1a;
+    border-top: 1px solid #3a3a3a;
+  }
+
+  .dark-modal .form-label,
+  .dark-modal label {
+    color: #e0e0e0;
+  }
+
+  .dark-modal .form-control,
+  .dark-modal .form-select {
+    background-color: #2a2a2a;
+    border-color: #3a3a3a;
+    color: #e0e0e0;
+  }
+
+  .dark-modal .form-control:focus,
+  .dark-modal .form-select:focus {
+    background-color: #2a2a2a;
+    border-color: #72ea90;
+    color: #e0e0e0;
+    box-shadow: 0 0 0 0.2rem rgba(114, 234, 144, 0.25);
+  }
+
+  .dark-modal .form-control::placeholder {
+    color: #888888;
+  }
+
+  .dark-modal .form-control:disabled,
+  .dark-modal .form-select:disabled {
+    background-color: #1a1a1a;
+    border-color: #333333;
+    color: #666666;
+  }
+
+  .dark-modal .form-text {
+    color: #888888;
+  }
   

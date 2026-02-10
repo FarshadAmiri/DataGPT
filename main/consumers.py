@@ -487,10 +487,19 @@ The query results above are the authoritative source. If it says "14", your answ
 
     async def _handle_translation(self, dict_data):
         message_id = dict_data.get("message_id")
+        # Remove commas from message_id (SQL Server formats numbers with thousand separators)
+        if isinstance(message_id, str):
+            message_id = message_id.replace(',', '')
         translation_task = await self.get_message(message_id)
         encrypted_aes_key = dict_data.get("encrypted_aes_key")
         aes_key = decrypt_aes_key(encrypted_aes_key)
-        persian_translation = translate_en_fa(translation_task)
+        
+        # Choose translation method based on translation_mode
+        if translation_mode == "llm":
+            persian_translation = self.llm_translate(translation_task)
+        else:  # Default to argos
+            persian_translation = translate_en_fa(translation_task)
+        
         encrypted_persian_translation = encrypt_AES_ECB(persian_translation, aes_key).decode('utf-8')
         await self.send({
             "type": "websocket.send",
@@ -507,6 +516,9 @@ The query results above are the authoritative source. If it says "14", your answ
 
     async def _handle_context(self, dict_data):
         message_id = dict_data.get("message_id")
+        # Remove commas from message_id (SQL Server formats numbers with thousand separators)
+        if isinstance(message_id, str):
+            message_id = message_id.replace(',', '')
         contexts = await self.get_context(message_id)
         encrypted_aes_key = dict_data.get("encrypted_aes_key")
         aes_key = decrypt_aes_key(encrypted_aes_key)
@@ -569,6 +581,42 @@ The query results above are the authoritative source. If it says "14", your answ
 
         print("Extracted Keywords:", extracted_keywords)
         return extracted_keywords
+
+    def llm_translate(self, text):
+        """Translate text to Persian using LLM."""
+        global model_name, translation_prompt
+        endpoint = llm_url.rstrip("/") + "/chat/completions"
+
+        messages = [
+            {"role": "system", "content": "You are a professional English to Persian translator."},
+            {"role": "user", "content": f"{translation_prompt}\n\n{text}"}
+        ]
+        payload = {
+            "model": model_name,
+            "messages": messages,
+            "temperature": 0.3,
+            "max_tokens": 2048,
+            "stream": False,
+            "chat_template_kwargs": {"enable_thinking": False}
+        }
+
+        headers = {"Content-Type": "application/json"}
+
+        try:
+            resp = requests.post(endpoint, json=payload, headers=headers)
+            if resp.status_code != 200:
+                print(f"LLM translation failed {resp.status_code}: {resp.text}")
+                # Fallback to argos if LLM fails
+                return translate_en_fa(text)
+
+            data = resp.json()
+            translated_text = data["choices"][0]["message"]["content"].strip()
+            print("LLM Translation completed")
+            return translated_text
+        except Exception as e:
+            print(f"LLM translation error: {e}")
+            # Fallback to argos if error occurs
+            return translate_en_fa(text)
 
     async def _handle_database_query(self, user_question: str, max_retries: int = 3) -> Tuple[str, Dict[str, str]]:
         """
@@ -637,7 +685,7 @@ The query results above are the authoritative source. If it says "14", your answ
                 
                 # Execute query based on database type
                 if collection_type == 'database':
-                    if db_type in ['sqlite', 'mysql', 'postgresql']:
+                    if db_type in ['sqlite', 'mysql', 'postgresql', 'sqlserver']:
                         success, result = await asyncio.get_event_loop().run_in_executor(
                             None,
                             execute_sql_query,
@@ -748,7 +796,7 @@ The query results above are the authoritative source. If it says "14", your answ
                     result_label = f"Raw Result #{query_counter}" if query_counter > 1 else "Raw Result"
                     
                     # Convert result to string format for display
-                    if db_type in ['sqlite', 'mysql', 'postgresql']:
+                    if db_type in ['sqlite', 'mysql', 'postgresql', 'sqlserver']:
                         # Format SQL results as table
                         if isinstance(result, dict) and 'columns' in result and 'rows' in result:
                             raw_display = f"Columns: {', '.join(result['columns'])}\n\n"

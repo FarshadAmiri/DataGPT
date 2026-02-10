@@ -1,5 +1,6 @@
 {% load static %}
 {% load custom_filters %}
+{% load l10n %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -104,9 +105,16 @@
       </li>
       {% if user|has_group:"Admin" or user|has_group:"Advanced_user" or user.is_superuser%}
       <li class="nav-item" style="margin-top: 10px; margin-bottom: 5px">
-        <a href="{% url 'main:main_collection' %}" id="new-collection-btn" class="nav-link active text-center">
-          Collections
-        </a>
+        <div style="display: flex; gap: 5px;">
+          <a href="{% url 'main:main_collection' %}" id="new-collection-btn" class="nav-link active text-center" style="flex: 1; padding: 10px 5px;">
+            Collections
+          </a>
+          {% if user|has_group:"Admin" or user.is_superuser %}
+          <a href="{% url 'main:users_list' %}" id="users-btn" class="nav-link active text-center" style="flex: 1; padding: 10px 5px;">
+            Users
+          </a>
+          {% endif %}
+        </div>
       </li>
       {% endif %}
     </ul>
@@ -169,13 +177,15 @@
         </div>
     {% else %}
         <div class="container">
+            {% localize off %}
             <input type="hidden" class="rag-response-id" id="{{message.id}}" value="{{message.id}}" >
+            {% endlocalize %}
             <p class="msg rag-response" style="line-break: auto;">{{message.message|linebreaksbr}}</p>
             <p class="msg rag-response-Fa" style="line-break: auto; display: none;"></p>
             <span class="time-left">{{message.timestamp|time_template}}</span>
-            <button class="copy-btn" onclick="copyThis(this.parentNode); showMessage('Copied!', this)"><img id="copy-icon"></button>
-            <button class="translate-btn" onclick="translateThis(this)"><img id="translate-icon"></button>
-            <button class="context-btn" aria-current="page" data-bs-toggle="modal" data-bs-target="#contextModal" onclick="getContext(this)"><img id="context-icon"></button>
+            <button class="copy-btn" onclick="copyThis(this.parentNode); showMessage('Copied!', this)" title="Copy response"><img id="copy-icon"></button>
+            <button class="translate-btn" onclick="translateThis(this)" title="Translate"><img id="translate-icon"></button>
+            <button class="context-btn" aria-current="page" data-bs-toggle="modal" data-bs-target="#contextModal" onclick="getContext(this)" title="View response context"><img id="context-icon"></button>
         </div>
     {% endif %}
     {% endfor %}
@@ -214,14 +224,6 @@
                 
                 <!-- Input wrapper -->
                 <div class="modern-input-wrapper">
-                    <!-- Attach file button -->
-                    <button type="button" class="attach-btn" id="attach-btn" title="Attach files">
-                        <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
-                            <path d="M4.5 3a2.5 2.5 0 0 1 5 0v9a1.5 1.5 0 0 1-3 0V5a.5.5 0 0 1 1 0v7a.5.5 0 0 0 1 0V3a1.5 1.5 0 1 0-3 0v9a2.5 2.5 0 0 0 5 0V5a.5.5 0 0 1 1 0v7a3.5 3.5 0 1 1-7 0V3z"/>
-                        </svg>
-                    </button>
-                    <input type="file" id="file-input" name="files" multiple style="display: none;" accept=".pdf,.txt,.doc,.docx,.csv,.xlsx,.xls">
-                    
                     <!-- Text input -->
                     <textarea placeholder="Ask anything..." name="message" id="msgInput" rows="1"></textarea>
                     
@@ -298,7 +300,19 @@
               <span class="collection-name">{{ base_collection_name }}</span>
               <span class="collection-type">
                 {% if base_collection_type == 'database' %}
-                  (MySQL database)
+                  {% if base_collection_db_type == 'mysql' %}
+                    (MySQL database)
+                  {% elif base_collection_db_type == 'sqlserver' %}
+                    (SQL Server database)
+                  {% elif base_collection_db_type == 'postgresql' %}
+                    (PostgreSQL database)
+                  {% elif base_collection_db_type == 'mongodb' %}
+                    (MongoDB database)
+                  {% elif base_collection_db_type == 'sqlite' %}
+                    (SQLite database)
+                  {% else %}
+                    (Database)
+                  {% endif %}
                 {% elif base_collection_type == 'excel' %}
                   (Excel files)
                 {% elif base_collection_type == 'document' %}
@@ -482,11 +496,7 @@
           </div>
           <div class="mb-3">
           <label for="llm" class="col-form-label">LLM</label>
-          <select class="form-select" id="llm" aria-label="Disabled select example" disabled>
-            <option value="1" selected>Qwen2.5 7B</option>
-            <option>Llama2 7B</option>
-            <option value="2">Llama2 13B</option>
-          </select>
+          <input type="text" class="form-control" id="llm" value="{{ model_name }}" disabled>
           </div>
           <div class="mb-3" id="doc-form-div">
             <label for="docForm" class="form-label">Add knowledge source</label>
@@ -507,26 +517,18 @@
 </div>
 {% if no_threads != True %}
 <div class="modal fade" id="addDocsModal" tabindex="0" aria-labelledby="addDocs" aria-hidden="true">
-  <div class="modal-dialog">
+  <div class="modal-dialog modal-lg">
     <div class="modal-content dark-modal">
       <div class="modal-header">
         <h5 class="modal-title" id="addDocs">Add new documents</h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" data-bs-newRagName="{{ new_rag_name }}"></button>
       </div>
       <div class="modal-body">
-        <form action="{%  url 'main:add_docs' active_thread_id %}" method="post" enctype="multipart/form-data">
+        <form action="{%  url 'main:add_docs' active_thread_id %}" method="post" enctype="multipart/form-data" id="chat-add-docs-form">
         {% csrf_token %}
           <div class="mb-3">
             <label for="rag-name" class="col-form-label">RAG name</label>
             <input type="text" class="form-control" id="rag-name" name="new-rag-name" value="{{ active_thread_name }}" disabled>
-          </div>
-          <div class="mb-3">
-          <label for="llm" class="col-form-label">LLM</label>
-          <select class="form-select" id="llm" aria-label="Disabled select example" disabled>
-            <option value="1" selected>Qwen2.5 7B</option>
-            <option>Llama2 7B</option>
-            <option value="2">Llama2 13B</option>
-          </select>
           </div>
           <div class="mb-3">
             <label for="docForm" class="form-label">Add knowledge source</label>
@@ -534,12 +536,17 @@
           </div>
           <div id="uploadedDocuments" class="mt-3"></div>
       </div>
-      <div class="modal-footer">
+      <div class="modal-footer modal-footer-custom">
+        <div class="progress-indicator" id="progress_indicator_chat" style="display: none; flex: 1; margin-right: auto;">
+          <span id="progress_text_chat" style="color: #aaa;"></span>
+          <span id="progress_filename_chat" style="color: #00ff88; font-weight: bold; margin-left: 8px;"></span>
+          <span id="progress_status_chat" style="color: #aaa; margin-left: 4px;"></span>
+        </div>
         <div class="spinner-border text-primary" id="spinner_loader_2" role="status" style="display: none;">
           <span class="sr-only"></span>
         </div>
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Discard</button>
-        <button type="submit" class="btn btn-primary" onclick="spinnerAppears2()">Add documents</button>
+        <button type="button" class="btn btn-modal-cancel" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" class="btn btn-modal-add-docs" onclick="submitChatAddDocsForm(event)">Add Documents</button>
       </div>
       </form>
     </div>
@@ -547,9 +554,9 @@
 </div>
 <div class="modal fade" id="contextModal" tabindex="0" aria-labelledby="context" aria-hidden="true">
   <div class="modal-dialog modal-xl">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="context">Response contexts</h5>
+    <div class="modal-content" style="background: linear-gradient(135deg, #083042 0%, #0e323e 50%, #1e3843 100%); border: 1px solid rgba(13, 110, 253, 0.4);">
+      <div class="modal-header" style="border-bottom: 1px solid rgba(53, 96, 164, 0.798);">
+        <h5 class="modal-title" id="context" style="color: #ffffff; font-weight: 600;">Response contexts</h5>
       </div>
       <div class="modal-body">
           <div class="mb-3" id="context-div">
@@ -579,7 +586,19 @@
             <span class="info-label">Type:</span>
             <span class="info-value">
               {% if base_collection_type == 'database' %}
-                MySQL Database
+                {% if base_collection_db_type == 'mysql' %}
+                  MySQL Database
+                {% elif base_collection_db_type == 'sqlserver' %}
+                  SQL Server Database
+                {% elif base_collection_db_type == 'postgresql' %}
+                  PostgreSQL Database
+                {% elif base_collection_db_type == 'mongodb' %}
+                  MongoDB Database
+                {% elif base_collection_db_type == 'sqlite' %}
+                  SQLite Database
+                {% else %}
+                  Database
+                {% endif %}
               {% elif base_collection_type == 'excel' %}
                 Excel Files
               {% elif base_collection_type == 'document' %}
@@ -750,8 +769,8 @@ const rag_response = '<div class="container">' +
 '<button class="context-btn" aria-current="page" data-bs-toggle="modal" data-bs-target="#contextModal" onclick="getContext(this)"><img id="context-icon"></button>' +
 '</div>'
 
-const contextField = '<label for="{context_id}" class="col-form-label" style="color: #000000; font-weight: bold;">{context_label}</label>' + 
-'<textarea type="text" class="form-control" rows="{rows}" id="{context_id}" style="font-family: monospace; font-size: 12px; white-space: pre-wrap;" disabled>{context_text}</textarea>'
+const contextField = '<label for="{context_id}" class="col-form-label" style="color: #ffffff; font-weight: bold; font-size: 14px;">{context_label}</label>' + 
+'<textarea type="text" class="form-control" rows="{rows}" id="{context_id}" style="font-family: monospace; font-size: 12px; white-space: pre-wrap; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(13, 110, 253, 0.4); color: #e0e0e0;" disabled>{context_text}</textarea>'
 
 function decrypt_text(text) {
     var aesRawKey = localStorage.getItem("aesRawKey_rag");
@@ -889,11 +908,24 @@ socket.onmessage = function(e) {
       var encryptedPersianTranslation = chatMsgData.encrypted_persian_translation;
       var persianTranslation = decrypt_text(encryptedPersianTranslation)
       var messageId = chatMsgData.message_id;
-      var container = document.getElementById(messageId).parentNode;
+      // Remove commas from messageId if present (SQL Server formatting)
+      if (typeof messageId === 'string') {
+        messageId = messageId.replace(/,/g, '');
+      }
+      console.log('Translation received for message ID:', messageId);
+      var messageElement = document.getElementById(messageId);
+      if (!messageElement) {
+        console.error('Could not find message element with ID:', messageId);
+        return;
+      }
+      var container = messageElement.parentNode;
       var persianTextBox = container.querySelector('.msg.rag-response-Fa');
       var englishTextBox = container.querySelector('.msg.rag-response');
-      persianTranslation = persianTranslation.replace(/\n/g, '<br>');
-      persianTextBox.innerHTML = persianTranslation;
+      
+      // Apply markdown rendering to Persian translation (for LLM translations with markdown)
+      var renderedPersianTranslation = renderLightMarkdown(persianTranslation);
+      persianTextBox.innerHTML = renderedPersianTranslation;
+      
       persianTextBox.style.display = "block";
       englishTextBox.style.display = "none";
       persianTextBox.style.fontFamily = "IranSans";
@@ -908,32 +940,41 @@ socket.onmessage = function(e) {
       translateIcon.classList.remove('spin-animation');
     } else if (chatMsgData.mode === "context") {
         var encryptedContexts = chatMsgData.encrypted_contexts;
-        Object.keys(encryptedContexts).forEach(function(encryptedKey, index) {
-          var contextId = "context-" + (index + 1);
-          var key = decrypt_text(encryptedKey)
-          // var contextLabel = "#" + (index + 1) + ": " + key;
-          var contextLabel = key + ": ";
-          var encryptedContextText = encryptedContexts[encryptedKey];
-          var contextText = decrypt_text(encryptedContextText)
-          
-          // Determine number of rows based on content length and type
-          var rows = 5;  // default
-          if (key.toLowerCase().includes('query')) {
-            // For queries, use fewer rows initially
-            rows = Math.min(10, Math.max(3, Math.ceil(contextText.split('\n').length)));
-          } else if (key.toLowerCase().includes('result') || key.toLowerCase().includes('error')) {
-            // For results and errors, use more rows
-            rows = Math.min(20, Math.max(8, Math.ceil(contextText.split('\n').length)));
-          }
-          
-          var context = contextField.replace("{context_id}", contextId);
-          context = context.replace("{context_label}", contextLabel);
-          context = context.replace("{context_text}", contextText);
-          context = context.replace("{rows}", rows);
-          
-          var contextDiv = document.getElementById("context-div");
-          contextDiv.innerHTML += context;
-        });
+        var contextDiv = document.getElementById("context-div");
+        
+        // Check if context is empty
+        if (!encryptedContexts || Object.keys(encryptedContexts).length === 0) {
+          contextDiv.innerHTML = '<div class="alert alert-info" style="background: rgba(13, 110, 253, 0.18); border: 1px solid rgba(13, 110, 253, 0.5); color: #4a8fd9; border-radius: 8px; padding: 16px; margin: 10px 0;">' +
+                                 '<strong>No Context Available</strong><br>' +
+                                 'This response was generated without any specific knowledge source or retrieved documents.' +
+                                 '</div>';
+        } else {
+          Object.keys(encryptedContexts).forEach(function(encryptedKey, index) {
+            var contextId = "context-" + (index + 1);
+            var key = decrypt_text(encryptedKey)
+            // var contextLabel = "#" + (index + 1) + ": " + key;
+            var contextLabel = key + ": ";
+            var encryptedContextText = encryptedContexts[encryptedKey];
+            var contextText = decrypt_text(encryptedContextText)
+            
+            // Determine number of rows based on content length and type
+            var rows = 5;  // default
+            if (key.toLowerCase().includes('query')) {
+              // For queries, use fewer rows initially
+              rows = Math.min(10, Math.max(3, Math.ceil(contextText.split('\n').length)));
+            } else if (key.toLowerCase().includes('result') || key.toLowerCase().includes('error')) {
+              // For results and errors, use more rows
+              rows = Math.min(20, Math.max(8, Math.ceil(contextText.split('\n').length)));
+            }
+            
+            var context = contextField.replace("{context_id}", contextId);
+            context = context.replace("{context_label}", contextLabel);
+            context = context.replace("{context_text}", contextText);
+            context = context.replace("{rows}", rows);
+            
+            contextDiv.innerHTML += context;
+          });
+        }
     } else if (chatMsgData.mode === "new") {
       status = "working";
   scroll_status = 1;
@@ -1471,6 +1512,83 @@ function spinnerDisappears() {
 
 function spinnerDisappears2() {
   spinnerLoader2.style.display = 'none' ;
+}
+
+// AJAX form submission for chat add documents with progress tracking
+function submitChatAddDocsForm(event) {
+  event.preventDefault();
+  
+  // Show spinner and progress
+  spinnerLoader2.style.display = 'inline-block';
+  var progressIndicator = document.getElementById('progress_indicator_chat');
+  if (progressIndicator) {
+    progressIndicator.style.display = 'flex';
+  }
+  
+  var form = document.getElementById('chat-add-docs-form');
+  if (!form) {
+    console.error('Chat add docs form not found');
+    return;
+  }
+  var formData = new FormData(form);
+  
+  // Start progress polling
+  startChatProgressPolling();
+  
+  fetch(form.action, {
+    method: 'POST',
+    body: formData,
+    headers: {
+      'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+    }
+  })
+  .then(response => {
+    if (response.redirected) {
+      window.location.href = response.url;
+    } else {
+      return response.text();
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    spinnerDisappears2();
+    stopChatProgressPolling();
+    alert('An error occurred while adding documents.');
+  });
+}
+
+var chatProgressInterval = null;
+
+function startChatProgressPolling() {
+  console.log('Starting chat add docs progress polling');
+  chatProgressInterval = setInterval(() => {
+    fetch('/indexing-progress/')
+      .then(response => response.json())
+      .then(data => {
+        console.log('Chat progress data:', data);
+        var textElem = document.getElementById('progress_text_chat');
+        var filenameElem = document.getElementById('progress_filename_chat');
+        var statusElem = document.getElementById('progress_status_chat');
+        
+        if (textElem && filenameElem && statusElem && data.current && data.total) {
+          textElem.textContent = `${data.current} / ${data.total} :`;
+          filenameElem.textContent = data.filename || '';
+          statusElem.textContent = data.filename ? ' is indexing' : '';
+        }
+      })
+      .catch(error => console.error('Chat progress polling error:', error));
+  }, 500);
+}
+
+function stopChatProgressPolling() {
+  if (chatProgressInterval) {
+    clearInterval(chatProgressInterval);
+    chatProgressInterval = null;
+  }
+  var progressIndicator = document.getElementById('progress_indicator_chat');
+  if (progressIndicator) {
+    progressIndicator.style.display = 'none';
+  }
 }
 
 // JavaScript to handle the sidebar collapse functionality

@@ -18,6 +18,9 @@ history_size = 3
 # Database/Excel Query Settings
 MAX_QUERY_RETRIES = 7  # Maximum attempts to generate and execute correct query
 
+# Translation Settings
+translation_mode = "llm"  # Options: "argos" or "llm"
+
 # stop_sequence = "User:"
 stop_sequence = "Human:"
 
@@ -85,4 +88,39 @@ If a question does not make any sense, or is not factually coherent, explain
 why instead of answering something not correct. If you don't know the answer
 to a question, please express that you do not have informaion or knowledge in
 that context and please don't share false information.
+"""
+
+# ----- LLM Translation Prompt -----
+translation_prompt = """You are a professional translator specializing in English to Persian (Farsi) translation.
+
+Your task is to translate the provided English text to Persian with the following requirements:
+
+IMPORTANT RULES:
+1. Preserve ALL formatting including:
+   - Markdown syntax (**, *, #, -, >, etc.)
+   - Line breaks and paragraph structure
+   - Code blocks and inline code (keep code unchanged, translate only comments)
+   - Bullet points and numbered lists
+   - Emojis and special characters
+   - HTML tags if present (translate only the content, not the tags)
+
+2. Translation quality:
+   - Use natural, fluent Persian
+   - Maintain the original tone and style
+   - Keep technical terms in English if commonly used (e.g., "API", "database")
+   - Translate idioms and expressions appropriately for Persian speakers
+
+3. Special handling:
+   - URLs and links: Keep unchanged
+   - Numbers and dates: Keep format unchanged
+   - Names and proper nouns: Keep in original language
+   - Code snippets: Do NOT translate, keep exactly as is
+
+4. Output format:
+   - Return ONLY the Persian translation
+   - Do NOT add explanations, notes, or meta-commentary
+   - Do NOT include phrases like "Here's the translation:" or "Translation:"
+   - Maintain exact same structure as the input
+
+Now translate the following text to Persian:
 """

@@ -25,16 +25,21 @@ all_docs_collection_path = os.path.join("collections", all_docs_collection_name)
 
 
 embedding_model_name = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
-embedding_model_lc = LangchainEmbedding(HuggingFaceEmbeddings(model_name=embedding_model_name))
-embedding_model_st = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
-embedding_model_st2 = embedding_functions.SentenceTransformerEmbeddingFunction(model_name="paraphrase-multilingual-MiniLM-L12-v2")
+embedding_model_lc = LangchainEmbedding(HuggingFaceEmbeddings(
+    model_name=embedding_model_name,
+    model_kwargs={'local_files_only': True}
+))
+embedding_model_st = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2", local_files_only=True)
+embedding_model_st2 = embedding_functions.SentenceTransformerEmbeddingFunction(
+    model_name="paraphrase-multilingual-MiniLM-L12-v2"
+)
 
 
 # Load model & tokenizer once (outside the function for efficiency)
 reranker_name = "Alibaba-NLP/gte-multilingual-reranker-base"
-tokenizer = AutoTokenizer.from_pretrained(reranker_name)
+tokenizer = AutoTokenizer.from_pretrained(reranker_name, local_files_only=True)
 reranker = AutoModelForSequenceClassification.from_pretrained(
-    reranker_name, trust_remote_code=True, torch_dtype=torch.float16
+    reranker_name, trust_remote_code=True, torch_dtype=torch.float16, local_files_only=True
 )
 reranker.eval()
 

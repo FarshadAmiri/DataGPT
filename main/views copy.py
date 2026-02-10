@@ -17,12 +17,29 @@ from llama_index.core import SimpleDirectoryReader
 from llama_index.core import SummaryIndex, Document as llama_index_doc
 from main.utilities.encryption import *
 import base64
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 
 
 vector_db_path = "vector_dbs"
 collections_path = "collections"
 all_docs_collection_name = "ALL_DOCS_COLLECTION"
 all_docs_collection_path = os.path.join(collections_path, all_docs_collection_name)
+
+# Helper function for loading documents with timeout
+def load_document_with_timeout(doc_path, timeout_seconds=60):
+    """Load a document using SimpleDirectoryReader with timeout protection"""
+    def _load():
+        return SimpleDirectoryReader(
+            input_files=[doc_path],
+            filename_as_id=True
+        ).load_data()
+    
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(_load)
+        try:
+            return future.result(timeout=timeout_seconds)
+        except FuturesTimeoutError:
+            raise TimeoutError(f"Document loading timed out after {timeout_seconds} seconds")
 
 # model_name = "TheBloke/Mistral-7B-Instruct-v0.2-AWQ"
 # model_name = "TheBloke/Mistral-7B-Instruct-v0.2-GPTQ"
@@ -50,10 +67,15 @@ def chat_view(request, thread_id=None):
         # Get or retrieve aes_key from session
         if request.method == "POST":
             encrypted_aes_key = request.POST.get("encrypted_aes_key", None)
-            aes_key = decrypt_aes_key(encrypted_aes_key)
-            # Store in session as base64 string (bytes are not JSON serializable)
-            request.session['aes_key'] = base64.b64encode(aes_key).decode('utf-8')
-            request.session.save()
+            if encrypted_aes_key:
+                aes_key = decrypt_aes_key(encrypted_aes_key)
+                # Store in session as base64 string (bytes are not JSON serializable)
+                request.session['aes_key'] = base64.b64encode(aes_key).decode('utf-8')
+                request.session.save()
+            else:
+                # Fallback to session key if POST doesn't contain it
+                aes_key_b64 = request.session.get('aes_key', None)
+                aes_key = base64.b64decode(aes_key_b64) if aes_key_b64 else None
         else:
             # GET request - retrieve from session and decode from base64
             aes_key_b64 = request.session.get('aes_key', None)
@@ -215,8 +237,16 @@ def add_docs_view(request, thread_id):
             doc_path = default_storage.get_available_name(doc_path)
             default_storage.save(doc_path, ContentFile(file.read()))
 
-            # Load document
-            documents = SimpleDirectoryReader(input_files=[doc_path]).load_data()
+            # Load document with timeout protection
+            try:
+                documents = load_document_with_timeout(doc_path, timeout_seconds=60)
+            except TimeoutError as e:
+                print(f"WARNING: Timeout loading {file_name}, skipping...")
+                continue
+            except Exception as e:
+                print(f"ERROR loading {file_name}: {str(e)}, skipping...")
+                continue
+            
             doc_sha256 = hash_file(doc_path)["sha256"]
 
             # Save document info
@@ -341,7 +371,16 @@ def collection_create_view(request,):
                 doc_path = default_storage.get_available_name(doc_path)
                 default_storage.save(doc_path, ContentFile(file.read()))
 
-                document = SimpleDirectoryReader(input_files=[doc_path]).load_data()
+                # Load document with timeout protection
+                try:
+                    document = load_document_with_timeout(doc_path, timeout_seconds=60)
+                except TimeoutError as e:
+                    print(f"WARNING: Timeout loading {file_name}, skipping...")
+                    continue
+                except Exception as e:
+                    print(f"ERROR loading {file_name}: {str(e)}, skipping...")
+                    continue
+                
                 doc_sha256 = hash_file(doc_path)["sha256"]
 
                 doc_obj = Document.objects.create(user=user, name=file_name, public=False,
@@ -708,8 +747,16 @@ def collection_add_docs_view(request, collection_id):
             doc_path = default_storage.get_available_name(doc_path)
             default_storage.save(doc_path, ContentFile(file.read()))
 
-            # document = loader.load(file_path=Path(doc_path), metadata=False)
-            document = SimpleDirectoryReader(input_files=[doc_path]).load_data()
+            # Load document with timeout protection
+            try:
+                document = load_document_with_timeout(doc_path, timeout_seconds=60)
+            except TimeoutError as e:
+                print(f"WARNING: Timeout loading {file_name}, skipping...")
+                continue
+            except Exception as e:
+                print(f"ERROR loading {file_name}: {str(e)}, skipping...")
+                continue
+            
             doc_sha256 = hash_file(doc_path)["sha256"]
 
             doc_obj = Document.objects.create(user=user, name=file_name, public=False,

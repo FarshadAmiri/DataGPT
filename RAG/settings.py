@@ -13,6 +13,11 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 from pathlib import Path
 import os
 
+# Force HuggingFace/Transformers to work offline
+os.environ['TRANSFORMERS_OFFLINE'] = '1'
+os.environ['HF_HUB_OFFLINE'] = '1'
+os.environ['HF_DATASETS_OFFLINE'] = '1'
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 

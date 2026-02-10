@@ -1,6 +1,6 @@
 """
 Database utilities for schema analysis and query execution
-Supports MySQL, PostgreSQL, SQLite, MongoDB, Excel/CSV
+Supports MySQL, PostgreSQL, SQLite, MongoDB, SQL Server, Excel/CSV
 """
 
 import sqlite3
@@ -261,6 +261,118 @@ def analyze_postgresql_schema(connection_string: str) -> Dict[str, Any]:
         
         schema_info['tables'][table_name] = table_info
     
+    conn.close()
+    return schema_info
+
+
+def analyze_sqlserver_schema(connection_string: str) -> Dict[str, Any]:
+    """
+    Analyze SQL Server database schema
+    Connection string format: mssql+pyodbc://user:password@host:port/database?driver=ODBC+Driver+17+for+SQL+Server
+    Or for named instances: mssql+pyodbc://user:password@host\\instance/database?driver=ODBC+Driver+17+for+SQL+Server
+    """
+    try:
+        import pyodbc
+    except ImportError:
+        raise ImportError("pyodbc is required for SQL Server connections. Install it with: pip install pyodbc")
+
+    from urllib.parse import urlparse, parse_qs, unquote_plus, unquote
+    parsed = urlparse(connection_string)
+    query_params = parse_qs(parsed.query)
+    driver = query_params.get("driver", ["ODBC Driver 17 for SQL Server"])[0]
+    driver = unquote_plus(driver)
+    
+    # Handle TrustServerCertificate parameter
+    trust_cert = query_params.get("TrustServerCertificate", ["no"])[0]
+    use_windows_auth = query_params.get("Trusted_Connection", ["no"])[0].lower() in ['yes', 'true', '1']
+    
+    # Extract server name (may include instance like localhost\SQLEXPRESS)
+    # URL encoding converts backslash to %5C
+    server = unquote(parsed.hostname or 'localhost')
+    
+    # Build connection string
+    conn_str_parts = [
+        f"DRIVER={{{driver}}}",
+        f"SERVER={server}",
+        f"DATABASE={parsed.path.lstrip('/')}",
+        f"TrustServerCertificate={trust_cert}"
+    ]
+    
+    # Add authentication
+    if use_windows_auth:
+        conn_str_parts.append("Trusted_Connection=yes")
+    else:
+        conn_str_parts.append(f"UID={parsed.username}")
+        conn_str_parts.append(f"PWD={parsed.password}")
+    
+    conn = pyodbc.connect(';'.join(conn_str_parts))
+
+    cursor = conn.cursor()
+    schema_info = {
+        'database_type': 'SQL Server',
+        'connection_string': connection_string.replace(parsed.password, '****') if parsed.password else connection_string,
+        'tables': {}
+    }
+
+    cursor.execute("""
+        SELECT TABLE_NAME
+        FROM INFORMATION_SCHEMA.TABLES
+        WHERE TABLE_TYPE = 'BASE TABLE'
+    """)
+    tables = cursor.fetchall()
+
+    for (table_name,) in tables:
+        table_info = {
+            'columns': [],
+            'primary_keys': [],
+            'foreign_keys': [],
+            'indexes': []
+        }
+
+        cursor.execute("""
+            SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE, COLUMN_DEFAULT
+            FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_NAME = ?
+        """, table_name)
+        columns = cursor.fetchall()
+        for col in columns:
+            col_info = {
+                'name': col[0],
+                'type': col[1],
+                'nullable': col[2] == 'YES',
+                'default': col[3]
+            }
+            table_info['columns'].append(col_info)
+
+        cursor.execute("""
+            SELECT k.COLUMN_NAME
+            FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS t
+            JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE k
+              ON t.CONSTRAINT_NAME = k.CONSTRAINT_NAME
+            WHERE t.TABLE_NAME = ? AND t.CONSTRAINT_TYPE = 'PRIMARY KEY'
+        """, table_name)
+        pks = cursor.fetchall()
+        table_info['primary_keys'] = [pk[0] for pk in pks]
+
+        cursor.execute("""
+            SELECT k.COLUMN_NAME, ccu.TABLE_NAME AS referenced_table, ccu.COLUMN_NAME AS referenced_column
+            FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS AS tc
+            JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE AS k
+              ON tc.CONSTRAINT_NAME = k.CONSTRAINT_NAME
+            JOIN INFORMATION_SCHEMA.CONSTRAINT_COLUMN_USAGE AS ccu
+              ON ccu.CONSTRAINT_NAME = tc.CONSTRAINT_NAME
+            WHERE tc.CONSTRAINT_TYPE = 'FOREIGN KEY' AND tc.TABLE_NAME = ?
+        """, table_name)
+        fks = cursor.fetchall()
+        for fk in fks:
+            table_info['foreign_keys'].append({
+                'column': fk[0],
+                'referenced_table': fk[1],
+                'referenced_column': fk[2]
+            })
+
+        schema_info['tables'][table_name] = table_info
+
     conn.close()
     return schema_info
 
@@ -677,6 +789,44 @@ def execute_sql_query(db_type: str, connection_info: str, query: str) -> Tuple[b
             columns = [desc[0] for desc in cursor.description] if cursor.description else []
             conn.close()
             return True, {'columns': columns, 'rows': results}
+
+        elif db_type == 'sqlserver':
+            import pyodbc
+            from urllib.parse import urlparse, parse_qs, unquote_plus, unquote
+            parsed = urlparse(connection_info)
+            query_params = parse_qs(parsed.query)
+            driver = query_params.get("driver", ["ODBC Driver 17 for SQL Server"])[0]
+            driver = unquote_plus(driver)
+            
+            # Handle TrustServerCertificate parameter
+            trust_cert = query_params.get("TrustServerCertificate", ["no"])[0]
+            use_windows_auth = query_params.get("Trusted_Connection", ["no"])[0].lower() in ['yes', 'true', '1']
+            
+            # Extract server name (may include instance like localhost\SQLEXPRESS)
+            server = unquote(parsed.hostname or 'localhost')
+            
+            # Build connection string
+            conn_str_parts = [
+                f"DRIVER={{{driver}}}",
+                f"SERVER={server}",
+                f"DATABASE={parsed.path.lstrip('/')}",
+                f"TrustServerCertificate={trust_cert}"
+            ]
+            
+            # Add authentication
+            if use_windows_auth:
+                conn_str_parts.append("Trusted_Connection=yes")
+            else:
+                conn_str_parts.append(f"UID={parsed.username}")
+                conn_str_parts.append(f"PWD={parsed.password}")
+            
+            conn = pyodbc.connect(';'.join(conn_str_parts))
+            cursor = conn.cursor()
+            cursor.execute(query)
+            results = cursor.fetchall()
+            columns = [desc[0] for desc in cursor.description] if cursor.description else []
+            conn.close()
+            return True, {'columns': columns, 'rows': results}
         
         else:
             return False, f"Unsupported database type: {db_type}"
@@ -807,21 +957,65 @@ def generate_database_query(user_question: str, schema_analysis: str, db_type: s
     chat_history = chat_history or []
     
     # Create appropriate prompt based on database type
-    if db_type in ['sqlite', 'mysql', 'postgresql']:
+    if db_type in ['sqlite', 'mysql', 'postgresql', 'sqlserver']:
         query_type = "SQL"
-        query_instructions = """Generate a valid SQL query to answer the user's question.
+        
+        # Database-specific syntax rules
+        if db_type == 'sqlserver':
+            syntax_rules = """SQL SERVER SYNTAX RULES:
+- Limit results: SELECT TOP 100 * FROM... (TOP goes after SELECT, NOT at end)
+- String concatenation: Use + operator (e.g., FirstName + ' ' + LastName)
+- Date functions: GETDATE() for current datetime
+- Null handling: ISNULL(column, default) or COALESCE(column, default)
+- Column/table names with spaces: Use [brackets] (e.g., [Order Date])
+- String literals: Single quotes only 'text'
+- Boolean: Use 1/0 or BIT type"""
+        
+        elif db_type == 'mysql':
+            syntax_rules = """MYSQL SYNTAX RULES:
+- Limit results: Add LIMIT 100 at the END of query
+- String concatenation: CONCAT(col1, ' ', col2) or use ||
+- Date functions: NOW() for current datetime, CURDATE() for date only
+- Null handling: IFNULL(column, default) or COALESCE(column, default)
+- Column/table names with spaces: Use backticks `column name`
+- String literals: Single or double quotes 'text' or "text"
+- Boolean: TRUE/FALSE or 1/0"""
+        
+        elif db_type == 'postgresql':
+            syntax_rules = """POSTGRESQL SYNTAX RULES:
+- Limit results: Add LIMIT 100 at the END of query
+- String concatenation: Use || operator (e.g., first_name || ' ' || last_name)
+- Date functions: NOW() for current timestamp, CURRENT_DATE for date only
+- Null handling: COALESCE(column, default)
+- Column/table names: Case-sensitive, use "double quotes" for mixed case
+- String literals: Single quotes only 'text'
+- Boolean: TRUE/FALSE"""
+        
+        else:  # sqlite
+            syntax_rules = """SQLITE SYNTAX RULES:
+- Limit results: Add LIMIT 100 at the END of query
+- String concatenation: Use || operator
+- Date functions: datetime('now') for current datetime
+- Null handling: IFNULL(column, default) or COALESCE(column, default)
+- Column/table names: Case-insensitive, can use "quotes" if needed
+- String literals: Single quotes 'text'
+- Boolean: 1/0 (no TRUE/FALSE keywords)"""
+        
+        query_instructions = f"""Generate a valid SQL query to answer the user's question.
+
+{syntax_rules}
 
 CRITICAL RULES - YOU MUST FOLLOW THESE EXACTLY:
 1. Return ONLY the SQL query text, absolutely NO explanations, comments, or markdown
 2. Use ONLY the exact table and column names provided in the schema above
 3. NEVER use columns that don't exist in the schema
-4. Check the schema carefully - if a column like 'DepartmentName' is in the departments table, use d.DepartmentName, NOT e.DepartmentName
-5. Use proper JOINs only when needed and ensure join columns exist in both tables
-6. Query should be safe (no DROP, DELETE, UPDATE, INSERT, etc.)
-7. Add LIMIT 100 to prevent excessive results
-8. Double-check column names match the schema exactly (case-sensitive)
-9. SYNTAX CRITICAL: Check for typos, missing commas, unmatched parentheses
-10. LOGIC CRITICAL: Verify the query answers the actual question"""
+4. Use proper JOINs only when needed and ensure join columns exist in both tables
+5. Query should be safe (no DROP, DELETE, UPDATE, INSERT, etc.)
+6. Follow the {db_type.upper()} syntax rules above precisely
+7. Double-check column names match the schema exactly
+8. SYNTAX CRITICAL: Check for typos, missing commas, unmatched parentheses
+9. LOGIC CRITICAL: Verify the query answers the actual question
+10. Remove any markdown code fences (```sql or ```) from your response"""
     
     elif db_type == 'mongodb':
         query_type = "MongoDB"
@@ -913,11 +1107,24 @@ Generate ONLY the {query_type} query (no explanations, no markdown, no code bloc
         data = resp.json()
         query = data["choices"][0]["message"]["content"].strip()
         
-        # Clean up the query (remove markdown code blocks if present)
+        # Clean up the query (remove markdown code blocks, comments, explanations)
         if query.startswith("```"):
+            # Remove markdown code fences
             lines = query.split("\n")
             query = "\n".join(lines[1:-1]) if len(lines) > 2 else query
-            query = query.replace("```sql", "").replace("```python", "").replace("```", "").strip()
+            query = query.replace("```sql", "").replace("```python", "").replace("```mongodb", "").replace("```", "").strip()
+        
+        # Remove common markdown patterns that might remain
+        query = query.replace("sql\n", "").replace("python\n", "")
+        
+        # For SQL queries, remove any text after semicolon (LLM explanations)
+        if db_type in ['sqlite', 'mysql', 'postgresql', 'sqlserver']:
+            # Keep only the first statement if there are multiple
+            if ';' in query:
+                query = query.split(';')[0].strip()
+        
+        # Remove leading/trailing whitespace
+        query = query.strip()
         
         return query
     except Exception as e:
@@ -930,7 +1137,7 @@ def format_query_results(results: Any, db_type: str) -> str:
     Format query results into human-readable text for LLM to use in response
     """
     try:
-        if db_type in ['sqlite', 'mysql', 'postgresql']:
+        if db_type in ['sqlite', 'mysql', 'postgresql', 'sqlserver']:
             # SQL results
             if isinstance(results, dict) and 'columns' in results and 'rows' in results:
                 columns = results['columns']
