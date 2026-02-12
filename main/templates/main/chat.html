@@ -615,7 +615,45 @@
             </div>
           </div>
           {% endif %}
-          {% if rag_docs %}
+          
+          <!-- Display collection documents for document-type collections -->
+          {% if base_collection_type == 'document' %}
+            {% if collection_docs %}
+            <div class="info-section">
+              <h6 class="section-title">
+                <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style="margin-right: 6px; vertical-align: text-top;">
+                  <path d="M5 4a.5.5 0 0 0 0 1h6a.5.5 0 0 0 0-1H5zm-.5 2.5A.5.5 0 0 1 5 6h6a.5.5 0 0 1 0 1H5a.5.5 0 0 1-.5-.5zM5 8a.5.5 0 0 0 0 1h6a.5.5 0 0 0 0-1H5zm0 2a.5.5 0 0 0 0 1h3a.5.5 0 0 0 0-1H5z"/>
+                  <path d="M2 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2zm10-1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1z"/>
+                </svg>
+                Collection Documents <span style="color: #888; font-weight: 400; font-size: 12px;">({{ collection_docs|length }} file{{ collection_docs|length|pluralize }})</span>
+              </h6>
+              <div class="document-list">
+                {% for doc in collection_docs %}
+                  <div class="document-item">
+                    <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                      <path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5L14 4.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5h-2z"/>
+                    </svg>
+                    <div class="doc-details">
+                      <div class="doc-title">{{ doc.name }}</div>
+                      <div class="doc-path">{{ doc.loc|path_end_part }}</div>
+                    </div>
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+            {% else %}
+            <div class="info-section">
+              <div class="empty-state">
+                <svg width="32" height="32" fill="currentColor" viewBox="0 0 16 16" style="color: #555; margin-bottom: 8px;">
+                  <path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5L14 4.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5h-2z"/>
+                </svg>
+                <p class="empty-text">No documents in this collection</p>
+              </div>
+            </div>
+            {% endif %}
+          {% endif %}
+          
+          {% if rag_docs and base_collection_type != 'document' %}
           <div class="info-section">
             <h6 class="section-title">Included Documents:</h6>
             <div class="document-list">

@@ -17,8 +17,8 @@ from llama_index.core import SimpleDirectoryReader
 from llama_index.core import SummaryIndex, Document as llama_index_doc
 from main.utilities.encryption import *
 import base64
-import signal
-from contextlib import contextmanager
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
+import functools
 
 
 vector_db_path = "vector_dbs"
@@ -26,26 +26,30 @@ collections_path = "collections"
 all_docs_collection_name = "ALL_DOCS_COLLECTION"
 all_docs_collection_path = os.path.join(collections_path, all_docs_collection_name)
 
-# Timeout handler for PDF loading
+# Cross-platform timeout handler for document loading
 class TimeoutException(Exception):
     pass
 
-@contextmanager
-def time_limit(seconds):
-    def signal_handler(signum, frame):
-        raise TimeoutException("PDF loading timed out")
+def load_document_with_timeout(file_path, timeout_seconds=60):
+    """
+    Load a document with timeout protection.
+    Works on both Windows and Linux, in any thread.
+    """
+    def _load():
+        return SimpleDirectoryReader(
+            input_files=[file_path],
+            filename_as_id=True
+        ).load_data()
     
-    # Only use signal on Unix-like systems
-    if hasattr(signal, 'SIGALRM'):
-        signal.signal(signal.SIGALRM, signal_handler)
-        signal.alarm(seconds)
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(_load)
         try:
-            yield
-        finally:
-            signal.alarm(0)
-    else:
-        # On Windows, just yield without timeout
-        yield
+            documents = future.result(timeout=timeout_seconds)
+            return documents
+        except FuturesTimeoutError:
+            raise TimeoutException(f"Document loading timed out after {timeout_seconds} seconds")
+        except Exception as e:
+            raise e
 
 # model_name = "TheBloke/Mistral-7B-Instruct-v0.2-AWQ"
 # model_name = "TheBloke/Mistral-7B-Instruct-v0.2-GPTQ"
@@ -154,10 +158,17 @@ def chat_view(request, thread_id=None):
         base_collection_name = None if base_collection == None else base_collection.name
         base_collection_type = None if base_collection == None else base_collection.collection_type
         base_collection_db_type = None if base_collection == None else base_collection.db_type
+        
+        # Get collection documents for document-type collections
+        collection_docs = None
+        if base_collection and base_collection.collection_type == 'document':
+            collection_docs = base_collection.docs.all()
+        
         from main.utilities.variables import model_name
         print(f"\ncollections: {collections}\n")
         context = {"chat_threads": threads, "active_thread_id": thread_id, "active_thread_name": active_thread_name, "rag_docs": rag_docs,
-                   "base_collection": base_collection, "base_collection_name": base_collection_name, "base_collection_type": base_collection_type, "base_collection_db_type": base_collection_db_type, "messages": messages, "threads_preview": threads_preview, 'collections': collections, 'model_name': model_name}
+                   "base_collection": base_collection, "base_collection_name": base_collection_name, "base_collection_type": base_collection_type, "base_collection_db_type": base_collection_db_type, 
+                   "collection_docs": collection_docs, "messages": messages, "threads_preview": threads_preview, 'collections': collections, 'model_name': model_name}
         print(f"\n\n{active_thread_name}\n\n")
         return render(request, 'main/chat.html', context)
 
@@ -245,11 +256,7 @@ def add_docs_view(request, thread_id):
 
             # Load document with timeout protection
             try:
-                with time_limit(60):  # 60 second timeout per file
-                    documents = SimpleDirectoryReader(
-                        input_files=[doc_path],
-                        filename_as_id=True
-                    ).load_data()
+                documents = load_document_with_timeout(doc_path, timeout_seconds=60)
             except TimeoutException:
                 print(f"WARNING: Timeout loading {file_name}, skipping...")
                 continue
@@ -383,11 +390,7 @@ def collection_create_view(request,):
 
                 # Load document with timeout protection
                 try:
-                    with time_limit(60):  # 60 second timeout per file
-                        document = SimpleDirectoryReader(
-                            input_files=[doc_path],
-                            filename_as_id=True
-                        ).load_data()
+                    document = load_document_with_timeout(doc_path, timeout_seconds=60)
                 except TimeoutException:
                     print(f"WARNING: Timeout loading {file_name}, skipping...")
                     continue
@@ -763,11 +766,7 @@ def collection_add_docs_view(request, collection_id):
 
             # Load document with timeout protection
             try:
-                with time_limit(60):  # 60 second timeout per file
-                    document = SimpleDirectoryReader(
-                        input_files=[doc_path],
-                        filename_as_id=True
-                    ).load_data()
+                document = load_document_with_timeout(doc_path, timeout_seconds=60)
             except TimeoutException:
                 print(f"WARNING: Timeout loading {file_name}, skipping...")
                 continue

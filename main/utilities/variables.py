@@ -5,6 +5,8 @@ from pprint import pprint
 # LLM
 # model_name = "Qwen3-4B"
 model_name = "Qwen2.5-7B-Instruct-AWQ"
+# model_name = "Qwen3-32B-AWQ"
+# model_name = "Qwen3-14B-AWQ"
 
 llm_url = "http://localhost:9002/v1"
 
