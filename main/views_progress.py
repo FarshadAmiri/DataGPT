@@ -9,6 +9,7 @@ from django.contrib.auth.decorators import login_required
 def indexing_progress_view(request):
     """
     Return current indexing progress for AJAX polling
+    (AJAX logs suppressed via settings.LOGGING filter)
     """
     progress = request.session.get('indexing_progress')
     if not progress:

@@ -161,3 +161,51 @@ CAPTCHA_IMAGE_SIZE = (120, 60)
 CAPTCHA_FONT_SIZE = 32
 
 SESSION_COOKIE_NAME = "rag_session"
+
+# Logging configuration - suppress AJAX spam but keep important logs
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'simple': {
+            'format': '[{levelname}] {message}',
+            'style': '{',
+        },
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {message}',
+            'style': '{',
+        },
+    },
+    'filters': {
+        'require_debug_false': {
+            '()': 'django.utils.log.RequireDebugFalse',
+        },
+        'suppress_indexing_progress': {
+            '()': 'RAG.logging_filters.SuppressIndexingProgressFilter',
+        },
+    },
+    'handlers': {
+        'console': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+            'filters': ['suppress_indexing_progress'],
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+        },
+        'django.server': {
+            'handlers': ['console'],
+            'level': 'WARNING',  # Suppress most HTTP logs
+            'propagate': False,
+        },
+        'indexing': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+}

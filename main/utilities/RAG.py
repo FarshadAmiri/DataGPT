@@ -102,8 +102,32 @@ def llm_inference(plain_text, model, tokenizer, device, streamer=None, max_lengt
 
 
 def create_rag(path):
-    db = chromadb.PersistentClient(path=path)
-    chroma_collection = db.get_or_create_collection("default")
+    import logging
+    logger = logging.getLogger('main.indexing')
+    logger.info(f"[create_rag] Creating ChromaDB at: {path}")
+    
+    # Ensure directory exists
+    import os
+    if not os.path.exists(path):
+        logger.info(f"[create_rag] Directory doesn't exist, creating: {path}")
+        try:
+            os.makedirs(path, exist_ok=True)
+            logger.info(f"[create_rag] ✓ Directory created successfully")
+        except Exception as e:
+            logger.error(f"[create_rag] ✗ Failed to create directory: {e}")
+            raise
+    else:
+        logger.info(f"[create_rag] Directory already exists")
+    
+    try:
+        db = chromadb.PersistentClient(path=path)
+        logger.info(f"[create_rag] ✓ ChromaDB PersistentClient created")
+        chroma_collection = db.get_or_create_collection("default")
+        logger.info(f"[create_rag] ✓ Collection 'default' created/retrieved")
+    except Exception as e:
+        logger.error(f"[create_rag] ✗ ChromaDB error: {e}")
+        raise
+    
     return
 
 
@@ -122,12 +146,29 @@ def create_all_docs_collection():
 
 
 def index_builder(vdb_path: str):
+    import logging
+    import os
     from llama_index.core import Settings
     from llama_index.core import StorageContext, VectorStoreIndex
     from llama_index.llms.huggingface import HuggingFaceLLM
     from llama_index.vector_stores.chroma import ChromaVectorStore
     import chromadb
     # from main.views import model, tokenizer
+    
+    logger = logging.getLogger('main.indexing')
+    logger.info(f"[index_builder] Building index at: {vdb_path}")
+    
+    # Ensure directory exists before ChromaDB operations
+    if not os.path.exists(vdb_path):
+        logger.warning(f"[index_builder] Directory doesn't exist! Creating: {vdb_path}")
+        try:
+            os.makedirs(vdb_path, exist_ok=True)
+            logger.info(f"[index_builder] ✓ Directory created")
+        except Exception as e:
+            logger.error(f"[index_builder] ✗ Failed to create directory: {e}")
+            raise
+    else:
+        logger.info(f"[index_builder] Directory exists")
     
     # Define your LLM
     # llm = HuggingFaceLLM(
@@ -144,19 +185,43 @@ def index_builder(vdb_path: str):
     # Settings.embed_model = embedding_model_st2
 
     # Setup Chroma
-    db = chromadb.PersistentClient(path=vdb_path)
-    chroma_collection = db.get_or_create_collection(
-        "default",
-        # embedding_function=embedding_model_st2
-    )
+    logger.info(f"[index_builder] Creating ChromaDB PersistentClient...")
+    try:
+        db = chromadb.PersistentClient(path=vdb_path)
+        logger.info(f"[index_builder] ✓ PersistentClient created")
+        chroma_collection = db.get_or_create_collection(
+            "default",
+            # embedding_function=embedding_model_st2
+        )
+        logger.info(f"[index_builder] ✓ Collection retrieved")
+    except Exception as e:
+        logger.error(f"[index_builder] ✗ ChromaDB error: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        raise
     vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
     storage_context = StorageContext.from_defaults(vector_store=vector_store)
 
     # Build index (no more service_context param)
+    logger.info(f"[index_builder] Creating VectorStoreIndex...")
     index = VectorStoreIndex.from_vector_store(
         vector_store,
         storage_context=storage_context,
     )
+    logger.info(f"[index_builder] ✓ VectorStoreIndex created successfully")
+    
+    # Store reference to ChromaDB client for explicit persistence
+    index._chroma_client = db
+    index._chroma_collection = chroma_collection
+    
+    # Verify SQLite database was created
+    sqlite_path = os.path.join(vdb_path, "chroma.sqlite3")
+    if os.path.exists(sqlite_path):
+        logger.info(f"[index_builder] ✓ SQLite database exists: {sqlite_path}")
+        logger.info(f"[index_builder]   File size: {os.path.getsize(sqlite_path)} bytes")
+    else:
+        logger.warning(f"[index_builder] ⚠ SQLite database NOT found at: {sqlite_path}")
+        logger.warning(f"[index_builder]   Directory contents: {os.listdir(vdb_path)}")
 
     return index
 

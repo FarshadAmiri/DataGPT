@@ -12,6 +12,7 @@ from django.db.models import Max, Count, Q
 from main.utilities.helper_functions import create_folder, get_first_words, copy_folder_contents, hash_file
 from main.utilities.RAG import create_rag, index_builder, create_all_docs_collection
 from pathlib import Path
+from django.conf import settings
 import os, shutil, random, string
 from llama_index.core import SimpleDirectoryReader
 from llama_index.core import SummaryIndex, Document as llama_index_doc
@@ -19,12 +20,125 @@ from main.utilities.encryption import *
 import base64
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 import functools
+import logging
+import sys
+import time
+import gc
 
+# Configure logging for indexing (not AJAX spam)
+indexing_logger = logging.getLogger('indexing')
+indexing_logger.setLevel(logging.INFO)
+if not indexing_logger.handlers:
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter('\n[INDEXING] %(message)s'))
+    indexing_logger.addHandler(handler)
 
-vector_db_path = "vector_dbs"
-collections_path = "collections"
+# Diagnostic: Check what PDF libraries are available
+def check_pdf_libraries():
+    """Log which PDF parsing libraries are available"""
+    libs = []
+    try:
+        import PyPDF2
+        libs.append(f"PyPDF2 v{PyPDF2.__version__}")
+    except ImportError:
+        pass
+    
+    try:
+        import pymupdf
+        libs.append(f"PyMuPDF v{pymupdf.__version__}")
+    except ImportError:
+        try:
+            import fitz
+            libs.append(f"PyMuPDF (fitz) v{fitz.__version__}")
+        except ImportError:
+            pass
+    
+    try:
+        import pdfminer
+        libs.append(f"pdfminer v{pdfminer.__version__}")
+    except ImportError:
+        pass
+    
+    try:
+        import pdfplumber
+        libs.append(f"pdfplumber v{pdfplumber.__version__}")
+    except ImportError:
+        pass
+    
+    if libs:
+        indexing_logger.info(f"PDF libraries available: {', '.join(libs)}")
+    else:
+        indexing_logger.warning("⚠ No PDF libraries detected!")
+    
+    return libs
+
+# Run diagnostic on import
+_pdf_libs = check_pdf_libraries()
+
+# Use absolute paths for cross-platform compatibility
+vector_db_path = os.path.join(settings.BASE_DIR, "vector_dbs")
+collections_path = os.path.join(settings.BASE_DIR, "collections")
 all_docs_collection_name = "ALL_DOCS_COLLECTION"
 all_docs_collection_path = os.path.join(collections_path, all_docs_collection_name)
+
+# CRITICAL: Print path configuration for debugging
+print("\n" + "="*70)
+print("PATH CONFIGURATION (views.py startup)")
+print("="*70)
+print(f"BASE_DIR: {settings.BASE_DIR}")
+print(f"collections_path: {collections_path}")
+print(f"collections_path is absolute: {os.path.isabs(collections_path)}")
+print(f"collections_path exists: {os.path.exists(collections_path)}")
+print(f"Current working directory: {os.getcwd()}")
+print("="*70 + "\n")
+
+# CRITICAL: Ensure base directories exist at startup
+for base_path in [vector_db_path, collections_path]:
+    if not os.path.exists(base_path):
+        print(f"[STARTUP] Creating missing directory: {base_path}")
+        try:
+            os.makedirs(base_path, exist_ok=True)
+            print(f"[STARTUP] ✓ Created: {base_path}")
+        except Exception as e:
+            print(f"[STARTUP] ✗ FAILED to create {base_path}: {e}")
+    else:
+        print(f"[STARTUP] ✓ Directory exists: {base_path}")
+
+# Log paths on startup
+import logging
+_startup_logger = logging.getLogger('main.indexing')
+_startup_logger.info(f"=== Path Configuration ===")
+_startup_logger.info(f"BASE_DIR: {settings.BASE_DIR}")
+_startup_logger.info(f"vector_db_path: {vector_db_path}")
+_startup_logger.info(f"collections_path: {collections_path}")
+_startup_logger.info(f"all_docs_collection_path: {all_docs_collection_path}")
+_startup_logger.info(f"=========================")
+
+# Disable signal alarm in LlamaIndex - it doesn't work in Django threads on Linux
+if sys.platform.startswith('linux'):
+    try:
+        # Monkey-patch signal to prevent LlamaIndex from using it in threads
+        import signal as _signal_module
+        _original_signal = _signal_module.signal
+        _original_alarm = _signal_module.alarm
+        
+        def _patched_signal(signalnum, handler):
+            import threading
+            if threading.current_thread() is threading.main_thread():
+                return _original_signal(signalnum, handler)
+            return None
+        
+        def _patched_alarm(time):
+            import threading
+            if threading.current_thread() is threading.main_thread():
+                return _original_alarm(time)
+            return 0
+        
+        _signal_module.signal = _patched_signal
+        _signal_module.alarm = _patched_alarm
+        indexing_logger.info("✓ Signal module patched for Linux")
+    except Exception as e:
+        indexing_logger.warning(f"Could not patch signal module: {e}")
 
 # Cross-platform timeout handler for document loading
 class TimeoutException(Exception):
@@ -33,23 +147,86 @@ class TimeoutException(Exception):
 def load_document_with_timeout(file_path, timeout_seconds=60):
     """
     Load a document with timeout protection.
-    Works on both Windows and Linux, in any thread.
+    Uses temporary file for IPC to avoid queue serialization issues.
+    Uses separate module for subprocess to avoid Django import issues on Windows.
     """
-    def _load():
-        return SimpleDirectoryReader(
-            input_files=[file_path],
-            filename_as_id=True
-        ).load_data()
+    import multiprocessing
+    import tempfile
+    import pickle
+    from main.utilities.document_loader import load_document_subprocess
     
-    with ThreadPoolExecutor(max_workers=1) as executor:
-        future = executor.submit(_load)
-        try:
-            documents = future.result(timeout=timeout_seconds)
-            return documents
-        except FuturesTimeoutError:
+    # Get file metadata for logging
+    file_size = os.path.getsize(file_path) / (1024 * 1024)  # MB
+    ext = os.path.splitext(file_path)[1].lower()
+    
+    # Create temporary file for IPC
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.pkl') as tmp:
+        result_file = tmp.name
+    
+    try:
+        process = multiprocessing.Process(target=load_document_subprocess, args=(file_path, result_file))
+        
+        indexing_logger.info(f"📄 File: {os.path.basename(file_path)} ({file_size:.2f} MB, {ext})")
+        indexing_logger.info(f"⏳ Starting subprocess to load document...")
+        start_time = time.time()
+        process.start()
+        
+        # Poll with progress updates
+        elapsed = 0
+        check_interval = 5
+        while process.is_alive() and elapsed < timeout_seconds:
+            time.sleep(check_interval)
+            elapsed = time.time() - start_time
+            if process.is_alive() and elapsed < timeout_seconds:
+                indexing_logger.info(f"   ... still loading ({int(elapsed)}s elapsed)")
+        
+        if process.is_alive():
+            # Still running after timeout - KILL IT
+            elapsed = time.time() - start_time
+            indexing_logger.warning(f"⚠ TIMEOUT after {int(elapsed)}s - KILLING process")
+            indexing_logger.warning(f"   The subprocess is stuck (not responding)")
+            process.terminate()
+            time.sleep(2)
+            if process.is_alive():
+                indexing_logger.warning(f"   Process still alive - using SIGKILL")
+                process.kill()
+            process.join(timeout=5)
             raise TimeoutException(f"Document loading timed out after {timeout_seconds} seconds")
-        except Exception as e:
-            raise e
+        
+        # Process finished - read results from file
+        process.join()  # Ensure process is fully terminated
+        elapsed = time.time() - start_time
+        
+        if os.path.exists(result_file) and os.path.getsize(result_file) > 0:
+            try:
+                with open(result_file, 'rb') as f:
+                    status, result = pickle.load(f)
+                
+                if status == 'success':
+                    chunks = len(result) if result else 0
+                    indexing_logger.info(f"✓ SUCCESS in {elapsed:.1f}s ({chunks} chunks)")
+                    return result
+                else:
+                    indexing_logger.error(f"✗ FAILED in {elapsed:.1f}s")
+                    indexing_logger.error(f"   Error details:\n{result}")
+                    raise Exception(result)
+            except Exception as e:
+                if 'status' in locals():
+                    raise  # Re-raise if we already parsed the error above
+                else:
+                    indexing_logger.error(f"✗ Could not read results: {e}")
+                    raise Exception(f"Failed to read subprocess results: {e}")
+        else:
+            indexing_logger.error(f"✗ Process terminated without result (exit code: {process.exitcode})")
+            raise Exception(f"Process terminated without result (exit code: {process.exitcode})")
+    
+    finally:
+        # Clean up temporary file
+        try:
+            if os.path.exists(result_file):
+                os.unlink(result_file)
+        except:
+            pass
 
 # model_name = "TheBloke/Mistral-7B-Instruct-v0.2-AWQ"
 # model_name = "TheBloke/Mistral-7B-Instruct-v0.2-GPTQ"
@@ -240,53 +417,67 @@ def add_docs_view(request, thread_id):
         total_files = len(uploaded_files)
         request.session['indexing_progress'] = {'current': 0, 'total': total_files, 'filename': ''}
         request.session.save()
-        print(f"[Chat Add Docs Progress] Initialized: 0/{total_files}")
+        indexing_logger.info(f"\\n{'='*60}\\nStarting indexing: {total_files} files\\n{'='*60}")
 
         for file_idx, file in enumerate(uploaded_files, 1):
             file_name = file.name
             # Update progress
             request.session['indexing_progress'] = {'current': file_idx, 'total': total_files, 'filename': file_name}
             request.session.save()
-            print(f"[Chat Add Docs Progress] Updated: {file_idx}/{total_files} - {file_name}")
-            
-            print(f"\nfile_name: {file_name} is in progress...\n")
+            # Minimal console output
             doc_path = os.path.join(docs_path, file_name)
             doc_path = default_storage.get_available_name(doc_path)
             default_storage.save(doc_path, ContentFile(file.read()))
 
             # Load document with timeout protection
+            indexing_logger.info(f"Processing file {file_idx}/{total_files}: {file_name}")
             try:
                 documents = load_document_with_timeout(doc_path, timeout_seconds=60)
-            except TimeoutException:
-                print(f"WARNING: Timeout loading {file_name}, skipping...")
+            except TimeoutException as e:
+                indexing_logger.warning(f"⚠ SKIPPED (timeout): {file_name}")
                 continue
             except Exception as e:
-                print(f"ERROR loading {file_name}: {str(e)}, skipping...")
+                indexing_logger.error(f"✗ SKIPPED (error): {file_name} - {str(e)}")
                 continue
             
-            doc_sha256 = hash_file(doc_path)["sha256"]
+            # Document loaded successfully, now index it
+            try:
+                indexing_logger.info(f"   Creating document object and indexing...")
+                doc_sha256 = hash_file(doc_path)["sha256"]
 
-            # Save document info
-            doc_obj = Document.objects.create(
-                user=user,
-                name=file_name,
-                public=False,
-                description=None,
-                loc=doc_path,
-                sha256=doc_sha256
-            )
+                # Save document info
+                doc_obj = Document.objects.create(
+                    user=user,
+                    name=file_name,
+                    public=False,
+                    description=None,
+                    loc=doc_path,
+                    sha256=doc_sha256
+                )
+                indexing_logger.info(f"   ✓ Document object created (ID: {doc_obj.id})")
 
-            # Insert chunks into index
-            for idx, chunked_doc in enumerate(documents):
-                doc = llama_index_doc(text=chunked_doc.text, id_=f"{doc_obj.id}_{idx}")
-                index.insert(doc)
+                # Insert chunks into index
+                indexing_logger.info(f"   Inserting {len(documents)} chunks into index...")
+                for idx, chunked_doc in enumerate(documents):
+                    doc = llama_index_doc(text=chunked_doc.text, id_=f"{doc_obj.id}_{idx}")
+                    index.insert(doc)
 
-            vdb.docs.add(doc_obj)
+                vdb.docs.add(doc_obj)
+                indexing_logger.info(f"✓ COMPLETED: {file_name}")
+                
+            except Exception as e:
+                indexing_logger.error(f"✗ INDEXING FAILED for {file_name}: {str(e)}")
+                import traceback
+                indexing_logger.error(traceback.format_exc())
+                # Delete the file if indexing failed
+                if os.path.exists(doc_path):
+                    os.remove(doc_path)
+                continue
         
         # Clear progress after completion
         request.session['indexing_progress'] = None
         request.session.save()
-        print("[Chat Add Docs Progress] Cleared")
+        indexing_logger.info(f"\n{'='*60}\n✓ INDEXING COMPLETED\n{'='*60}\n")
 
         return redirect('main:chat', thread_id=thread_id)
 
@@ -353,11 +544,47 @@ def collection_create_view(request,):
             uploaded_files = request.FILES.getlist('files')
             collection_path = os.path.join(collections_path, f'collection_{collection_name}')
             docs_path = os.path.join(collection_path, "docs")
-            create_rag(collection_path)
-            create_folder(docs_path)
+            
+            # Log collection creation
+            indexing_logger.info(f"[collection_create_view] Creating new collection: {collection_name}")
+            indexing_logger.info(f"[collection_create_view] BASE_DIR: {settings.BASE_DIR}")
+            indexing_logger.info(f"[collection_create_view] collections_path: {collections_path}")
+            indexing_logger.info(f"[collection_create_view] Collection path: {collection_path}")
+            indexing_logger.info(f"[collection_create_view] Collection path is absolute: {os.path.isabs(collection_path)}")
+            indexing_logger.info(f"[collection_create_view] Docs path: {docs_path}")
+            
+            # Create collection directory structure
+            try:
+                indexing_logger.info(f"[collection_create_view] Calling create_rag({collection_path})...")
+                create_rag(collection_path)
+                indexing_logger.info(f"[collection_create_view] ✓ create_rag completed")
+                indexing_logger.info(f"[collection_create_view] Collection directory exists after create_rag: {os.path.exists(collection_path)}")
+                if os.path.exists(collection_path):
+                    indexing_logger.info(f"[collection_create_view] Contents: {os.listdir(collection_path)}")
+                
+                create_folder(docs_path)
+                indexing_logger.info(f"[collection_create_view] ✓ docs folder created")
+                indexing_logger.info(f"[collection_create_view] Docs directory exists: {os.path.exists(docs_path)}")
+            except Exception as e:
+                indexing_logger.error(f"[collection_create_view] ✗ Failed to create collection structure: {e}")
+                import traceback
+                indexing_logger.error(traceback.format_exc())
+                return JsonResponse({'error': f'Failed to create collection: {e}'}, status=500)
+            
             create_all_docs_collection()
 
+            indexing_logger.info(f"[collection_create_view] Calling index_builder({collection_path})...")
             index = index_builder(collection_path)
+            indexing_logger.info(f"[collection_create_view] ✓ index_builder completed, index type: {type(index)}")
+            
+            # Verify SQLite database was created
+            sqlite_path = os.path.join(collection_path, "chroma.sqlite3")
+            indexing_logger.info(f"[collection_create_view] Checking for SQLite database...")
+            indexing_logger.info(f"[collection_create_view] Expected path: {sqlite_path}")
+            indexing_logger.info(f"[collection_create_view] SQLite exists: {os.path.exists(sqlite_path)}")
+            if os.path.exists(collection_path):
+                indexing_logger.info(f"[collection_create_view] Collection directory contents: {os.listdir(collection_path)}")
+            
             all_docs_index = index_builder(all_docs_collection_path)
             collection_vdb = Collection.objects.create(
                 user_created=user, 
@@ -381,45 +608,221 @@ def collection_create_view(request,):
                 # Update progress
                 request.session['indexing_progress'] = {'current': idx, 'total': total_files, 'filename': file_name}
                 request.session.save()
-                print(f"[Progress] Updated: {idx}/{total_files} - {file_name}")
                 
-                print(f"\nfile_name: {file_name} is in progress...\n")
+                # Minimal console output
                 doc_path = os.path.join(docs_path, file_name)
                 doc_path = default_storage.get_available_name(doc_path)
                 default_storage.save(doc_path, ContentFile(file.read()))
 
                 # Load document with timeout protection
+                indexing_logger.info(f"Processing file {idx}/{total_files}: {file_name}")
                 try:
                     document = load_document_with_timeout(doc_path, timeout_seconds=60)
-                except TimeoutException:
-                    print(f"WARNING: Timeout loading {file_name}, skipping...")
+                except TimeoutException as e:
+                    indexing_logger.warning(f"⚠ SKIPPED (timeout): {file_name}")
                     continue
                 except Exception as e:
-                    print(f"ERROR loading {file_name}: {str(e)}, skipping...")
+                    indexing_logger.error(f"✗ SKIPPED (error): {file_name} - {str(e)}")
                     continue
                 
-                doc_sha256 = hash_file(doc_path)["sha256"]
+                # Document loaded successfully, now index it
+                try:
+                    indexing_logger.info(f"   Creating document object and indexing...")
+                    doc_sha256 = hash_file(doc_path)["sha256"]
 
-                doc_obj = Document.objects.create(user=user, name=file_name, public=False,
-                                                  description=None, loc=doc_path, sha256=doc_sha256)
-                # Create indexes
-                if doc_sha256 not in all_docs_collection_vdb.docs.values_list("sha256", flat=True):
+                    doc_obj = Document.objects.create(user=user, name=file_name, public=False,
+                                                      description=None, loc=doc_path, sha256=doc_sha256)
+                    indexing_logger.info(f"   ✓ Document object created (ID: {doc_obj.id})")
+                    
+                    # Create indexes - FIX: Batch insertions and separate index operations to avoid SQLite contention on Linux
+                    indexing_logger.info(f"   Preparing {len(document)} chunks for indexing...")
+                    indexing_logger.info(f"   Index object: {index}")
+                    indexing_logger.info(f"   All_docs_index object: {all_docs_index}")
+                    
+                    # Create all LlamaIndex documents first
+                    docs_to_index = []
                     for idx_chunk, chunked_doc in enumerate(document):
                         doc = llama_index_doc(text=chunked_doc.text, id_=f"{doc_obj.id}_{idx_chunk}")
-                        index.insert(doc)
-                        all_docs_index.insert(doc)
-                    all_docs_collection_vdb.docs.add(doc_obj)
-                    collection_vdb.docs.add(doc_obj)
-                else:
-                    for idx_chunk, chunked_doc in enumerate(document):
-                        doc = llama_index_doc(text=chunked_doc.text, id_=f"{doc_obj.id}_{idx_chunk}")
-                        index.insert(doc)
-                    collection_vdb.docs.add(doc_obj)
+                        docs_to_index.append(doc)
+                    indexing_logger.info(f"   ✓ Created {len(docs_to_index)} document objects")
+                    
+                    if doc_sha256 not in all_docs_collection_vdb.docs.values_list("sha256", flat=True):
+                        # Insert all chunks into collection index first (batch operation with micro-batches for Linux)
+                        indexing_logger.info(f"   Inserting {len(docs_to_index)} chunks into COLLECTION index...")
+                        MICRO_BATCH_SIZE = 3  # Insert 3 chunks at a time to prevent resource exhaustion
+                        for i in range(0, len(docs_to_index), MICRO_BATCH_SIZE):
+                            batch_end = min(i + MICRO_BATCH_SIZE, len(docs_to_index))
+                            indexing_logger.info(f"   Micro-batch {i//MICRO_BATCH_SIZE + 1}: chunks {i+1}-{batch_end}")
+                            
+                            for idx_chunk in range(i, batch_end):
+                                doc = docs_to_index[idx_chunk]
+                                indexing_logger.info(f"      [{idx_chunk+1}/{len(docs_to_index)}] Collection insert...")
+                                try:
+                                    index.insert(doc)
+                                    indexing_logger.info(f"      [{idx_chunk+1}/{len(docs_to_index)}] ✓")
+                                except Exception as e:
+                                    indexing_logger.error(f"      ✗ Collection insert failed: {e}")
+                                    raise
+                            
+                            # Force garbage collection and small pause after each micro-batch
+                            if sys.platform.startswith('linux'):
+                                gc.collect()
+                                time.sleep(0.1)
+                                indexing_logger.info(f"   Micro-batch complete, memory cleared")
+                        
+                        indexing_logger.info(f"   ✓ All chunks inserted into collection index")
+                        
+                        # Give ChromaDB/SQLite time to commit on Linux
+                        if sys.platform.startswith('linux'):
+                            indexing_logger.info(f"   [Linux] Pausing 1s for SQLite commit...")
+                            time.sleep(1.0)
+                            gc.collect()
+                        
+                        # Verify collection directory and SQLite database
+                        indexing_logger.info(f"   Verifying collection persistence...")
+                        sqlite_path = os.path.join(collection_path, "chroma.sqlite3")
+                        if os.path.exists(sqlite_path):
+                            indexing_logger.info(f"   ✓ SQLite database exists: {os.path.getsize(sqlite_path)} bytes")
+                        else:
+                            indexing_logger.error(f"   ✗ SQLite database NOT FOUND at: {sqlite_path}")
+                            indexing_logger.error(f"   Collection directory contents: {os.listdir(collection_path) if os.path.exists(collection_path) else 'DIR NOT FOUND'}")
+                        
+                        # Verify collection directory and SQLite database                        indexing_logger.info(f"   Verifying collection persistence...")
+                        sqlite_path = os.path.join(collection_path, "chroma.sqlite3")
+                        if os.path.exists(sqlite_path):
+                            indexing_logger.info(f"   ✓ SQLite database exists: {os.path.getsize(sqlite_path)} bytes")
+                        else:
+                            indexing_logger.error(f"   ✗ SQLite database NOT FOUND at: {sqlite_path}")
+                            indexing_logger.error(f"   Collection directory contents: {os.listdir(collection_path) if os.path.exists(collection_path) else 'DIR NOT FOUND'}")
+                        
+                        # Now insert all chunks into all_docs index (separate batch)
+                        indexing_logger.info(f"   Inserting {len(docs_to_index)} chunks into ALL_DOCS index...")
+                        for i in range(0, len(docs_to_index), MICRO_BATCH_SIZE):
+                            batch_end = min(i + MICRO_BATCH_SIZE, len(docs_to_index))
+                            indexing_logger.info(f"   Micro-batch {i//MICRO_BATCH_SIZE + 1}: chunks {i+1}-{batch_end}")
+                            
+                            for idx_chunk in range(i, batch_end):
+                                doc = docs_to_index[idx_chunk]
+                                indexing_logger.info(f"      [{idx_chunk+1}/{len(docs_to_index)}] All_docs insert...")
+                                try:
+                                    all_docs_index.insert(doc)
+                                    indexing_logger.info(f"      [{idx_chunk+1}/{len(docs_to_index)}] ✓")
+                                except Exception as e:
+                                    indexing_logger.error(f"      ✗ All_docs insert failed: {e}")
+                                    raise
+                            
+                            # Force garbage collection and small pause after each micro-batch
+                            if sys.platform.startswith('linux'):
+                                gc.collect()
+                                time.sleep(0.1)
+                                indexing_logger.info(f"   Micro-batch complete, memory cleared")
+                        
+                        indexing_logger.info(f"   ✓ All chunks inserted into all_docs index")
+                        
+                        # Verify all_docs persistence
+                        all_docs_sqlite = os.path.join(all_docs_collection_path, "chroma.sqlite3")
+                        if os.path.exists(all_docs_sqlite):
+                            indexing_logger.info(f"   ✓ All_docs SQLite: {os.path.getsize(all_docs_sqlite)} bytes")
+                        
+                        # Verify all_docs persistence
+                        all_docs_sqlite = os.path.join(all_docs_collection_path, "chroma.sqlite3")
+                        if os.path.exists(all_docs_sqlite):
+                            indexing_logger.info(f"   ✓ All_docs SQLite: {os.path.getsize(all_docs_sqlite)} bytes")
+                        
+                        # Force ChromaDB sync on Linux by querying count
+                        if sys.platform.startswith('linux'):
+                            indexing_logger.info(f"   [Linux] Ensuring ChromaDB sync...")
+                            try:
+                                if hasattr(index, '_chroma_collection'):
+                                    count = index._chroma_collection.count()
+                                    indexing_logger.info(f"   ✓ Collection has {count} vectors in ChromaDB")
+                                if hasattr(all_docs_index, '_chroma_collection'):
+                                    all_count = all_docs_index._chroma_collection.count()
+                                    indexing_logger.info(f"   ✓ All_docs has {all_count} vectors in ChromaDB")
+                                time.sleep(0.5)  # Give filesystem time to sync
+                            except Exception as e:
+                                indexing_logger.warning(f"   ⚠ ChromaDB sync check failed: {e}")
+                        
+                        all_docs_collection_vdb.docs.add(doc_obj)
+                        collection_vdb.docs.add(doc_obj)
+                        indexing_logger.info(f"   ✓ Indexed to collection and all_docs")
+                    else:
+                        # Only insert into collection index
+                        indexing_logger.info(f"   Document already in all_docs, inserting {len(docs_to_index)} chunks into collection only...")
+                        MICRO_BATCH_SIZE = 3
+                        for i in range(0, len(docs_to_index), MICRO_BATCH_SIZE):
+                            batch_end = min(i + MICRO_BATCH_SIZE, len(docs_to_index))
+                            indexing_logger.info(f"   Micro-batch {i//MICRO_BATCH_SIZE + 1}: chunks {i+1}-{batch_end}")
+                            
+                            for idx_chunk in range(i, batch_end):
+                                doc = docs_to_index[idx_chunk]
+                                indexing_logger.info(f"      [{idx_chunk+1}/{len(docs_to_index)}] Collection insert...")
+                                try:
+                                    index.insert(doc)
+                                    indexing_logger.info(f"      [{idx_chunk+1}/{len(docs_to_index)}] ✓")
+                                except Exception as e:
+                                    indexing_logger.error(f"      ✗ Insert failed: {e}")
+                                    raise
+                            
+                            # Force garbage collection and small pause after each micro-batch
+                            if sys.platform.startswith('linux'):
+                                gc.collect()
+                                time.sleep(0.1)
+                                indexing_logger.info(f"   Micro-batch complete, memory cleared")
+                        
+                        indexing_logger.info(f"   ✓ All chunks inserted into collection")
+                        
+                        # Verify collection persistence
+                        indexing_logger.info(f"   Verifying collection persistence...")
+                        sqlite_path = os.path.join(collection_path, "chroma.sqlite3")
+                        if os.path.exists(sqlite_path):
+                            indexing_logger.info(f"   ✓ SQLite database exists: {os.path.getsize(sqlite_path)} bytes")
+                        else:
+                            indexing_logger.error(f"   ✗ SQLite database NOT FOUND at: {sqlite_path}")
+                            indexing_logger.error(f"   Collection directory contents: {os.listdir(collection_path) if os.path.exists(collection_path) else 'DIR NOT FOUND'}")
+                        
+                        
+                        # Verify collection persistence
+                        indexing_logger.info(f"   Verifying collection persistence...")
+                        sqlite_path = os.path.join(collection_path, "chroma.sqlite3")
+                        if os.path.exists(sqlite_path):
+                            indexing_logger.info(f"   ✓ SQLite database exists: {os.path.getsize(sqlite_path)} bytes")
+                        else:
+                            indexing_logger.error(f"   ✗ SQLite database NOT FOUND at: {sqlite_path}")
+                            indexing_logger.error(f"   Collection directory contents: {os.listdir(collection_path) if os.path.exists(collection_path) else 'DIR NOT FOUND'}")
+                        
+                        # Force ChromaDB sync on Linux by querying count
+                        if sys.platform.startswith('linux'):
+                            indexing_logger.info(f"   [Linux] Ensuring ChromaDB sync...")
+                            try:
+                                if hasattr(index, '_chroma_collection'):
+                                    count = index._chroma_collection.count()
+                                    indexing_logger.info(f"   ✓ Collection has {count} vectors in ChromaDB")
+                                time.sleep(0.5)  # Give filesystem time to sync
+                            except Exception as e:
+                                indexing_logger.warning(f"   ⚠ ChromaDB sync check failed: {e}")
+                        
+                        collection_vdb.docs.add(doc_obj)
+                        indexing_logger.info(f"   ✓ Indexed to collection")
+                    
+                    # Verify document was added
+                    doc_count = collection_vdb.docs.count()
+                    indexing_logger.info(f"   Collection now has {doc_count} documents")
+                    indexing_logger.info(f"✓ COMPLETED: {file_name}")
+                    
+                except Exception as e:
+                    indexing_logger.error(f"✗ INDEXING FAILED for {file_name}: {str(e)}")
+                    import traceback
+                    indexing_logger.error(traceback.format_exc())
+                    # Delete the file if indexing failed
+                    if os.path.exists(doc_path):
+                        os.remove(doc_path)
+                    continue
             
             # Clear progress after completion
             request.session['indexing_progress'] = None
             request.session.save()
-            print("[Progress] Cleared")
+            indexing_logger.info(f"\n{'='*60}\n✓ INDEXING COMPLETED\n{'='*60}\n")
         
         elif collection_type == "database":
             # Database-backed collection
@@ -742,6 +1145,37 @@ def collection_add_docs_view(request, collection_id):
         collection_name = collection_vdb.name
         collection_path = os.path.join(collections_path, f'collection_{collection_name}')
         docs_path = os.path.join(collection_path, "docs")
+        
+        # Log and ensure directories exist
+        indexing_logger.info(f"[collection_add_docs_view] Collection: {collection_name}")
+        indexing_logger.info(f"[collection_add_docs_view] Collections base path: {collections_path}")
+        indexing_logger.info(f"[collection_add_docs_view] Collections path exists: {os.path.exists(collections_path)}")
+        indexing_logger.info(f"[collection_add_docs_view] Collections path writable: {os.access(collections_path, os.W_OK)}")
+        indexing_logger.info(f"[collection_add_docs_view] Collection path: {collection_path}")
+        indexing_logger.info(f"[collection_add_docs_view] Docs path: {docs_path}")
+        indexing_logger.info(f"[collection_add_docs_view] Collection exists in filesystem: {os.path.exists(collection_path)}")
+        indexing_logger.info(f"[collection_add_docs_view] Docs folder exists: {os.path.exists(docs_path)}")
+        
+        # Ensure collection directory exists
+        if not os.path.exists(collection_path):
+            indexing_logger.warning(f"[collection_add_docs_view] Collection directory missing! Creating...")
+            try:
+                create_folder(collection_path)
+                indexing_logger.info(f"[collection_add_docs_view] ✓ Collection directory created")
+            except Exception as e:
+                indexing_logger.error(f"[collection_add_docs_view] ✗ Failed to create collection directory: {e}")
+                return JsonResponse({'error': f'Failed to create collection directory: {e}'}, status=500)
+        
+        # Ensure docs folder exists
+        if not os.path.exists(docs_path):
+            indexing_logger.warning(f"[collection_add_docs_view] Docs folder missing! Creating...")
+            try:
+                create_folder(docs_path)
+                indexing_logger.info(f"[collection_add_docs_view] ✓ Docs folder created")
+            except Exception as e:
+                indexing_logger.error(f"[collection_add_docs_view] ✗ Failed to create docs folder: {e}")
+                return JsonResponse({'error': f'Failed to create docs folder: {e}'}, status=500)
+        
         index = index_builder(collection_path)
         create_all_docs_collection()
         all_docs_index = index_builder(all_docs_collection_path)
@@ -750,52 +1184,208 @@ def collection_add_docs_view(request, collection_id):
         total_files = len(uploaded_files)
         request.session['indexing_progress'] = {'current': 0, 'total': total_files, 'filename': ''}
         request.session.save()
-        print(f"[Add Docs Progress] Initialized: 0/{total_files}")
+        indexing_logger.info(f"\n{'='*60}\nStarting indexing: {total_files} files\n{'='*60}")
         
         for file_idx, file in enumerate(uploaded_files, 1):
             file_name = file.name
             # Update progress
             request.session['indexing_progress'] = {'current': file_idx, 'total': total_files, 'filename': file_name}
             request.session.save()
-            print(f"[Add Docs Progress] Updated: {file_idx}/{total_files} - {file_name}")
             
-            print(f"\nfile_name: {file_name} is in progress...\n")
+            # Minimal console output  
             doc_path = os.path.join(docs_path, file_name)
             doc_path = default_storage.get_available_name(doc_path)
             default_storage.save(doc_path, ContentFile(file.read()))
 
             # Load document with timeout protection
+            indexing_logger.info(f"Processing file {file_idx}/{total_files}: {file_name}")
             try:
                 document = load_document_with_timeout(doc_path, timeout_seconds=60)
-            except TimeoutException:
-                print(f"WARNING: Timeout loading {file_name}, skipping...")
+            except TimeoutException as e:
+                indexing_logger.warning(f"⚠ SKIPPED (timeout): {file_name}")
                 continue
             except Exception as e:
-                print(f"ERROR loading {file_name}: {str(e)}, skipping...")
+                indexing_logger.error(f"✗ SKIPPED (error): {file_name} - {str(e)}")
                 continue
             
-            doc_sha256 = hash_file(doc_path)["sha256"]
+            # Document loaded successfully, now index it
+            try:
+                indexing_logger.info(f"   Creating document object and indexing...")
+                doc_sha256 = hash_file(doc_path)["sha256"]
 
-            doc_obj = Document.objects.create(user=user, name=file_name, public=False,
-                                              description=None, loc=doc_path, sha256=doc_sha256)
-            # Create indexes
-            if doc_sha256 not in all_docs_collection_vdb.docs.values_list("sha256", flat=True):
-                for idx, chunked_doc in enumerate(document):
-                    doc = llama_index_doc(text=chunked_doc.text, id_=f"{doc_obj.id}_{idx}")
-                    index.insert(doc)
-                    all_docs_index.insert(doc)
-                all_docs_collection_vdb.docs.add(doc_obj)
-                collection_vdb.docs.add(doc_obj)
-            else:
-                for idx, chunked_doc in enumerate(document):
-                    doc = llama_index_doc(text=chunked_doc.text, id_=f"{doc_obj.id}_{idx}")
-                    index.insert(doc)
-                collection_vdb.docs.add(doc_obj)
+                doc_obj = Document.objects.create(user=user, name=file_name, public=False,
+                                                  description=None, loc=doc_path, sha256=doc_sha256)
+                indexing_logger.info(f"   ✓ Document object created (ID: {doc_obj.id})")
+                
+                # Create indexes - FIX: Batch insertions and separate index operations to avoid SQLite contention on Linux
+                indexing_logger.info(f"   Preparing {len(document)} chunks for indexing...")
+                indexing_logger.info(f"   Index object: {index}")
+                indexing_logger.info(f"   All_docs_index object: {all_docs_index}")
+                
+                # Create all LlamaIndex documents first
+                docs_to_index = []
+                for idx_chunk, chunked_doc in enumerate(document):
+                    doc = llama_index_doc(text=chunked_doc.text, id_=f"{doc_obj.id}_{idx_chunk}")
+                    docs_to_index.append(doc)
+                indexing_logger.info(f"   ✓ Created {len(docs_to_index)} document objects")
+                
+                if doc_sha256 not in all_docs_collection_vdb.docs.values_list("sha256", flat=True):
+                    # Insert all chunks into collection index first (batch operation with micro-batches for Linux)
+                    indexing_logger.info(f"   Inserting {len(docs_to_index)} chunks into COLLECTION index...")
+                    MICRO_BATCH_SIZE = 3  # Insert 3 chunks at a time to prevent resource exhaustion
+                    for i in range(0, len(docs_to_index), MICRO_BATCH_SIZE):
+                        batch_end = min(i + MICRO_BATCH_SIZE, len(docs_to_index))
+                        indexing_logger.info(f"   Micro-batch {i//MICRO_BATCH_SIZE + 1}: chunks {i+1}-{batch_end}")
+                        
+                        for idx_chunk in range(i, batch_end):
+                            doc = docs_to_index[idx_chunk]
+                            indexing_logger.info(f"      [{idx_chunk+1}/{len(docs_to_index)}] Collection insert...")
+                            try:
+                                index.insert(doc)
+                                indexing_logger.info(f"      [{idx_chunk+1}/{len(docs_to_index)}] ✓")
+                            except Exception as e:
+                                indexing_logger.error(f"      ✗ Collection insert failed: {e}")
+                                raise
+                        
+                        # Force garbage collection and small pause after each micro-batch
+                        if sys.platform.startswith('linux'):
+                            gc.collect()
+                            time.sleep(0.1)
+                            indexing_logger.info(f"   Micro-batch complete, memory cleared")
+                    
+                    indexing_logger.info(f"   ✓ All chunks inserted into collection index")
+                    
+                    # Give ChromaDB/SQLite time to commit on Linux
+                    if sys.platform.startswith('linux'):
+                        indexing_logger.info(f"   [Linux] Pausing 1s for SQLite commit...")
+                        time.sleep(1.0)
+                        gc.collect()
+                    
+                    # Now insert all chunks into all_docs index (separate batch)
+                    indexing_logger.info(f"   Inserting {len(docs_to_index)} chunks into ALL_DOCS index...")
+                    for i in range(0, len(docs_to_index), MICRO_BATCH_SIZE):
+                        batch_end = min(i + MICRO_BATCH_SIZE, len(docs_to_index))
+                        indexing_logger.info(f"   Micro-batch {i//MICRO_BATCH_SIZE + 1}: chunks {i+1}-{batch_end}")
+                        
+                        for idx_chunk in range(i, batch_end):
+                            doc = docs_to_index[idx_chunk]
+                            indexing_logger.info(f"      [{idx_chunk+1}/{len(docs_to_index)}] All_docs insert...")
+                            try:
+                                all_docs_index.insert(doc)
+                                indexing_logger.info(f"      [{idx_chunk+1}/{len(docs_to_index)}] ✓")
+                            except Exception as e:
+                                indexing_logger.error(f"      ✗ All_docs insert failed: {e}")
+                                raise
+                        
+                        # Force garbage collection and small pause after each micro-batch
+                        if sys.platform.startswith('linux'):
+                            gc.collect()
+                            time.sleep(0.1)
+                            indexing_logger.info(f"   Micro-batch complete, memory cleared")
+                    
+                    indexing_logger.info(f"   ✓ All chunks inserted into all_docs index")
+                    
+                    # Force ChromaDB sync on Linux by querying count
+                    if sys.platform.startswith('linux'):
+                        indexing_logger.info(f"   [Linux] Ensuring ChromaDB sync...")
+                        try:
+                            if hasattr(index, '_chroma_collection'):
+                                count = index._chroma_collection.count()
+                                indexing_logger.info(f"   ✓ Collection has {count} vectors in ChromaDB")
+                            if hasattr(all_docs_index, '_chroma_collection'):
+                                all_count = all_docs_index._chroma_collection.count()
+                                indexing_logger.info(f"   ✓ All_docs has {all_count} vectors in ChromaDB")
+                            time.sleep(0.5)  # Give filesystem time to sync
+                        except Exception as e:
+                            indexing_logger.warning(f"   ⚠ ChromaDB sync check failed: {e}")
+                    
+                    all_docs_collection_vdb.docs.add(doc_obj)
+                    collection_vdb.docs.add(doc_obj)
+                    indexing_logger.info(f"   ✓ Indexed to collection and all_docs")
+                else:
+                    # Only insert into collection index
+                    indexing_logger.info(f"   Document already in all_docs, inserting {len(docs_to_index)} chunks into collection only...")
+                    MICRO_BATCH_SIZE = 3
+                    for i in range(0, len(docs_to_index), MICRO_BATCH_SIZE):
+                        batch_end = min(i + MICRO_BATCH_SIZE, len(docs_to_index))
+                        indexing_logger.info(f"   Micro-batch {i//MICRO_BATCH_SIZE + 1}: chunks {i+1}-{batch_end}")
+                        
+                        for idx_chunk in range(i, batch_end):
+                            doc = docs_to_index[idx_chunk]
+                            indexing_logger.info(f"      [{idx_chunk+1}/{len(docs_to_index)}] Collection insert...")
+                            try:
+                                index.insert(doc)
+                                indexing_logger.info(f"      [{idx_chunk+1}/{len(docs_to_index)}] ✓")
+                            except Exception as e:
+                                indexing_logger.error(f"      ✗ Insert failed: {e}")
+                                raise
+                        
+                        # Force garbage collection and small pause after each micro-batch
+                        if sys.platform.startswith('linux'):
+                            gc.collect()
+                            time.sleep(0.1)
+                            indexing_logger.info(f"   Micro-batch complete, memory cleared")
+                    
+                    indexing_logger.info(f"   ✓ All chunks inserted into collection")
+                    
+                    # Force ChromaDB sync on Linux by querying count
+                    if sys.platform.startswith('linux'):
+                        indexing_logger.info(f"   [Linux] Ensuring ChromaDB sync...")
+                        try:
+                            if hasattr(index, '_chroma_collection'):
+                                count = index._chroma_collection.count()
+                                indexing_logger.info(f"   ✓ Collection has {count} vectors in ChromaDB")
+                            time.sleep(0.5)  # Give filesystem time to sync
+                        except Exception as e:
+                            indexing_logger.warning(f"   ⚠ ChromaDB sync check failed: {e}")
+                    
+                    collection_vdb.docs.add(doc_obj)
+                    indexing_logger.info(f"   ✓ Indexed to collection")
+                
+                # Verify document was added
+                doc_count = collection_vdb.docs.count()
+                indexing_logger.info(f"   Collection now has {doc_count} documents")
+                
+                # FINAL VERIFICATION: Check SQLite database
+                final_sqlite_check = os.path.join(collection_path, "chroma.sqlite3")
+                if os.path.exists(final_sqlite_check):
+                    size_kb = os.path.getsize(final_sqlite_check) / 1024
+                    indexing_logger.info(f"   ✓ FINAL CHECK: SQLite DB = {size_kb:.2f} KB")
+                    indexing_logger.info(f"   ✓ Collection path for querying: {collection_path}")
+                    indexing_logger.info(f"   ✓ Collection DB entry loc: {collection_vdb.loc}")
+                else:
+                    indexing_logger.error(f"   ✗ FINAL CHECK: SQLite DB MISSING!")
+                    indexing_logger.error(f"   Collection path: {collection_path}")
+                    indexing_logger.error(f"   Directory contents: {os.listdir(collection_path) if os.path.exists(collection_path) else 'DIR NOT FOUND'}")
+                
+                
+                # FINAL VERIFICATION: Check SQLite database
+                final_sqlite_check = os.path.join(collection_path, "chroma.sqlite3")
+                if os.path.exists(final_sqlite_check):
+                    size_kb = os.path.getsize(final_sqlite_check) / 1024
+                    indexing_logger.info(f"   ✓ FINAL CHECK: SQLite DB = {size_kb:.2f} KB")
+                    indexing_logger.info(f"   ✓ Collection path for querying: {collection_path}")
+                    indexing_logger.info(f"   ✓ Collection DB entry loc: {collection_vdb.loc}")
+                else:
+                    indexing_logger.error(f"   ✗ FINAL CHECK: SQLite DB MISSING!")
+                    indexing_logger.error(f"   Collection path: {collection_path}")
+                    indexing_logger.error(f"   Directory contents: {os.listdir(collection_path) if os.path.exists(collection_path) else 'DIR NOT FOUND'}")
+                
+                indexing_logger.info(f"✓ COMPLETED: {file_name}")
+                
+            except Exception as e:
+                indexing_logger.error(f"✗ INDEXING FAILED for {file_name}: {str(e)}")
+                import traceback
+                indexing_logger.error(traceback.format_exc())
+                # Delete the file if indexing failed
+                if os.path.exists(doc_path):
+                    os.remove(doc_path)
+                continue
         
         # Clear progress after completion
         request.session['indexing_progress'] = None
         request.session.save()
-        print("[Add Docs Progress] Cleared")
+        indexing_logger.info(f"\n{'='*60}\n✓ INDEXING COMPLETED\n{'='*60}\n")
 
         return redirect('main:collection', collection_id=collection_id)
 
