@@ -1,6 +1,7 @@
 absl-py==2.1.0
 accelerate==1.9.0
 aenum==3.1.15
+aiodns==3.6.1
 aiofiles==23.2.1
 aiohappyeyeballs==2.6.1
 aiohttp==3.12.15
@@ -54,6 +55,7 @@ bnunicodenormalizer==0.1.1
 build==1.2.1
 cachetools==5.5.2
 catalogue==2.0.10
+ccxt==4.5.30
 celery==5.4.0
 certifi==2025.8.3
 cffi==1.16.0
@@ -74,6 +76,7 @@ cloudpathlib==0.21.0
 cloudpickle==3.1.1
 cmake==3.30.0
 codecov==2.1.13
+coincurve==21.0.0
 colorama==0.4.6
 coloredlogs==15.0.1
 colour-runner==0.1.1
@@ -386,6 +389,7 @@ pyasn1_modules==0.4.0
 pybase64==1.4.2
 pybboxes==0.1.6
 pybind11==2.13.6
+pycares==4.11.0
 pycodestyle==2.14.0
 pycountry==24.6.1
 pycparser==2.22
@@ -397,7 +401,9 @@ pydub==0.25.1
 Pygments==2.18.0
 PyMuPDF==1.24.7
 PyMuPDFb==1.24.6
+PyMySQL==1.1.2
 pynndescent==0.5.13
+pyodbc==5.3.0
 pyOpenSSL==24.1.0
 pypandoc==1.12
 pyparsing==3.1.2
@@ -576,6 +582,7 @@ widgetsnbextension==4.0.11
 word2number==1.1
 wrapt==1.17.3
 xformers==0.0.26.post1+cu118
+xlrd==2.0.2
 xmltodict==0.14.2
 xxhash==3.4.1
 yarl==1.20.1

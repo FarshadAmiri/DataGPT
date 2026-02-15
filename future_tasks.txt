@@ -1,19 +1,4 @@
-* increase context chunk sizes for more cohesive retreivals
-
-* correct &lt;= &gt;= in showing codes
-
-* test if embedding model works fine ALWAYS when offline
-
-* codes should always be ltr, even when whole response is in persian
-
 * adaptive history size based on messages lengths and llm max token input limit
-
-* response translation become a llm-based and preserves text markdown.
-
-* it prints <br> in table fields
-
-* input should be capacity to extend to multiple lines and next line can be add
-by ctrl + enter in input area
 
 * adaptive use of RAG or Standard - embed functionality into keyword_extractor
 
